@@ -8,12 +8,18 @@ class MemoryStorage {
 }
 const s = new MemoryStorage();
 s.setItem('renpet.settings.v1', '{"language":"ar","gregorian":true}');
-s.setItem('renpet.scheduler.v1', '{"events":[{"title":"مناسبة"}],"calendars":[]}');
+s.setItem('renpet.scheduler.v1', JSON.stringify({version:1,
+ calendars:[{id:'personal',name:{ar:'شخصي'},color:'#187568',visible:true}],
+ items:[{id:'one',kind:'event',title:'مناسبة',startDay:20740,endDay:20740,
+   startMinutes:540,endMinutes:600,calendarId:'personal',repeat:'none'}]}));
 s.setItem('renpet.keyboard.personal.v1', '{"egy:𓄿":7}');
 s.setItem('renpet.keyboard.coptic-dialect.v1', 'sahidic');
 s.setItem('unrelated.app', '{"private":"must not export"}');
 const raw = createBackup(s, new Date('2026-10-14T00:00:00Z'));
 const data = parseBackup(raw);
+assert.throws(()=>parseBackup(JSON.stringify({format:BACKUP_FORMAT,entries:{
+ 'renpet.scheduler.v1':'{"events":[{"title":"unreadable"}],"calendars":[]}'
+}})),/Invalid calendar records/);
 assert.equal(JSON.parse(raw).format, BACKUP_FORMAT);
 assert.equal(JSON.parse(raw).created_at, '2026-10-14T00:00:00.000Z');
 assert.equal(Object.keys(data.entries).length, 4);

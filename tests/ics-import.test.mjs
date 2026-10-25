@@ -12,4 +12,12 @@ x=parseICS(unsupported);assert.equal(x.unsupported,1);assert.equal(x.imported,1)
 const bad=multi.replace('RRULE:FREQ=DAILY;INTERVAL=10','RRULE:FREQ=MONTHLY;BYDAY=MO');
 x=parseICS(bad);assert.equal(x.unsupported,1);assert.equal(x.imported,1);
 assert.throws(()=>parseICS('not a calendar'),/Invalid/);
-console.log('ICS one-way import and conflict handling verified');
+const midnight='BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:midnight\r\nDTSTART:20261025T090000\r\nDTEND:20261026T000000\r\nSUMMARY:Midnight\r\nEND:VEVENT\r\nEND:VCALENDAR';
+x=parseICS(midnight);assert.equal(x.imported,1);
+assert.equal(x.items[0].endDay,x.items[0].startDay);
+assert.equal(x.items[0].endMinutes,1440);
+x=parseICS(midnight.replace('DTEND:20261026T000000','DTEND:20261026T000000Z'));
+assert.equal(x.unsupported,1);assert.equal(x.imported,0);
+const badExdate=multi.replace('EXDATE:20261105T090000','EXDATE:20261105T090000,notadate');
+x=parseICS(badExdate);assert.equal(x.unsupported,1);assert.equal(x.imported,1);
+console.log('ICS UTC, midnight and invalid exclusion regression tests passed');
