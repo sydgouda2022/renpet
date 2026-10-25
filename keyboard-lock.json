@@ -4,14 +4,14 @@
   "dependencies": {
     "coptic-keyboard": {
       "upstream_repository": "sydgouda2022/coptic-keyboard",
-      "source_commit": "011f2d20fe4e858b14aa2559a25ab5618c87385f",
+      "source_commit": "88b6e7834ac33b3d5c9b052c549025faed313a68",
       "version": "coptic-expanded-a2d96bba65d01081",
       "manifest_sha256": "aa92bc1cd6ea541d0a8513afab096935e651c002a1b59e331e96482b2a7b955b",
       "lexicon_sha256": "a2d96bba65d01081750f9539b8c7a26c94ba93665f3f9a14f7b2fb517f476799"
     },
     "hieroglyphic-keyboard": {
       "upstream_repository": "sydgouda2022/hieroglyphic-keyboard",
-      "source_commit": "3a708cd92c5973499ca5a3492191e91440dd9dfc",
+      "source_commit": "9f929bae7be77c06e60365f64fa764f50d71a536",
       "version": "late-egyptian-development-48f7769c20b1560f",
       "manifest_sha256": "c16fca798db1a61a79c122297e0bae1135b78a94c516631802abf4c84151eb01",
       "lexicon_sha256": "48f7769c20b1560f76b0080e8ac5155b5e42c2b9fe2c1fe696f765e803dd5a39"
