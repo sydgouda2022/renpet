@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {COPTIC_LETTERS,COP_NUMBERS,EGY_NUMBERS,wordRange,suggestions,deleteGrapheme} from '../web/keyboard-core.js';
 import {egyptianSignPages} from '../web/keyboard-api.mjs';
 import {createKeyboardFromData,API_VERSION} from '../web/keyboards/egy/keyboard_api.mjs';
-import {prepareKeyboardIndex,predictKeyboard,PREDICTION_API_VERSION} from '../web/keyboards/cop/keyboard_search.mjs';
+import {prepareKeyboardIndex,predictKeyboard,PREDICTION_API_VERSION} from '../web/keyboards/cop/core.mjs';
 const read=async p=>JSON.parse(await readFile(new URL('../web/'+p,import.meta.url),'utf8'));
 const coptic=await read('coptic-lexicon/lexicon.json'),egyptian=await read('lexicon/lexicon.json');
 assert.equal(COPTIC_LETTERS.length,32);

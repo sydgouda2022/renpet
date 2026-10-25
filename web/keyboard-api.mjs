@@ -1,5 +1,5 @@
 /** Host integration only: two pinned standalone APIs own signs and suggestions. */
-import {prepareKeyboardIndex as copIndex,predictKeyboard as copPredict} from './keyboards/cop/keyboard_search.mjs';
+import {createCopticKeyboard} from './keyboards/cop/core.mjs';
 import {createKeyboardFromData} from './keyboards/egy/keyboard_api.mjs';
 const compiled=new WeakMap(),signOnly=createKeyboardFromData();
 export function egyptianSignPages(){
@@ -11,9 +11,9 @@ export function suggestions(raw,language,pack,learned={},limit=4,{dialect='all',
  if(language==='cop'){
   const source=pack?.payload||pack;
   if(!source)return [{text:raw,raw:true,personal:false,attested:false,dialects:0}];
-  let index=compiled.get(source);
-  if(!index){index=copIndex('cop',source);compiled.set(source,index);}
-  return copPredict(index,raw,{limit,learned,dialect,previous});
+  let engine=compiled.get(source);
+  if(!engine){engine=createCopticKeyboard(source);compiled.set(source,engine);}
+  return engine.suggest(raw,{limit,learned,dialect,previous});
  }
  if(language==='egy'){
   const source=pack?.payload||pack;
