@@ -134,8 +134,8 @@ async function run(){
   });
   await specific.reload();
   await specific.locator('[data-primary-view=list]').click();
-  await specific.locator('[data-show-all-calendars]').waitFor();
-  await specific.locator('[data-show-all-calendars]').click();
+  await specific.locator('[data-show-all-calendars]').first().waitFor();
+  await specific.locator('[data-show-all-calendars]').first().click();
   await specific.locator('.event-row:has-text("ميعاد السعادة")').waitFor();
   report('recovery-old-hidden','show-all reveals saved legacy appointment');
   await specific.close();
