@@ -4,7 +4,7 @@
   "dependencies": {
     "coptic-keyboard": {
       "upstream_repository": "sydgouda2022/coptic-keyboard",
-      "source_commit": "cbebf2f4f88f0f29142273cb015fbdde45158a89",
+      "source_commit": "82c2fcb1b2f8a4afca06ec0ae5f3ca10e871b024",
       "version": "coptic-expanded-a2d96bba65d01081",
       "manifest_sha256": "ed0a5292e2fb71d73a3eda5b70dbf00a2e118527d66485ef6a6f940fe88a5bf4",
       "lexicon_sha256": "a2d96bba65d01081750f9539b8c7a26c94ba93665f3f9a14f7b2fb517f476799"

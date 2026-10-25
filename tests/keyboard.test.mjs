@@ -10,7 +10,7 @@ assert.equal(COPTIC_LETTERS.length,32);
 assert.equal(new Set(COPTIC_LETTERS).size,32);
 assert.equal(COP_NUMBERS.length,12);
 assert.equal(EGY_NUMBERS.length,15);
-assert.equal(PREDICTION_API_VERSION,1);
+assert.equal(PREDICTION_API_VERSION,2);
 assert.equal(API_VERSION,'1.0.0');
 const pages=egyptianSignPages();
 for(const group of ['uni','bi','tri'])assert.ok(pages[group].length>15);

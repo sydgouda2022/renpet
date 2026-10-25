@@ -1,9 +1,6 @@
-/** Versioned, Coptic-only public prediction API.
- * Renpet's historical import path/argument shapes remain backward compatible.
+/** Compatibility entry used by Renpet's version-locked keyboard adapter.
+ * The actual single Coptic predictor implementation lives in core.mjs.
  */
-export const PREDICTION_API_VERSION = 1;
-export {LANGUAGE,keyboardKey,prepareKeyboardIndex,predictKeyboard,
-  isInsertableSurface} from './_generic_search.mjs';
-import {isInsertableSurface} from './_generic_search.mjs';
-/** Compatibility helper retained for the standalone PWA and older consumers. */
-export function keyboardReady(surface) {return isInsertableSurface(surface);}
+export {LANGUAGE,PREDICTION_API_VERSION,COPTIC_KEYS,keyboardKey,keyboardReady,
+  prepareKeyboardIndex,predictKeyboard,isInsertableSurface,
+  createCopticKeyboard} from './core.mjs';

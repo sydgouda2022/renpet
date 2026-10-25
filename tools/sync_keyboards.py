@@ -81,16 +81,13 @@ def stage(name, sha):
         files["web/coptic-install.mjs"] = get("src/coptic_install.mjs")
     else:
         files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
-    if "coptic-keyboard" in current_lock()["dependencies"]:
-        files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
-        try:
-            files[f"web/keyboards/{language}/_generic_search.mjs"] = get("src/_generic_search.mjs")
-        except Exception:
-            # Earlier publisher versions exposed the generic kernel directly.
-            # Never suppress failure for the required public module.
-            pass
+    files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
+    if language == "cop":
+        files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
+    else:
+        files["web/keyboards/egy/_generic_search.mjs"] = get("src/_generic_search.mjs")
         if language == "cop":
-            files[f"web/keyboards/{language}/keyboard.mjs"] = get("src/keyboard.mjs")
+            # Coptic UI is external; Renpet imports only the headless Unicode API.
         else:
             files[f"web/keyboards/{language}/keyboard_api.mjs"] = get("src/keyboard_api.mjs")
             files[f"web/keyboards/{language}/keyboard_catalog.js"] = get("src/keyboard_catalog.js")

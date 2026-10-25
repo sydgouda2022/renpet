@@ -1,7 +1,7 @@
 import {suggestions} from './keyboard-api.mjs';
 import {nativeNumber} from './calendar.js';
 
-export {COPTIC_KEYS as COPTIC_LETTERS} from './keyboards/cop/keyboard.mjs';
+export {COPTIC_KEYS as COPTIC_LETTERS} from './keyboards/cop/core.mjs';
 export const EGY_NUMBERS=[
  ...Array.from({length:9},(_,i)=>({value:i+1,text:'𓏺'.repeat(i+1)})),
  ...[[10,'𓎆'],[100,'𓍢'],[1000,'𓆼'],[10000,'𓂭'],[100000,'𓆐'],[1000000,'𓁨']].map(([value,text])=>({value,text}))
