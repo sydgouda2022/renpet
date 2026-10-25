@@ -85,7 +85,8 @@ def stage(name, sha):
     if language == "cop":
         files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
     else:
-        files["web/keyboards/egy/_generic_search.mjs"] = get("src/_generic_search.mjs")
+        # The Egyptian publisher owns one provenance-aware, self-contained predictor.
+        pass
         if language == "cop":
             # Coptic UI is external; Renpet imports only the headless Unicode API.
         else:
