@@ -318,7 +318,8 @@ async function run(){
        for(const group of await month.locator('.decade-days').all()){
          if(await group.locator('.date').count()!==10)throw Error('A decade must show exactly ten adjacent dates');
          const cols=await group.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
-         if(cols!==10)throw Error('Ten-day week unexpectedly wrapped into '+cols+' columns');
+         const expectedCols=(q.viewportSize()?.width||1000)<=480?5:10;
+          if(cols!==expectedCols)throw Error('Expected '+expectedCols+' native date columns, got '+cols);
        }
      }else if(bands<4||bands>6)throw Error('Seven-day month needs 4–6 weekly bands: '+bands);
     const monthLabel=q.locator('.decade-label').first();
@@ -433,7 +434,12 @@ async function run(){
    await q.locator('header [data-open-panel=settings]').click();
    await q.locator('[data-backup]').click();
    await q.locator('.renpet-backup-overlay').waitFor();
-   if(await q.locator('.renpet-backup-close').count())throw Error('Backup close X remains');
+   if(await q.locator('.renpet-backup-close').count()!==1)throw Error('Accessible backup Close button absent');
+    await q.locator('.renpet-backup-close').click();
+    if(await q.locator('.renpet-backup-overlay').count())throw Error('Backup Close button did not dismiss');
+    await q.locator('header [data-open-panel=settings]').click();
+    await q.locator('[data-backup]').click();
+    await q.locator('.renpet-backup-overlay').waitFor();
    await q.locator('.renpet-backup-overlay').click({position:{x:10,y:10}});
    if(await q.locator('.renpet-backup-overlay').count())throw Error('Backup did not dismiss on outside tap');
    for(const language of ['cop','egy']){
