@@ -4,7 +4,7 @@ import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {AMUN_SOURCE,loadFestivalCatalog,enabledSourceIds,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
-import {loadScheduler,saveScheduler,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
+import {loadScheduler,saveScheduler,schedulerRecoveryStatus,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {openBackup} from './backup.js';
 import {initKeyboard,syncKeyboard,closeKeyboard,primeEgyptianLexicon,primeCopticLexicon} from './keyboard.js';
 import {timeEditorFields,openTimeEditor,updateTimeChoice,closeTimeEditor} from './time-editor.js';
@@ -354,7 +354,11 @@ function render(){
  document.body.dataset.view=state.view;
  const content=state.view==='year'?yearView():state.view==='day'?dayView():state.view==='list'?listView():monthView();
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
- root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
+ const recovery=schedulerRecoveryStatus();
+ const warning=!recovery.primaryValid?'<div class="scheduler-recovery-banner" role="alert">'+
+  safe(lang()==='ar'?'بيانات المواعيد الأصلية غير سليمة؛ النسخة الاحتياطية للعرض فقط حتى الاستعادة الصريحة.':lang()==='cop'?'Ⲡⲓⲥⲱⲛϩ ⲛ̀ⲛⲓⲣⲁⲛ ⲁϥⲧⲁⲕⲟ.':'𓏞 𓐍𓏏')+
+  '<button type="button" data-backup>'+safe(lang()==='ar'?'مراجعة الاستعادة':lang()==='cop'?'Ⲧⲁϩⲟ':'𓏞 ↺')+'</button></div>':'';
+ root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+warning+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
    +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
    +panelContent()+(state.dialog?editor():'')+festivalDetails();
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){

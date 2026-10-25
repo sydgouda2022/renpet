@@ -28,6 +28,8 @@ button svg{flex-shrink:0}
 .empty{color:var(--muted);text-align:center;padding:24px 8px;font-size:14px}
 
 /* Persistent application frame — toolbar / one view / one nav */
+.scheduler-recovery-banner{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#fff1dd;color:#5c341f;border-bottom:2px solid #a66829;font-size:13px;line-height:1.5}
+.scheduler-recovery-banner button{min-height:44px;border:1px solid #a66829;border-radius:8px;padding:8px 12px;background:#fff;white-space:nowrap}
 .app-shell{display:flex;flex-direction:column;width:100%;max-width:850px;margin:0 auto;height:100dvh;min-height:0;overflow:hidden;background:var(--bg)}
 .main-scroll{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .main-scroll::-webkit-scrollbar{display:none}

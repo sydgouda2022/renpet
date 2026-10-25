@@ -2,7 +2,7 @@ import { createBackup, parseBackup, restoreBackup } from './backup-core.mjs';
 import { exportICS, eventUID } from './ics-core.mjs';
 import { parseICS } from './ics-import.mjs';
 import { dayNumber } from './calendar.js';
-import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot } from './scheduler.js';
+import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot, CORRUPT_RECORD_STORE } from './scheduler.js';
 
 // Backup and restore work entirely on the user's device. No account or upload.
 const words = {
@@ -111,6 +111,7 @@ function open() {
     <button type="button" data-backup="import-ics" class="renpet-backup-action secondary"></button>
     <button type="button" data-backup="import" class="renpet-backup-action secondary"></button>
     <button type="button" data-backup="recover" class="renpet-backup-action secondary" hidden></button>
+    <button type="button" data-backup="damaged" class="renpet-backup-action secondary" hidden></button>
   </section>`;
   dialog.querySelector('h2').textContent = t.title;
    dialog.querySelector('.renpet-backup-close').setAttribute('aria-label',t.close);
@@ -121,7 +122,11 @@ function open() {
   dialog.querySelector('[data-backup="import-ics"]').textContent = t.importICS;
   const recoveryButton=dialog.querySelector('[data-backup="recover"]');
   recoveryButton.textContent=t.recover;
-  recoveryButton.hidden=!schedulerRecoveryStatus(localStorage).recoveryAvailable;
+  const recoveryState=schedulerRecoveryStatus(localStorage);
+  recoveryButton.hidden=!recoveryState.recoveryAvailable;
+  const rawButton=dialog.querySelector('[data-backup="damaged"]');
+  rawButton.textContent=lang()==='ar'?'تصدير البيانات التالفة الأصلية':'Export original damaged records';
+  rawButton.hidden=recoveryState.primaryValid&&!localStorage.getItem(CORRUPT_RECORD_STORE);
   dialog.dir = lang() === 'ar' ? 'rtl' : 'ltr';
   dialog.addEventListener('click', event => {
     const action = event.target.closest('[data-backup]')?.dataset.backup;
@@ -131,6 +136,11 @@ function open() {
     else if (action === 'import') importData();
     else if (action === 'ics') exportCalendar();
     else if (action === 'import-ics') importCalendarICS();
+    else if (action === 'damaged') {
+      const raw=localStorage.getItem(CORRUPT_RECORD_STORE)||
+       (!schedulerRecoveryStatus(localStorage).primaryValid?localStorage.getItem('renpet.scheduler.v1'):null);
+      if(raw!==null)download(raw,'renpet-original-damaged-calendar.json','application/octet-stream');
+    }
     else if (action === 'recover' && window.confirm(t.confirm)) {
       const outcome=restoreSchedulerSnapshot(localStorage);
       if(outcome.restored)window.location.reload();
