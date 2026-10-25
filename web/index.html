@@ -44,8 +44,15 @@
    repair.disabled = true;
    try {
     if (navigator.serviceWorker) {
-     const registrations = await navigator.serviceWorker.getRegistrations();
-     await Promise.all(registrations.map(registration => registration.unregister()));
+     // Only unregister this Renpet installation. Other origin-wide service
+     // workers must not be touched by an application repair action.
+     const appScope = new URL('./', location.href);
+     const expectedScript = new URL('./sw.js', location.href).href;
+     const registration = await navigator.serviceWorker.getRegistration(appScope);
+     const actualScript = registration?.active?.scriptURL ||
+       registration?.waiting?.scriptURL || registration?.installing?.scriptURL;
+     if (registration && actualScript && new URL(actualScript).href === expectedScript)
+       await registration.unregister();
     }
    } catch (error) { console.warn('Renpet boot repair',error); }
    // Unregisters only the app shell service worker, not localStorage or data.
