@@ -82,7 +82,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs web/assets/dictionaries/signs.json
+          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs
           if git diff --cached --quiet; then
             echo 'Keyboard releases unchanged'
           else
