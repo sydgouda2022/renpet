@@ -16,6 +16,8 @@ function fold(line) {
   parts.push(part);return parts.join('\r\n');
 }
 const validDay = n => Number.isInteger(n) && n >= -25567 && n <= 100000;
+// Shared identity keeps an exported local event from being duplicated on re-import.
+export const eventUID=(item,start=item.startDay)=>String(item.id||'renpet').replace(/[^a-zA-Z0-9_-]/g,'-')+'-'+start+'@renpet.local';
 function calendarEvents(state,years,occursOn,today,maxOccurrences=5000){
   if(!Array.isArray(state?.items))throw Error('No calendar items');
   if(!Array.isArray(years)||!years.length)throw Error('Calendar years missing');
@@ -61,7 +63,7 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=5000){
       const cal=calendars.get(item.calendarId);
       const summary=String(item.title|| (item.kind==='reminder'?'Reminder':'Event')).trim();
       out.push({
-        uid:String(item.id||'renpet').replace(/[^a-zA-Z0-9_-]/g,'-')+'-'+start+'@renpet.local',
+        uid:eventUID(item,start),
         start,end:actualEnd,startMinutes,endMinutes:exportEndMinutes,allDay,summary,rrule:rule,exdates,
         location:String(item.location||''),notes:String(item.notes||''),
         calendar:String(cal?.name?.ar||cal?.name||'Renpet'),
