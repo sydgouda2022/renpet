@@ -1,4 +1,4 @@
-import {COPTIC_LETTERS,COP_NUMBERS,EGY_NUMBERS,wordRange,suggestions,deleteGrapheme} from './keyboard-core.js';
+import {COPTIC_LETTERS,COP_NUMBERS,EGY_NUMBERS,egyptianSignKeys,wordRange,suggestions,deleteGrapheme} from './keyboard-core.js';
 import {ensureLexicon} from './lexicon-install.mjs';
 import {ensureCopticLexicon} from './coptic-install.mjs';
 
@@ -51,28 +51,12 @@ async function load(lang){
    console.warn('Coptic lexicon unavailable:',err);
   }
  }else if(lang==='egy'){
-  if(!catalog.egy?.pages){
-   try{
-    const res=await fetch('./assets/dictionaries/signs.json');
-    if(!res.ok)throw Error('Hieroglyphic signs unavailable: '+res.status);
-    catalog.egy=await res.json();
-   }catch(err){
-    console.warn('Hieroglyphic keyboard signs unavailable:',err);
-    catalog.egy={rows:[],pages:{uni:[],bi:[],tri:[]}};
-   }
-  }
   try{
    const installed=await ensureLexicon();
-   catalog.egy.entries=installed.payload.entries;
-   catalog.egy.rows=installed.payload.entries.map(e=>[e.signs,e.attestations||1,e.lemma||e.ref,e.ref]);
-   catalog.egy.source=installed.manifest.release;
-   catalog.egy.complete=installed.complete;
-   catalog.egy.lexiconReady=true;
-   catalog.egy.lexiconError=null;
+   catalog.egy={entries:installed.payload.entries,source:installed.manifest.release,
+    complete:installed.complete,lexiconReady:true,lexiconError:null};
   }catch(err){
-   catalog.egy.rows=[];
-   catalog.egy.lexiconReady=false;
-   catalog.egy.lexiconError=String(err?.message||err);
+   catalog.egy={entries:[],lexiconReady:false,lexiconError:String(err?.message||err)};
    console.warn('Late Egyptian lexicon unavailable:',err);
   }
  }
@@ -89,7 +73,7 @@ function numberButtons(lang){
  return '<div class="kb-numbers" aria-label="Number signs">'+values.map(n=>'<button type="button" class="kb-num" data-kb-insert="'+escape(n.text)+'" title="'+n.value+'" aria-label="'+n.value+'">'+n.text+'</button>').join('')+'</div>';
 }
 function keys(lang){
- const options=lang==='cop'?COPTIC_LETTERS.map(ch=>[upper?ch.toLocaleUpperCase():ch,'']):(catalog.egy?.pages?.[tab]||[]);
+ const options=lang==='cop'?COPTIC_LETTERS.map(ch=>[upper?ch.toLocaleUpperCase():ch,'']):egyptianSignKeys(tab);
  // Each sign key shows the actual Unicode sign. Gardiner IDs are available as tooltips,
  // not transliteration prompts or invented lexical equivalences.
  return '<div class="kb-signs '+(lang==='egy'?'kb-hiero':'kb-coptic')+'">'+options.map(([x,y])=>'<button type="button" class="kb-sign" data-kb-insert="'+escape(x)+'" aria-label="'+escape(y||x)+'" title="'+escape(y||x)+'">'+x+'</button>').join('')+'</div>';

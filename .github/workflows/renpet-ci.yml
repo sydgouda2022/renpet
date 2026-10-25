@@ -44,7 +44,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check web/app.js
-          node --check web/keyboard-search.mjs
+          node --check web/keyboard-core.js
+          node --check web/keyboards/cop/core.mjs
+          node --check web/keyboards/egy/keyboard_api.mjs
           node tests/keyboard.test.mjs
           node tests/scheduler.test.mjs
           node tests/calendar-presentation.test.mjs
@@ -68,7 +70,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs web/assets/dictionaries/signs.json
+          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs web/keyboards/egy/keyboard_catalog.js
           if git diff --cached --quiet; then
             echo 'Keyboard releases unchanged'
           else

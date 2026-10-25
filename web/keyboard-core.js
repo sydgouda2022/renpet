@@ -1,39 +1,47 @@
-import {prepareKeyboardIndex,predictKeyboard} from './keyboard-search.mjs';
+/** Renpet UI adapter. Lexical ranking, sign inventories and editing belong to the two independent APIs. */
+import {COPTIC_KEYS,createCopticKeyboard} from './keyboards/cop/core.mjs';
+import {wordBeforeCaret,backspaceRange} from './keyboards/cop/editor.mjs';
+import {createKeyboardFromData} from './keyboards/egy/keyboard_api.mjs';
 import {nativeNumber} from './calendar.js';
 
-export const COPTIC_LETTERS=[...'ⲁⲃⲅⲇⲉⲋⲍⲏⲑⲓⲕⲗⲙⲛⲝⲟⲡⲣⲥⲧⲩⲫⲭⲯⲱϣϥϧϩϫϭϯ'];
+export const COPTIC_LETTERS=COPTIC_KEYS;
 export const EGY_NUMBERS=[
  ...Array.from({length:9},(_,i)=>({value:i+1,text:'𓏺'.repeat(i+1)})),
  ...[[10,'𓎆'],[100,'𓍢'],[1000,'𓆼'],[10000,'𓂭'],[100000,'𓆐'],[1000000,'𓁨']].map(([value,text])=>({value,text}))
 ];
 export const COP_NUMBERS=[...Array.from({length:9},(_,i)=>i+1),10,100,1000].map(value=>({value,text:nativeNumber(value,'cop')}));
-const cop=/[\p{Script=Coptic}\p{Script=Greek}\p{Mark}]+$/u;
-const egy=/[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+$/u;
-export function wordRange(input, caret, lang){
- const left=input.slice(0,caret);
- const matched=left.match(lang==='cop'?cop:egy);
- return {start:caret-(matched?.[0].length||0),end:caret,raw:matched?.[0]||''};
+const signs=createKeyboardFromData();
+export function egyptianSignKeys(group='uni'){
+ return signs.getSigns(group).map(s=>[s.glyph,s.code]);
 }
-// A single prepared index is reused across keystrokes. All ranking and dialect
-// filtering is delegated to the shared Egyptian/Coptic prediction engine.
-const indexCache=new WeakMap();
-export function suggestions(raw,language,lexicon,learned={},limit=4,options={}){
+// Prefix completion replaces the entire word, including a suffix to the right of the caret.
+const beforeEgyptian=/[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+$/u;
+const afterEgyptian=/^[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+/u;
+const afterCoptic=/^[\p{Script=Coptic}\p{Script=Greek}\p{Mark}]+/u;
+export function wordRange(value,caret,lang){
+ if(typeof value!=='string'||!Number.isInteger(caret)||caret<0||caret>value.length)throw new RangeError('Invalid cursor');
+ const before=lang==='cop'?wordBeforeCaret(value,caret):(()=>{
+   const match=value.slice(0,caret).match(beforeEgyptian);
+   return {start:caret-(match?.[0].length||0),end:caret,raw:match?.[0]||''};
+ })();
+ const suffix=value.slice(caret).match(lang==='cop'?afterCoptic:afterEgyptian);
+ return {...before,end:caret+(suffix?.[0].length||0)};
+}
+const engineCache=new WeakMap();
+export function suggestions(raw,language,pack,learned={},limit=4,options={}){
  if(!raw)return [];
- const pack=lexicon&&typeof lexicon==='object'?lexicon:null;
- let index=pack&&indexCache.get(pack);
- if(!index||index.language!==language){
-  index=prepareKeyboardIndex(language,pack||(language==='cop'?{rows:[]}:{entries:[]}));
-  if(pack)indexCache.set(pack,index);
+ if(language!=='cop'&&language!=='egy')throw new RangeError('Unsupported keyboard language');
+ const input=pack&&typeof pack==='object'?pack:null;
+ let engine=input&&engineCache.get(input);
+ if(!engine){
+  engine=language==='cop'
+   ?createCopticKeyboard(input||{rows:[]})
+   :createKeyboardFromData({lexicon:input?.entries?input:{entries:[]}});
+  if(input)engineCache.set(input,engine);
  }
- return predictKeyboard(index,raw,{limit,learned,dialect:options.dialect||'all',previous:options.previous||''});
+ const args={learned,limit,previous:options.previous||''};
+ return language==='cop'?
+  engine.suggest(raw,{...args,dialect:options.dialect||'all'}):
+  engine.predict(raw,args);
 }
-export function deleteGrapheme(value,start,end){
- if(start!==end)return {start,end,text:''};
- if(start===0)return {start:0,end:0,text:''};
- const s=value.slice(0,start);
- if(typeof Intl!=='undefined'&&Intl.Segmenter){
-  let last=0;for(const t of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(s))last=t.index;
-  return {start:last,end:start,text:''};
- }
- return {start:start-[...s].at(-1).length,end:start,text:''};
-}
+export function deleteGrapheme(value,start,end){return backspaceRange(value,start,end);}
