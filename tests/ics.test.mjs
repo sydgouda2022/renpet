@@ -9,7 +9,7 @@ const resolver=(i,d)=>i.repeat==='daily'?d>=i.startDay:d===i.startDay;
 const opts={today:days('2026-10-14'),now:new Date('2026-10-14T12:00:00Z')};
 const result=exportICS(state,years,resolver,opts);
 assert.equal(result.count,1);
-assert.match(result.text,new RegExp('UID:'+eventUID(item).replace(/[.*+?^${}()|[\]\\]/g,'\\assert.equal(result.count,1);')));
+assert.ok(result.text.includes('UID:'+eventUID(item)),'Exported UID matches the local appointment');
 const reimport=parseICS(result.text,{knownUIDs:[eventUID(item)]});
 assert.equal(reimport.imported,0,'Renpet must not import an exported appointment twice');
 assert.equal(reimport.duplicate,1);
