@@ -1,5 +1,5 @@
-/* RENPET 6.7 — horizontal week bands, not boxed date cells.
-   Small: vertical month + selected day. Large: navigation rail + two panes. */
+/* Renpet responsive calendar: horizontal week bands; narrow ten-day grids use five columns.
+   Small screens show a month and agenda; large screens use navigation and calendar panes. */
 .week-bands,.month-section.ten-day .decades{display:flex;flex-direction:column;gap:0;padding:0}
 .week-band{position:relative;min-width:0;padding:6px 0 8px;border-bottom:1px solid var(--line)}
 .week-band:last-child{border-bottom:0}

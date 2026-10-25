@@ -94,4 +94,18 @@ const css=await readFile(new URL('../web/ui.css',import.meta.url),'utf8');
 for(const c of ['.month-agenda','.year-season','.advanced-fields','.ux-panel','.schedule-empty','RenpetEgyptian'])assert.ok(css.includes(c),'Present styles: '+c);
 for(const dead of ['.more-sheet','.mini-grid','.ux-language','.festival-list'])assert.ok(!css.includes(dead),'Remove unused CSS: '+dead);
 assert.ok(!has('Renpet:'),'No runtime errors');
-console.log('Renpet direct Month/Year/Day navigation smoke tests passed');
+// Dates containing appointments in hidden calendars must appear in List
+// even when other visible appointments exist elsewhere in the same window.
+const hiddenDate=dayNumber('2026-10-27'),visibleDate=dayNumber('2026-10-28');
+const calendars=[{id:'personal',name:{ar:'شخصي'},color:'#187568',visible:true},
+ {id:'hidden',name:{ar:'مخفي'},color:'#187568',visible:false}];
+memory.set('renpet.scheduler.v1',JSON.stringify({version:1,calendars,items:[
+ {id:'hidden-event',kind:'event',title:'Hidden private event',startDay:hiddenDate,endDay:hiddenDate,startMinutes:540,endMinutes:600,calendarId:'hidden',repeat:'none'},
+ {id:'visible-event',kind:'event',title:'Visible public event',startDay:visibleDate,endDay:visibleDate,startMinutes:540,endMinutes:600,calendarId:'personal',repeat:'none'}
+]}));
+click('data-primary-view','today');
+click('data-primary-view','list');
+assert.ok(has('Visible public event'),'List includes visible event');
+assert.ok(has('data-show-all-calendars'),'List includes hidden-calendar recovery on separate dates');
+assert.ok(has('27')||has('٢٧'),'Hidden-only day receives an agenda heading');
+console.log('Renpet direct Month/Year/Day navigation and hidden-date list smoke tests passed');

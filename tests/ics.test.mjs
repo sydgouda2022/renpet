@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { exportICS,eventUID } from '../web/ics-core.mjs';
 import {parseICS} from '../web/ics-import.mjs';
 const days=n=>Math.floor(Date.parse(n+'T00:00:00Z')/86400000);
-const years=[{year:6282,start:'2026-09-11',days:365},{year:6283,start:'2027-09-11',days:366},{year:6284,start:'2028-09-11',days:365}];
+const years=[{year:6282,start:'2026-09-11',days:366},{year:6283,start:'2027-09-12',days:365},{year:6284,start:'2028-09-11',days:365}];
 const item={id:'a',kind:'event',title:'موعد، مهم; جداً\\ملاحظة',startDay:days('2026-10-14'),endDay:days('2026-10-14'),startMinutes:540,endMinutes:600,allDay:false,repeat:'none',calendarId:'personal',location:'القاهرة',notes:'السطر الأول\nالسطر الثاني'};
 const state={calendars:[{id:'personal',name:{ar:'شخصي'}}],items:[item]};
 const resolver=(i,d)=>i.repeat==='daily'?d>=i.startDay:d===i.startDay;

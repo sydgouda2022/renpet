@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {dayNumber} from '../web/calendar.js';
-import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,occurrenceStartsForDay,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
-const years=[{year:6282,start:'2026-09-11',days:365},{year:6283,start:'2027-09-11',days:365}];
+import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,occurrenceStartsForDay,nextOccurrence,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
+const years=[{year:6282,start:'2026-09-11',days:366},{year:6283,start:'2027-09-12',days:365}];
 const day=dayNumber('2026-10-14');
 const state=emptyState();
 assert.equal(state.calendars.length,3);
@@ -81,6 +81,9 @@ assert.equal(saveScheduler(emptyState(),noRecovery),false,'Never overwrite sole 
 const overlap=createItem({title:'Long daily',startDay:day,endDay:day+2,repeat:'daily',calendarId:'personal'});
 const overlapState=emptyState();upsertItem(overlapState,overlap);
 assert.deepEqual(occurrenceStartsForDay(overlap,day+2,years),[day,day+1,day+2]);
+assert.equal(nextOccurrence(overlap,day+1,years),day+1);
+const weeklyLong=createItem({title:'Long weekly',startDay:day,endDay:day+4,repeat:'weekly',calendarId:'personal'});
+assert.equal(nextOccurrence(weeklyLong,day+2,years),day+7,'Next occurrence returns a start, not continuation date');
 const live=itemsForDay(overlapState,day+2,years);
 assert.equal(live.length,3,'Overlapping recurring events are not collapsed');
 assert.deepEqual(live.map(i=>i._occurrenceStart),[day,day+1,day+2]);

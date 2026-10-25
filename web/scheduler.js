@@ -248,7 +248,7 @@ export function itemsInRange(state,start,endExclusive,years){
 }
 
 export function nextOccurrence(item,fromDay,years,maxDays=370){
- for(let d=Math.max(fromDay,item.startDay);d<Math.max(fromDay,item.startDay)+maxDays;d++)if(occursOn(item,d,years))return d;
+ for(let d=Math.max(fromDay,item.startDay);d<Math.max(fromDay,item.startDay)+maxDays;d++)if(isStartOccurrence(item,d,years))return d;
  return null;
 }
 
