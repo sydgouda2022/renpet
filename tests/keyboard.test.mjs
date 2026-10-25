@@ -65,3 +65,12 @@ const egyptianSource=suggestions([...late.entries[0].signs][0],'egy',late,{},6);
 assert.ok(egyptianSource.slice(1).every(x=>x.lexicon_ref&&['LATE','RAMSES-CORPUS'].includes(x.source)),'Source-backed hieroglyphic suggestions retain stable lexicon reference IDs');
 assert.ok(egyptianSource.slice(1).every(x=>x.source!=='RAMSES-CORPUS'||x.lexicalIdentityVerified===false),'Unlinked Ramses suggestions must not claim a verified lemma');
 console.log('Renpet keyboard catalog and bilingual prediction tests passed');
+
+
+/* The Coptic package is strictly headless. Its core is supplied by the
+ * checksum-locked upstream importer; Renpet owns browser storage and UI. */
+const pureCoptic=await import('../web/keyboards/cop/core.mjs');
+assert.equal(pureCoptic.PREDICTION_API_VERSION,2,'Renpet must consume the headless Coptic API v2');
+assert.equal(pureCoptic.COPTIC_KEYS.length,32,'The Coptic inventory remains complete');
+const pureIndex=pureCoptic.createCopticKeyboard(coptic);
+assert.equal(pureIndex.suggest('ⲡ')[0].text,'ⲡ','New imported core remains a drop-in predictor');
