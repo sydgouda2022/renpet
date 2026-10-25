@@ -81,18 +81,17 @@ def stage(name, sha):
         f"{dest}/manifest.json": raw_manifest,
         f"{dest}/coverage.json": get("release/coverage.json")
     }
-    if language == "cop":
-        files["web/coptic-install.mjs"] = get("src/coptic_install.mjs")
-    else:
+    # Application storage is owned by Renpet, never by the headless Coptic
+    # package. Keep the existing web/coptic-install.mjs as a Renpet adapter.
+    if language == "egy":
         files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
     if "coptic-keyboard" in current_lock()["dependencies"]:
         files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
-        try:
-            files[f"web/keyboards/{language}/_generic_search.mjs"] = get("src/_generic_search.mjs")
-        except Exception:
-            # Earlier publisher versions exposed the generic kernel directly.
-            # Never suppress failure for the required public module.
-            pass
+        if language == "cop":
+            # The Coptic library publishes exactly one headless core.
+            files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
+        else:
+            files["web/keyboards/egy/_generic_search.mjs"] = get("src/_generic_search.mjs")
         if language == "egy":
             files["web/assets/dictionaries/signs.json"] = get("release/signs.json")
     else:
