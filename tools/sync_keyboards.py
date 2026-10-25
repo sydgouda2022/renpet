@@ -16,8 +16,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "keyboard-lock.json"
-KIND = ROOT.name.lower()
-AGENT = {"User-Agent": "four-stream-migration-audit"}
+AGENT = {"User-Agent": "renpet-keyboard-api-consumer"}
 PREFIX = "https://raw.githubusercontent.com/{repo}/{sha}/{path}"
 
 def digest(b):
@@ -35,7 +34,7 @@ def current_lock():
     if j.get("format") != "keyboard-dependencies-v1":
         raise ValueError("Unsupported dependency lock schema")
     names = set(j["dependencies"])
-    if names not in ({"coptic-keyboard", "hieroglyphic-keyboard"}, {"hieroglyphic-keyboard"}):
+    if names != {"coptic-keyboard", "hieroglyphic-keyboard"}:
         raise ValueError("Unexpected dependency graph")
     return j
 
@@ -54,9 +53,6 @@ def verify():
             raise ValueError(f"Corrupted {name} counts")
         if locked["manifest_sha256"] != digest(manifest) or locked["lexicon_sha256"] != digest(catalog):
             raise ValueError(f"Untracked {name} release modification")
-    if "coptic-keyboard" not in j["dependencies"]:
-        if (ROOT / "core/mdwnfr/data/lexicon.json").read_bytes() != (ROOT / "web/lexicon/lexicon.json").read_bytes():
-            raise ValueError("MdwNfr browser and Python catalog diverged")
     print("Keyboard dependencies match exact locked hashes.")
 
 def stage(name, sha):
@@ -93,14 +89,12 @@ def stage(name, sha):
             # Earlier publisher versions exposed the generic kernel directly.
             # Never suppress failure for the required public module.
             pass
-        if language == "egy":
-            files["web/assets/dictionaries/signs.json"] = get("release/signs.json")
-    else:
-        if language != "egy":
-            raise ValueError("Coptic is not a MdwNfr dependency")
-        files["web/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
-        files["core/mdwnfr/data/lexicon.json"] = catalog
-        files["data/lexicon.sqlite3"] = get("release/lexicon.sqlite3")
+        if language == "cop":
+            files[f"web/keyboards/{language}/keyboard.mjs"] = get("src/keyboard.mjs")
+        else:
+            files[f"web/keyboards/{language}/keyboard_api.mjs"] = get("src/keyboard_api.mjs")
+            files[f"web/keyboards/{language}/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
+            files[f"web/keyboards/{language}/lexicon_install.mjs"] = get("src/lexicon_install.mjs")
     return manifest, raw_manifest, catalog, files
 
 def update():

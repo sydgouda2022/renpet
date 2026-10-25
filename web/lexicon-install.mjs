@@ -1,118 +1,136 @@
-/** Local-first, self-repairing Late Egyptian lexicon installation for browser PWAs.
- *  Uses its own IndexedDB database: no access to documents, appointments or learning.
- *  All payload bytes are SHA-256 verified on every open, including cached copies.
- */
+/** Versioned, local-first Egyptian lexicon installer. Integrity is not authentication. */
 export const DB_NAME='egyptian-lexicon-install-v1';
-export const MANIFEST_URL='/lexicon/manifest.json';
-export const PAYLOAD_URL='/lexicon/lexicon.json';
+export const MANIFEST_URL=new URL('./lexicon/manifest.json',import.meta.url).href;
+export const PAYLOAD_URL=new URL('./lexicon/lexicon.json',import.meta.url).href;
 const FORMAT='egyptian-lexicon-install-v1';
-let inFlight=null;
 const hex=buffer=>Array.from(new Uint8Array(buffer),b=>b.toString(16).padStart(2,'0')).join('');
 const hash=async bytes=>hex(await crypto.subtle.digest('SHA-256',bytes));
-const enc=new TextEncoder();
-const native=s=>typeof s==='string'&&[...s].some(c=>{const n=c.codePointAt(0);return n>=0x13000&&n<=0x1342f;});
-
+const SIGN=cp=>(cp>=0x13000&&cp<=0x1342f)||(cp>=0x13460&&cp<=0x143ff);
+const OPS=new Set([0x13430,0x13431,0x13432,0x13433,0x13434,0x13435,0x13436,0x13439,0x1343a,0x1343b]);
+const OPEN=new Map([[0x13437,0x13438],[0x1343c,0x1343d],[0x1343e,0x1343f]]);
+const CLOSE=new Set(OPEN.values());
+export function validEgyptianWord(value){
+ if(typeof value!=='string'||!value||[...value].length>256)return false;
+ let expecting=true,mirror=false,signs=0;const stack=[];
+ for(const ch of value){
+  const cp=ch.codePointAt(0);
+  if(SIGN(cp)){signs++;expecting=false;mirror=false;}
+  else if(cp===0x13440){if(!expecting||mirror)return false;mirror=true;}
+  else if(OPEN.has(cp)){if(mirror)return false;stack.push(OPEN.get(cp));expecting=true;}
+  else if(CLOSE.has(cp)){if(mirror||expecting||stack.pop()!==cp)return false;expecting=false;}
+  else if(OPS.has(cp)){if(expecting||mirror)return false;expecting=true;}
+  else return false;
+ }
+ return signs>0&&!expecting&&!mirror&&stack.length===0;
+}
 export function validateCatalog(payload){
- if(!payload||payload.format!=='mdwnfr-predict-v1'||!payload.metadata||!Array.isArray(payload.entries)||!payload.entries.length)throw Error('Invalid Late Egyptian lexicon format');
+ if(payload?.format!=='mdwnfr-predict-v1'||!payload.metadata||!Array.isArray(payload.entries)||!payload.entries.length)throw Error('Invalid Egyptian catalog');
+ const meta=payload.metadata;
+ if(meta.stage!=='Late Egyptian'||typeof meta.complete!=='boolean'||meta.spelling_records!==payload.entries.length)throw Error('Invalid Egyptian catalog metadata');
  const refs=new Set();
  for(const entry of payload.entries){
-  if(!entry||typeof entry.ref!=='string'||!entry.ref||refs.has(entry.ref)||!native(entry.signs))throw Error('Invalid or duplicate Late Egyptian spelling');
+  if(!entry||typeof entry.ref!=='string'||!entry.ref||refs.has(entry.ref)||!validEgyptianWord(entry.signs))throw Error('Invalid or duplicate native spelling');
+  if(typeof entry.source!=='string'||!entry.source||!Number.isSafeInteger(entry.attestations)||entry.attestations<0)throw Error('Missing spelling provenance or frequency');
+  if(entry.source==='RAMSES-WORD-MODEL-2023'&&entry.lexical_identity_verified!==false)throw Error('Unlinked corpus form cannot claim a verified lemma');
   refs.add(entry.ref);
  }
- if(payload.metadata.spelling_records!==payload.entries.length||typeof payload.metadata.complete!=='boolean')throw Error('Lexicon counts or completeness metadata invalid');
  return payload;
 }
 export function validateManifest(m){
- if(!m||m.format!==FORMAT||m.language!=='egy'||m.stage!=='Late Egyptian'||typeof m.release!=='string'||!m.release||
-   !Number.isSafeInteger(m.bytes)||m.bytes<=0||!Number.isSafeInteger(m.spelling_records)||m.spelling_records<1||
-   !/^[a-f0-9]{64}$/.test(m.sha256)||typeof m.complete!=='boolean')throw Error('Invalid lexicon release manifest');
+ if(m?.format!==FORMAT||m.language!=='egy'||m.stage!=='Late Egyptian'||typeof m.release!=='string'||!m.release||
+ !Number.isSafeInteger(m.bytes)||m.bytes<1||m.bytes>128*1024*1024||
+ !Number.isSafeInteger(m.spelling_records)||m.spelling_records<1||
+ !/^[0-9a-f]{64}$/.test(m.sha256)||typeof m.complete!=='boolean')throw Error('Invalid Egyptian release manifest');
  return m;
 }
 export async function validateSlot(slot){
  if(!slot)return null;
  try{
   validateManifest(slot.manifest);
-  const data=slot.bytes;
-  if(!(data instanceof ArrayBuffer)||data.byteLength!==slot.manifest.bytes)return null;
-  if(await hash(data)!==slot.manifest.sha256)return null;
-  const payload=validateCatalog(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data)));
+  const bytes=slot.bytes;
+  if(!(bytes instanceof ArrayBuffer)||bytes.byteLength!==slot.manifest.bytes)return null;
+  if(await hash(bytes)!==slot.manifest.sha256)return null;
+  const payload=validateCatalog(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
   if(payload.entries.length!==slot.manifest.spelling_records||payload.metadata.complete!==slot.manifest.complete)return null;
   return {slot,payload};
  }catch{return null;}
 }
-
-// Separate authority from all personal documents and scheduler data.
 export function idbStore(name=DB_NAME){
- let open=null;
- async function db(){
-  if(!open)open=new Promise((resolve,reject)=>{
-   const request=indexedDB.open(name,1);
-   request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('releases'))request.result.createObjectStore('releases');};
-   request.onsuccess=()=>{const d=request.result;d.onversionchange=()=>{d.close();open=null;};resolve(d);};
-   request.onerror=()=>{open=null;reject(request.error||Error('Lexicon storage unavailable'));};
-   request.onblocked=()=>{open=null;reject(Error('Lexicon database blocked by another tab'));};
-  });return open;
+ let opened=null;
+ function db(){
+  if(opened)return opened;
+  opened=new Promise((resolve,reject)=>{
+   const req=indexedDB.open(name,1);let settled=false;
+   req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('releases'))req.result.createObjectStore('releases');};
+   req.onsuccess=()=>{
+    const connection=req.result;
+    if(settled){connection.close();return;}
+    settled=true;connection.onversionchange=()=>{connection.close();opened=null;};resolve(connection);
+   };
+   req.onerror=()=>{if(settled)return;settled=true;opened=null;reject(req.error||Error('Lexicon IndexedDB unavailable'));};
+   req.onblocked=()=>{if(settled)return;settled=true;opened=null;reject(Error('Another tab blocked the lexicon database upgrade'));};
+  });
+  return opened;
  }
- function transaction(mode,fn){return db().then(d=>new Promise((resolve,reject)=>{
-  const tx=d.transaction('releases',mode);const store=tx.objectStore('releases');
-  let result;try{result=fn(store,tx);}catch(e){try{tx.abort();}catch{}reject(e);return;}
-  tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||Error('Lexicon write failed'));
-  tx.onabort=()=>reject(tx.error||Error('Lexicon write aborted'));
+ function write(callback){return db().then(d=>new Promise((resolve,reject)=>{
+  const tx=d.transaction('releases','readwrite'),store=tx.objectStore('releases');
+  try{callback(store);}catch(e){try{tx.abort();}catch{}reject(e);return;}
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||Error('Lexicon write failed'));tx.onabort=()=>reject(tx.error||Error('Lexicon write aborted'));
  }));}
  return {
   read:async()=>{const d=await db();return new Promise((resolve,reject)=>{
-   const tx=d.transaction('releases','readonly'),s=tx.objectStore('releases');
-   const a=s.get('active'),p=s.get('previous');
+   const tx=d.transaction('releases','readonly'),store=tx.objectStore('releases'),a=store.get('active'),p=store.get('previous');
    tx.oncomplete=()=>resolve({active:a.result||null,previous:p.result||null});
-   tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Lexicon read aborted'));
+   tx.onerror=()=>reject(tx.error||Error('Lexicon read failed'));tx.onabort=()=>reject(tx.error||Error('Lexicon read aborted'));
   });},
-  activate:async(next,prior)=>transaction('readwrite',s=>{s.put(next,'active');if(prior)s.put(prior,'previous');else s.delete('previous');}),
-  restore:async(valid)=>transaction('readwrite',s=>{s.put(valid,'active');s.delete('previous');})
+  activate:(next,prior)=>write(s=>{s.put(next,'active');if(prior)s.put(prior,'previous');else s.delete('previous');}),
+  restore:valid=>write(s=>{s.put(valid,'active');s.delete('previous');})
  };
 }
-async function requestJSON(url,fetcher,timeoutMs){
- const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
- try{const response=await fetcher(url,{cache:'no-store',signal:controller.signal});
-  if(!response.ok)throw Error('Lexicon asset unavailable: '+response.status);
-  return response;
+async function readResponse(url,fetcher,timeoutMs,method){
+ const controller=new AbortController();
+ let timer;
+ try{
+  return await Promise.race([
+   (async()=>{
+    const response=await fetcher(url,{cache:'no-store',signal:controller.signal});
+    if(!response.ok)throw Error('Lexicon asset unavailable: '+response.status);
+    return response[method]();
+   })(),
+   new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('Lexicon asset timed out'));},timeoutMs);})
+  ]);
  }finally{clearTimeout(timer);}
 }
-async function download(manifest,fetcher,timeoutMs){
- const response=await requestJSON(PAYLOAD_URL,fetcher,timeoutMs);
- const bytes=await response.arrayBuffer();
+async function download(manifest,fetcher,timeoutMs,payloadUrl){
+ const bytes=await readResponse(payloadUrl,fetcher,timeoutMs,'arrayBuffer');
  if(bytes.byteLength!==manifest.bytes||await hash(bytes)!==manifest.sha256)throw Error('Downloaded lexicon checksum mismatch');
  const slot={manifest,bytes};
  if(!await validateSlot(slot))throw Error('Downloaded lexicon failed structural verification');
  return slot;
 }
-/** Dependency injection used for no-browser regression and simulated-corruption tests.
- *  Remote failure with a verified local release never prevents startup.
- */
-export async function ensureLexiconImpl({store=idbStore(),fetcher=fetch,online=true,timeoutMs=3000}={}){
+/** Failure to update must never erase the last verified local release. */
+export async function ensureLexiconImpl({store=idbStore(),fetcher=fetch,online=true,timeoutMs=6000,
+ manifestUrl=MANIFEST_URL,payloadUrl=PAYLOAD_URL}={}){
+ if(!manifestUrl||!payloadUrl||typeof fetcher!=='function')throw new TypeError('Lexicon URLs and fetcher are required');
  const saved=await store.read();
  let active=await validateSlot(saved.active),previous=await validateSlot(saved.previous);
  let recovered=false;
  if(!active&&previous){await store.restore(previous.slot);active=previous;recovered=true;}
  let remote=null;
  if(online||!active){
-  // When the local record is missing, also try the PWA's offline precache.
-  // A cached, SHA-256-valid release can repair IndexedDB without connectivity.
-  try{remote=validateManifest(await (await requestJSON(MANIFEST_URL,fetcher,active?1600:timeoutMs)).json());}
+  try{remote=validateManifest(await readResponse(manifestUrl,fetcher,active?2000:timeoutMs,'json'));}
   catch(e){if(!active)throw Error('Lexicon unavailable and no verified local copy: '+String(e?.message||e));}
  }
  if(remote&&(!active||remote.sha256!==active.slot.manifest.sha256)){
-  try{
-   const next=await download(remote,fetcher,timeoutMs);
-   await store.activate(next,active?.slot||null);active=await validateSlot(next);recovered=false;
+  try{const next=await download(remote,fetcher,timeoutMs,payloadUrl);await store.activate(next,active?.slot||null);
+   active=await validateSlot(next);recovered=false;
   }catch(e){if(!active)throw Error('Lexicon download/repair failed: '+String(e?.message||e));}
  }
- if(!active)throw Error('No verified local lexicon and no downloadable release; connect once to install');
+ if(!active)throw Error('No verified local lexicon and no downloadable release');
  return {payload:active.payload,bytes:active.slot.bytes,manifest:active.slot.manifest,
-   status:recovered?'recovered':remote&&active.slot.manifest.sha256===remote.sha256?'verified':'offline',
-   complete:active.slot.manifest.complete};
+  status:recovered?'recovered':remote&&remote.sha256===active.slot.manifest.sha256?'verified':'offline',
+  complete:active.slot.manifest.complete};
 }
-/** Runtime entry: one operation per page/worker. */
 export function ensureLexicon(options={}){
- if(!inFlight)inFlight=ensureLexiconImpl({...options,online:options.online??(typeof navigator==='undefined'||navigator.onLine!==false)}).finally(()=>{inFlight=null;});
- return inFlight;
+ return ensureLexiconImpl({...options,online:options.online??(typeof navigator==='undefined'||navigator.onLine!==false)});
 }
