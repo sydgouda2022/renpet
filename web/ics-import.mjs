@@ -54,10 +54,13 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[]}={}
     counts.unsupported++;continue;
    }
    const allDay=start.params.includes('VALUE=DATE');
+   if(!allDay&&start.value.endsWith('Z')!==end.value.endsWith('Z')){counts.unsupported++;continue;}
    if(allDay!==end.params.includes('VALUE=DATE')){counts.unsupported++;continue;}
    const a=dateValue(start.value,allDay),b=dateValue(end.value,allDay);
    if(!a||!b){counts.invalid++;continue;}
-   const last=allDay?b.day-1:b.day;
+   // DTEND is exclusive; next-day midnight is the previous day's ending.
+   const midnightEnd=!allDay&&b.day>a.day&&b.minutes===0;
+   const last=allDay||midnightEnd?b.day-1:b.day;
    if(a.day<minDay||last>maxDay||last<a.day||(last===a.day&&!allDay&&b.minutes<=a.minutes)){
     counts.invalid++;continue;
    }
@@ -71,18 +74,20 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[]}={}
     else if(parts.FREQ==='WEEKLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='weekly';
     else{counts.unsupported++;continue;}
    }
-   const excludedDays=[];
+   const excludedDays=[];let invalidExclusion=false;
    for(const exclusion of p.get('EXDATE')||[]){
     for(const value of exclusion.value.split(',')){
+     if(!allDay&&value.endsWith('Z')!==start.value.endsWith('Z')){invalidExclusion=true;break;}
      const ex=dateValue(value,allDay);
-     if(!ex){counts.unsupported++;break;}
+     if(!ex){invalidExclusion=true;break;}
      excludedDays.push(ex.day);
     }
+    if(invalidExclusion)break;
    }
-   if(p.get('EXDATE')?.length&&counts.unsupported&&excludedDays.length===0)continue;
+   if(invalidExclusion){counts.unsupported++;continue;}
    const title=unescapeICS(prop('SUMMARY')?.value||'Imported event').slice(0,200).trim()||'Imported event';
    found.push({importUID:uid,title,startDay:a.day,endDay:last,startMinutes:allDay?540:a.minutes,
-    endMinutes:allDay?600:b.minutes,allDay,location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
+    endMinutes:allDay?600:midnightEnd?1440:b.minutes,allDay,location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
     notes:unescapeICS(prop('DESCRIPTION')?.value||'').slice(0,4000),repeat,excludedDays:[...new Set(excludedDays)]});
    counts.imported++;known.add(uid);continue;
   }
