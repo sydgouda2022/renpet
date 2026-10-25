@@ -6,6 +6,7 @@ import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presen
 import {AMUN_SOURCE,loadFestivalCatalog,enabledSourceIds,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
 import {loadScheduler,saveScheduler,schedulerRecoveryStatus,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {openBackup} from './backup.js';
+import {syncModalFocus} from './dialog-focus.mjs';
 import {initKeyboard,syncKeyboard,closeKeyboard,primeEgyptianLexicon,primeCopticLexicon} from './keyboard.js';
 import {timeEditorFields,openTimeEditor,updateTimeChoice,closeTimeEditor} from './time-editor.js';
 import {inputClock,timeText,timeHtml,localMinutes,nowLineTop} from './clock.js';
@@ -274,7 +275,7 @@ function toolbar(){
  return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-back">'+(state.view==='day'?'<button data-back aria-label="'+safe(spoken('month'))+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':yearButton)+'</div><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div></div><div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(year?'':'<p>'+safe(season)+'</p>')+'</div><div class="ux-heading-actions"><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div></div>'+(state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
-function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>'<button data-result="'+i.startDay+'"><strong>'+safe(i.title)+'</strong><small>'+safe(greg(i.startDay))+'</small></button>').join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
+function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>'<button data-result="'+i.startDay+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(greg(i.startDay))+'</small></button>').join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
 function dateFields(d,prefix=''){
  const e=egy(d);
  const names=prefix?{year:'endEgyYear',month:'endEgyMonth',day:'endEgyDay'}:{year:'egyYear',month:'egyMonth',day:'egyDay'};
@@ -390,6 +391,7 @@ function render(){
   if(marker){const relativeY=marker.getBoundingClientRect().top-main.getBoundingClientRect().top;main.scrollTop+=Math.max(0,relativeY-main.clientHeight*.35);}
  }
  previousRenderKey=viewKey;
+ syncModalFocus();
  maintainCurrentTimeLine();
 }
 
@@ -551,7 +553,14 @@ root.addEventListener('click',ev=>{
   state.view='month';render();return;
  }
  if(b.hasAttribute('data-open-year')){state.view='year';render();return;}
- if(b.hasAttribute('data-result')){state.focus=clamp(Number(b.dataset.result));state.view='day';state.search=false;render();return;}
+ if(b.hasAttribute('data-result')){
+  const target=schedule.items.find(item=>item.id===b.dataset.searchId);
+  state.focus=clamp(Number(b.dataset.result));state.view='day';state.search=false;
+  // Hidden calendars remain hidden by user choice, but the found item opens directly.
+  if(target&&!schedule.calendars.some(c=>c.id===target.calendarId&&c.visible!==false))
+   state.dialog={id:target.id,occurrenceDay:target.startDay};
+  render();return;
+ }
  if(b.hasAttribute('data-prev')){navigate(-1);return;}
  if(b.hasAttribute('data-next')){navigate(1);return;}
  if(b.hasAttribute('data-back')){state.saveNotice=false;state.view='month';render();return;}

@@ -32,7 +32,8 @@ for(const [dialect,mask] of [['sahidic',1],['bohairic',2]]){
  assert.ok(candidates.slice(1).every(x=>x.dialects&mask));
 }
 assert.equal(wordRange('ⲁⲡⲉ ⲥⲙ',7,'cop').raw,'ⲥⲙ');
-assert.deepEqual(wordRange('ⲥⲙⲉ',2,'cop'),{start:0,end:3,raw:'ⲥⲙⲉ'});
+assert.deepEqual(wordRange('ⲥⲙⲉ',2,'cop'),{start:0,end:3,raw:'ⲥⲙ'});
+assert.deepEqual(wordRange('𓄿𓈖𓏏',4,'egy'),{start:0,end:6,raw:'𓄿𓈖'},'Mid-word sign prediction replaces the whole word');
 assert.equal(wordRange('𓄿𓅓 𓈖𓏏',9,'egy').raw,'𓈖𓏏');
 assert.equal(deleteGrapheme('𓄿𓂝',4,4).start,2);
 assert.equal(deleteGrapheme('ⲁ̅',2,2).start,0);

@@ -1,4 +1,5 @@
 import { createBackup, parseBackup, restoreBackup } from './backup-core.mjs';
+import {syncModalFocus} from './dialog-focus.mjs';
 import { exportICS, eventUID } from './ics-core.mjs';
 import { parseICS } from './ics-import.mjs';
 import { dayNumber } from './calendar.js';
@@ -19,6 +20,7 @@ function close() {
   dialog.remove();
   dialog = null;
   if (lastFocus?.isConnected) lastFocus.focus();
+  syncModalFocus();
 }
 function download(text, filename, mime='application/json;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([text], { type:mime }));
@@ -148,7 +150,7 @@ function open() {
     }
   });
   document.body.append(dialog);
-  dialog.querySelector('[data-backup="export"]')?.focus();
+  syncModalFocus();
 }
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && dialog) close(); });
 export function openBackup(){open();}
