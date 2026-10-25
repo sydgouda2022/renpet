@@ -1,6 +1,7 @@
 import {COPTIC_LETTERS,COP_NUMBERS,EGY_NUMBERS,wordRange,suggestions,deleteGrapheme} from './keyboard-core.js';
 import {ensureLexicon} from './lexicon-install.mjs';
 import {ensureCopticLexicon} from './coptic-install.mjs';
+import {egyptianSignPages} from './keyboard-api.mjs';
 
 const STORAGE='renpet.keyboard.personal.v1';
 const DIALECT_STORAGE='renpet.keyboard.coptic-dialect.v1';
@@ -51,26 +52,17 @@ async function load(lang){
    console.warn('Coptic lexicon unavailable:',err);
   }
  }else if(lang==='egy'){
-  if(!catalog.egy?.pages){
-   try{
-    const res=await fetch('./assets/dictionaries/signs.json');
-    if(!res.ok)throw Error('Hieroglyphic signs unavailable: '+res.status);
-    catalog.egy=await res.json();
-   }catch(err){
-    console.warn('Hieroglyphic keyboard signs unavailable:',err);
-    catalog.egy={rows:[],pages:{uni:[],bi:[],tri:[]}};
-   }
-  }
+  // Source-owned headless API supplies all native sign pages.
+  if(!catalog.egy)catalog.egy={pages:egyptianSignPages(),lexiconReady:false};
   try{
    const installed=await ensureLexicon();
-   catalog.egy.entries=installed.payload.entries;
-   catalog.egy.rows=installed.payload.entries.map(e=>[e.signs,e.attestations||1,e.lemma||e.ref,e.ref]);
+   catalog.egy.payload=installed.payload;
+   catalog.egy.manifest=installed.manifest;
    catalog.egy.source=installed.manifest.release;
    catalog.egy.complete=installed.complete;
    catalog.egy.lexiconReady=true;
    catalog.egy.lexiconError=null;
   }catch(err){
-   catalog.egy.rows=[];
    catalog.egy.lexiconReady=false;
    catalog.egy.lexiconError=String(err?.message||err);
    console.warn('Late Egyptian lexicon unavailable:',err);
