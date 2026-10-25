@@ -55,7 +55,11 @@ async function load(lang){
   // Source-owned headless API supplies all native sign pages.
   if(!catalog.egy)catalog.egy={pages:egyptianSignPages(),lexiconReady:false};
   try{
-   const installed=await ensureLexicon();
+   const installed=await ensureLexicon({
+    manifestUrl:new URL('./lexicon/manifest.json',import.meta.url).href,
+    payloadUrl:new URL('./lexicon/lexicon.json',import.meta.url).href,
+    timeoutMs:30000
+   });
    catalog.egy.payload=installed.payload;
    catalog.egy.manifest=installed.manifest;
    catalog.egy.source=installed.manifest.release;
