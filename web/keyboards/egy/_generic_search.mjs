@@ -1,106 +1,75 @@
-/** Single native-script prediction kernel for Renpet and shared lexicon clients.
- *  Lexical rows are indexed once (binary prefix lookup), not rescanned on every key.
- *  An unassigned Coptic dialect is NOT treated as either Sahidic or Bohairic.
- *  This engine never transliterates, auto-corrects, or creates attested spellings.
- */
-const collate=(a,b)=>a<b?-1:a>b?1:0;
-export function keyboardKey(value,language){
- if(typeof value!=='string')throw new TypeError('Unicode string required');
- if(language==='egy')return value.normalize('NFC');
- if(language==='cop')return value.normalize('NFD').toLocaleLowerCase('und').replace(/\p{Mark}/gu,'').normalize('NFC');
- throw new RangeError('Unsupported keyboard language');
+/** Egyptian-only, native Unicode prefix predictor. No transliteration or autocorrection. */
+const cmp=(a,b)=>a<b?-1:a>b?1:0;
+export function keyboardKey(text,language='egy'){
+ if(language!=='egy')throw new RangeError('Wrong keyboard language');
+ if(typeof text!=='string')throw new TypeError('Unicode string required');
+ return text.normalize('NFC');
 }
 export function prepareKeyboardIndex(language,pack){
- if(!pack||!['cop','egy'].includes(language))throw Error('Invalid keyboard pack');
- const rows=[];
- if(language==='cop'){
-  if(!Array.isArray(pack.rows))throw Error('Missing Coptic dictionary rows');
-  for(const entry of pack.rows){
-   if(!Array.isArray(entry)||entry.length<2||typeof entry[0]!=='string'||!entry[0]||![0,1,2,3].includes(entry[1]))throw Error('Invalid Coptic word or dialect mask');
-   const surface=entry[0];
-   rows.push({text:surface,key:keyboardKey(surface,language),id:'cop:'+surface,
-     dialects:entry[1],frequency:Number(pack.popularity?.[surface])||0,source:'COP'});
-  }
- }else{
-  const entries=pack.entries||pack.rows;
-  if(!Array.isArray(entries))throw Error('Missing Late Egyptian spellings');
-  for(const item of entries){
-   const legacy=Array.isArray(item),text=legacy?item[0]:item.signs;
-   if(typeof text!=='string'||!text)throw Error('Invalid Late Egyptian Unicode spelling');
-   rows.push({text,key:keyboardKey(text,language),id:legacy?'egy:'+text:(item.ref||'egy:'+text),
-    source:!legacy&&item.source==='RAMSES-WORD-MODEL-2023'?'RAMSES-CORPUS':'LATE',
-    lexicalIdentityVerified:legacy||item.lexical_identity_verified!==false,
-    dialects:0,frequency:Math.max(0,Number(legacy?item[1]:item.attestations)||0),
-    lemma:legacy?item[2]:item.lemma,sourceRef:legacy?item[3]:(item.ref||null)});
-  }
- }
- rows.sort((a,b)=>collate(a.key,b.key)||collate(a.id,b.id));
- return {language,rows};
+ if(language!=='egy')throw new RangeError('Wrong keyboard language');
+ const entries=pack?.entries||pack?.rows;
+ if(!Array.isArray(entries))throw new TypeError('Missing Late Egyptian spelling records');
+ const rows=entries.map(item=>{
+  const legacy=Array.isArray(item),text=legacy?item[0]:item?.signs;
+  if(typeof text!=='string'||!text)throw new TypeError('Invalid native spelling');
+  const source=legacy?'LATE':item.source==='RAMSES-WORD-MODEL-2023'?'RAMSES-CORPUS':'LATE';
+  const ref=legacy?(item[3]||'egy:'+text):item.ref;
+  const frequency=Number(legacy?item[1]:item.attestations);
+  return {text,key:keyboardKey(text),id:typeof ref==='string'&&ref?ref:'egy:'+text,
+   source,sourceRef:ref||null,frequency:Number.isFinite(frequency)?Math.max(0,frequency):0,
+   lexicalIdentityVerified:legacy||item.lexical_identity_verified!==false,
+   lemma:legacy?item[2]:(item.lemma||null)};
+ });
+ rows.sort((a,b)=>cmp(a.key,b.key)||cmp(a.id,b.id));
+ return {language:'egy',rows};
 }
-function bisect(rows,value){
+function lowerBound(rows,key){
  let lo=0,hi=rows.length;
- while(lo<hi){const m=(lo+hi)>>>1;if(rows[m].key<value)lo=m+1;else hi=m;}return lo;
+ while(lo<hi){const mid=Math.floor((lo+hi)/2);if(rows[mid].key<key)lo=mid+1;else hi=mid;}return lo;
 }
-function permitted(row,language,dialect){
- if(language!=='cop'||dialect==='all')return true;
- if(dialect==='sahidic')return (row.dialects&1)!==0;
- if(dialect==='bohairic')return (row.dialects&2)!==0;
- throw RangeError('Invalid Coptic dialect');
+function count(source,key){
+ const n=Number(Object.hasOwn(source||{},key)?source[key]:0);
+ return Number.isFinite(n)?Math.min(10000,Math.max(0,n)):0;
 }
-function count(obj,key){
- const x=Number(obj?.[key]||0);
- return Number.isFinite(x)?Math.min(10000,Math.max(0,x)):0;
-}
-export function predictKeyboard(index,raw,{dialect='all',learned={},previous='',limit=4}={}){
- if(!index||!['egy','cop'].includes(index.language)||!Array.isArray(index.rows))throw Error('Invalid keyboard index');
- if(typeof raw!=='string')throw TypeError('Expected Unicode signs/letters');
- if(!Number.isInteger(limit)||limit<1||limit>80)throw RangeError('Invalid suggestion count');
+export function predictKeyboard(index,raw,{limit=4,learned={},previous=''}={}){
+ if(index?.language!=='egy'||!Array.isArray(index.rows))throw new TypeError('Invalid Egyptian index');
+ if(typeof raw!=='string')throw new TypeError('Unicode input required');
+ if(!Number.isInteger(limit)||limit<1||limit>80)throw new RangeError('Invalid suggestion limit');
  if(!raw)return [];
- const language=index.language,lookup=keyboardKey(raw,language);
- const found=new Map();
- let exact=false;
- const insert=(row,personal=false)=>{
-  if(row.text===raw){exact ||= !personal;return;}
+ const lookup=keyboardKey(raw),found=new Map();
+ let exact=false,exactRefs=[];
+ const add=(row,personal=false)=>{
   if(!row.key.startsWith(lookup))return;
-  if(!permitted(row,language,dialect))return;
-  const learnedN=count(learned,language+':'+row.text);
-  const contextN=previous?count(learned,'ctx:'+language+':'+previous+':'+row.text):0;
-  const sourceWeight=row.source==='RAMSES-CORPUS'?-12:0;
-  const score=(personal?0:Math.log1p(row.frequency)*8)+sourceWeight+Math.log1p(learnedN)*45+
-      Math.log1p(contextN)*30-(Array.from(row.text).length*0.05)+
-      (language==='cop'&&row.dialects===3?3:0);
+  if(row.text===raw){
+   if(!personal){exact=true;exactRefs.push(row.sourceRef||row.id);}
+   return;
+  }
+  const learning=count(learned,'egy:'+row.text);
+  const context=previous?count(learned,'ctx:egy:'+previous+':'+row.text):0;
+  const score=(personal?0:Math.log1p(row.frequency)*8)+(row.source==='RAMSES-CORPUS'?-12:0)+
+    Math.log1p(learning)*45+Math.log1p(context)*30-[...row.text].length*0.05;
+  const existing=found.get(row.text);
   const candidate={text:row.text,raw:false,personal,attested:!personal,
-   dialects:row.dialects,frequency:row.frequency,lemma:row.lemma??null,
-   lexicalIdentityVerified:personal?false:row.lexicalIdentityVerified!==false,
-   source:personal?'PERSONAL':row.source,lexicon_ref:personal?null:(row.sourceRef||row.id),
-   score};
-  const old=found.get(candidate.text);
-  if(!old||(!old.attested&&candidate.attested)||candidate.score>old.score&&old.attested===candidate.attested)
-   found.set(candidate.text,candidate);
+   frequency:row.frequency,lemma:row.lemma,source:personal?'PERSONAL':row.source,
+   lexicalIdentityVerified:!personal&&row.lexicalIdentityVerified,
+   lexicon_ref:personal?null:row.sourceRef||row.id,
+   lexicon_refs:personal?[]:[row.sourceRef||row.id],score};
+  if(!existing){found.set(row.text,candidate);return;}
+  if(!personal && existing.attested){
+   existing.lexicon_refs.push(candidate.lexicon_ref);
+   if(candidate.score>existing.score){candidate.lexicon_refs=existing.lexicon_refs;found.set(row.text,candidate);}
+  }else if(!personal){candidate.lexicon_refs=existing.lexicon_refs.concat(candidate.lexicon_refs);found.set(row.text,candidate);}
  };
- for(let i=bisect(index.rows,lookup);i<index.rows.length;i++){
-  const row=index.rows[i];if(!row.key.startsWith(lookup))break;
-  if(permitted(row,language,dialect)){if(row.text===raw)exact=true;else insert(row);}
+ for(let i=lowerBound(index.rows,lookup);i<index.rows.length;i++){
+  const row=index.rows[i];if(!row.key.startsWith(lookup))break;add(row);
  }
- for(const [k,n] of Object.entries(learned)){
-  if(!k.startsWith(language+':')||!(Number(n)>0))continue;
-  const text=k.slice(language.length+1);
+ for(const [key,n] of Object.entries(learned||{})){
+  if(!key.startsWith('egy:')||!(Number(n)>0))continue;
+  const text=key.slice(4);
   if(!text||text===raw||found.has(text))continue;
-  insert({text,key:keyboardKey(text,language),id:null,dialects:0,frequency:0,source:'PERSONAL'},true);
+  add({text,key:keyboardKey(text),frequency:0,source:'PERSONAL',lexicalIdentityVerified:false},true);
  }
- const list=[...found.values()];
- list.sort((a,b)=>b.score-a.score||collate(a.text,b.text));
- // In the combined Coptic view, show useful examples from both dialects
- // without overriding user frequency/context preferences on later slots.
- let chosen=[];
- if(language==='cop'&&dialect==='all'){
-  const s=list.find(x=>x.dialects&1),b=list.find(x=>x.dialects&2);
-  if(s)chosen.push(s);
-  if(b&&b.text!==s?.text)chosen.push(b);
- }
- for(const x of list){
-  if(chosen.length>=limit-1)break;
-  if(!chosen.some(y=>y.text===x.text))chosen.push(x);
- }
- return [{text:raw,raw:true,personal:false,attested:exact,lexicon_ref:null},...chosen.slice(0,limit-1).map(({score,...x})=>x)];
+ const options=[...found.values()].sort((a,b)=>b.score-a.score||cmp(a.text,b.text));
+ return [{text:raw,raw:true,attested:exact,personal:false,lexicon_ref:exactRefs[0]||null,
+  lexicon_refs:exactRefs},...options.slice(0,limit-1).map(({score,...rest})=>rest)];
 }
