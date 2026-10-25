@@ -12,4 +12,17 @@ x=parseICS(unsupported);assert.equal(x.unsupported,1);assert.equal(x.imported,1)
 const bad=multi.replace('RRULE:FREQ=DAILY;INTERVAL=10','RRULE:FREQ=MONTHLY;BYDAY=MO');
 x=parseICS(bad);assert.equal(x.unsupported,1);assert.equal(x.imported,1);
 assert.throws(()=>parseICS('not a calendar'),/Invalid/);
+
+// Regression: an exclusive midnight DTEND must not create a phantom next-day appointment.
+const midnight='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:midnight\r\nDTSTART:20261025T230000\r\nDTEND:20261026T000000\r\nSUMMARY:Late meeting\r\nEND:VEVENT\r\nEND:VCALENDAR';
+const mid=parseICS(midnight);assert.equal(mid.imported,1);
+assert.equal(mid.items[0].startDay,mid.items[0].endDay);
+// Different DTSTART/DTEND time interpretations must not be silently combined.
+const mixed=midnight.replace('DTSTART:20261025T230000','DTSTART:20261025T230000Z');
+assert.equal(parseICS(mixed).unsupported,1);
+// Invalid exclusion invalidates the occurrence rather than importing a partial exception list.
+const invalidExdate=multi.replace('EXDATE:20261105T090000','EXDATE:20261105T090000,NOT_A_DATE');
+const badExceptions=parseICS(invalidExdate);
+assert.equal(badExceptions.imported,1);assert.equal(badExceptions.unsupported,1);
+
 console.log('ICS one-way import and conflict handling verified');
