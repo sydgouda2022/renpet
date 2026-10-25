@@ -1,0 +1,117 @@
+name: Bootstrap Renpet from aaa with two independent keyboard dependencies
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bootstrap-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    if: github.repository == 'sydgouda2022/renpet'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: true}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v5
+        with: {node-version: '24'}
+      - name: Import original calendar and independently published keyboards
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch main https://github.com/sydgouda2022/aaa.git /tmp/aaa-original
+          cp -a /tmp/aaa-original/renpet/. ./
+          # Lexical source seed tables belong exclusively to Coptic Keyboard.
+          rm -f web/assets/dictionaries/coptic.json web/assets/dictionaries/coptic-popular.json
+          mkdir -p web/keyboards/cop web/keyboards/egy
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          names=['coptic-keyboard','hieroglyphic-keyboard']
+          lock={'format':'keyboard-dependencies-v1','migration_origin':'sydgouda2022/aaa',
+                'dependencies':{name:{'upstream_repository':'sydgouda2022/'+name,
+                                      'source_commit':None,'version':None,
+                                      'manifest_sha256':None,'lexicon_sha256':None}
+                                for name in names}}
+          Path('keyboard-lock.json').write_text(json.dumps(lock,indent=2)+'\n')
+          Path('SOURCE_PROVENANCE.json').write_text(json.dumps({
+            'origin':'sydgouda2022/aaa',
+            'commit':subprocess.check_output(['git','-C','/tmp/aaa-original','rev-parse','HEAD'],text=True).strip(),
+            'source_subfolder':'renpet/'
+          },indent=2)+'\n')
+          PY
+          cat > web/keyboard-search.mjs <<'EOF'
+          /** Sole adapter: prediction and attestations belong to each upstream keyboard. */
+          import * as cop from './keyboards/cop/keyboard_search.mjs';
+          import * as egy from './keyboards/egy/keyboard_search.mjs';
+          function own(lang) {
+            if (lang === 'cop') return cop;
+            if (lang === 'egy') return egy;
+            throw new RangeError('Unsupported keyboard language');
+          }
+          export function keyboardKey(input, lang) { return own(lang).keyboardKey(input, lang); }
+          export function prepareKeyboardIndex(lang, pack) { return own(lang).prepareKeyboardIndex(lang, pack); }
+          export function predictKeyboard(index, input, options={}) {
+            return own(index?.language).predictKeyboard(index, input, options);
+          }
+          EOF
+          cat > tools/build_release.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$(dirname "$0")/.."
+          python tools/sync_keyboards.py --verify
+          python tools/build_app_icons.py
+          mkdir -p web/assets/fonts
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/google/fonts/main/ofl/notosansegyptianhieroglyphs/NotoSansEgyptianHieroglyphs-Regular.ttf' -o web/assets/fonts/NotoSansEgyptianHieroglyphs-Regular.ttf
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/google/fonts/main/ofl/notosansegyptianhieroglyphs/OFL.txt' -o web/assets/fonts/OFL-NotoEgyptian.txt
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo%5Bslnt%2Cwght%5D.ttf' -o web/assets/fonts/Cairo-VF.ttf
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/OFL.txt' -o web/assets/fonts/OFL-Cairo.txt
+          python tools/make_numerals.py
+          python tools/stamp_assets.py
+          python tools/build_csp.py
+          python tools/build_service_worker.py
+          EOF
+          chmod +x tools/build_release.sh
+          python tools/sync_keyboards.py
+          bash tools/build_release.sh
+          cat > README.md <<'EOF'
+          # Renpet — Egyptian Calendar
+
+          Independent calendar and appointment-management source, migrated from
+          `sydgouda2022/aaa/renpet`. Native predictive input is supplied by
+          `sydgouda2022/coptic-keyboard` and
+          `sydgouda2022/hieroglyphic-keyboard`.
+
+          See `keyboard-lock.json` for pinned upstream commits and SHA-256 release
+          hashes. `tools/sync_keyboards.py` updates only keyboard dependencies,
+          not the user's appointments, saved calendar data or learning.
+          Deployment is intentionally disabled until Cloudflare cutover.
+          EOF
+      - name: Run calendar, keyboard and offline regression
+        run: |
+          set -euo pipefail
+          python tools/sync_keyboards.py --verify
+          node --check web/keyboard-search.mjs
+          node tests/keyboard.test.mjs
+          node tests/scheduler.test.mjs
+          node tests/calendar-presentation.test.mjs
+          node tests/festival-catalog.test.mjs
+          node tests/ui.test.mjs
+          node tests/backup.test.mjs
+          python tests/test_service_worker_source.py
+          python tests/test_app_icons.py
+          test -s web/assets/dictionaries/signs.json
+          test ! -e web/lexicon/lexicon.sqlite3
+          test ! -e web/coptic-lexicon/lexicon.sqlite3
+      - name: Commit tested independent calendar source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf 'dist/\n__pycache__/\n*.pyc\n' > .gitignore
+          git add README.md SOURCE_PROVENANCE.json keyboard-lock.json .gitignore tools web tests worker.mjs wrangler.worker.toml FESTIVAL_SOURCES.md KEYBOARD_DATA_SOURCES.md SEASONAL_DESIGN.md
+          git diff --cached --quiet && exit 0
+          git commit -m 'Import Renpet and verify both independently published keyboard dependencies'
+          git push origin HEAD:main
