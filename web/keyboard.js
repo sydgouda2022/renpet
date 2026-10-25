@@ -120,6 +120,13 @@ function draw(){
  // Leave form controls above the dock rather than obscuring them.
  requestAnimationFrame(()=>{if(active?.isConnected)active.scrollIntoView({block:'nearest',behavior:'instant'});});
 }
+// Updating suggestions must not rebuild every key and disturb active iOS input.
+function refreshPredictions(){
+ if(!keyboard||keyboard.hidden||!active?.isConnected)return;
+ const region=keyboard.querySelector('.kb-suggestions');
+ if(!region){draw();return;}
+ region.outerHTML=predictBar(keyboardLanguage());
+}
 function hide(){
  if(!keyboard)return;keyboard.hidden=true;
  document.body.classList.remove('keyboard-open');active=null;
@@ -136,7 +143,7 @@ function edit(text,range=null){
    const candidate=old.name?document.querySelector('[name="'+CSS.escape(old.name)+'"]'):null;
    if(eligible(candidate))active=candidate;
   }
-  if(active?.isConnected){active.focus({preventScroll:true});draw();}else hide();
+  if(active?.isConnected){active.focus({preventScroll:true});refreshPredictions();}else hide();
  });
 }
 function click(ev){
@@ -189,7 +196,7 @@ export function initKeyboard(getLanguage){
   draw();
  });
  document.addEventListener('input',e=>{
-  if(e.target===active)draw();
+  if(e.target===active)refreshPredictions();
  });
  // Clicking outside dismisses the keyboard without losing the text field.
  // On iOS a second tap on that still-focused field does not fire focusin;

@@ -1,5 +1,5 @@
 import { createBackup, parseBackup, restoreBackup } from './backup-core.mjs';
-import { exportICS } from './ics-core.mjs';
+import { exportICS, eventUID } from './ics-core.mjs';
 import { parseICS } from './ics-import.mjs';
 import { dayNumber } from './calendar.js';
 import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot } from './scheduler.js';
@@ -55,7 +55,7 @@ async function importCalendarICS(){
    const calendar=await result.json(),sched=loadScheduler();
    const parsed=parseICS(await file.text(),{
     minDay:dayNumber(calendar.min_date),maxDay:dayNumber(calendar.max_date),
-    knownUIDs:sched.items.map(i=>i.importUID).filter(Boolean)
+    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean)
    });
    const counts=''+parsed.imported+' '+(lang()==='ar'?'موعد صالح · ':'events ready · ')+
     parsed.unsupported+' '+(lang()==='ar'?'تكرارات/مناطق زمنية غير مدعومة · ':'unsupported · ')+

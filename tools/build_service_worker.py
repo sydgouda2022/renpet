@@ -81,7 +81,7 @@ self.addEventListener('fetch', event => {
  }
  event.respondWith((async () => {
   const cache = await caches.open(CACHE);
-  // Critical: HTML requests app.js?v=6.x but precache stored ./app.js.
+  // HTML uses versioned URLs, while precache stores canonical unversioned files.
   // Strip version queries to their canonical cache key first. Explicit keys
   // work on WebKit versions that implement ignoreSearch inconsistently.
   const canonical = new URL(event.request.url);

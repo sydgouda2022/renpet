@@ -5,7 +5,7 @@ dictionary, prediction algorithm or sign catalog is authored by Renpet.**
 
 The repositories are independent, headless programming APIs:
 
-- [Coptic Keyboard](https://github.com/sydgouda2022/coptic-keyboard) — `src/core.mjs` and `src/keyboard_search.mjs`, API v2. Source-backed Sahidic and Bohairic input with optional local learning.
+- [Coptic Keyboard](https://github.com/sydgouda2022/coptic-keyboard) — `src/core.mjs`, `src/editor.mjs`, `src/lexicon.mjs` and `src/index.mjs`, API v2. Source-backed Sahidic and Bohairic input with optional local learning.
 - [Hieroglyphic Keyboard](https://github.com/sydgouda2022/hieroglyphic-keyboard) — `src/keyboard_api.mjs`, `keyboard_search.mjs` and `keyboard_catalog.js`, API v2. Native signs, verified lexicon records and source-aware suggestions.
 
 ## Runtime boundary
@@ -13,15 +13,17 @@ The repositories are independent, headless programming APIs:
 `web/keyboard-api.mjs` is the Renpet adapter: it calls the pinned library
 interfaces and prepares prediction engines once per loaded lexicon. Renpet's
 `web/keyboard.js` owns the input dock and editor integration only.
-`web/keyboard-core.js` owns Unicode selection, grapheme deletion and number
-key presentation; it does not own an independent prediction engine.
+`web/keyboard-core.js` owns caret/word selection and number-key presentation;
+Unicode grapheme deletion delegates to the Coptic API's pure editor.
 
 The pinned upstream modules live under `web/keyboards/cop/` and
 `web/keyboards/egy/`. This local vendoring is required for offline use; there
 is no hosted API, telemetry or remote prediction service. References in
-`keyboard-lock.json` pin the source commit and released dictionary bytes.
-`tools/sync_keyboards.py` updates these dependencies intentionally from
-their repositories, checking release hashes and inventory counts.
+`keyboard-lock.json` pin each upstream commit, the Git blob SHA-1 of every
+vendored executable module, and SHA-256 checksums of the released lexicon bytes.
+`python tools/sync_keyboards.py --verify` checks all pins without fetching or
+writing. An upstream update requires an explicit `python tools/sync_keyboards.py`
+invocation and a reviewed pull request; CI never silently rewrites `main`.
 
 Renpet owns local keyboard learning, personal text, events, reminders,
 preferences and exports. The Coptic browser installer remains an app-managed

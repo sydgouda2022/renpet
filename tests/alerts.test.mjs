@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {dayNumber} from '../web/calendar.js';
 import {createItem,emptyState,upsertItem,excludeOccurrence} from '../web/scheduler.js';
 import {dueAlerts} from '../web/alerts.js';
-const years=[{year:6282,start:'2026-09-11',days:365},{year:6283,start:'2027-09-11',days:365}];
+const years=[{year:6282,start:'2026-09-11',days:366},{year:6283,start:'2027-09-12',days:365}];
 const day=dayNumber('2026-10-14');
 test('local alerts trigger only at their configured foreground due time',()=>{
  const state=emptyState();

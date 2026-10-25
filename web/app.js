@@ -73,7 +73,7 @@ function quickDeleteButton(item,extraClass=''){
 function eventRow(i,day=state.focus){
  const cal=schedule.calendars.find(c=>c.id===i.calendarId),color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
  const clock=i.allDay?safe(T().allDay):timeHtml(i.startMinutes,lang());
- return '<div class="event-row-shell"><button class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+day+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span>'+(i.kind==='reminder'?'<span class="reminder-box'+(isCompleted(i,day)?' is-complete':'')+'" data-complete="'+safe(i.id)+'" aria-label="'+safe(T().reminder)+'">'+icon('check')+'</span>':'')+'</button>'+quickDeleteButton(i)+'</div>';
+ return '<div class="event-row-shell"><button class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+(i._occurrenceStart??day)+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span>'+(i.kind==='reminder'?'<span class="reminder-box'+(isCompleted(i,i._occurrenceStart??day)?' is-complete':'')+'" data-complete="'+safe(i.id)+'" data-complete-occurrence="'+(i._occurrenceStart??day)+'" aria-label="'+safe(T().reminder)+'">'+icon('check')+'</span>':'')+'</button>'+quickDeleteButton(i)+'</div>';
 }
 // Existing appointments in hidden calendars are never silently represented
 // as "no events". Offer one action to show them all without losing data.
@@ -195,7 +195,7 @@ function dayView(){
  // A spanning event displays only the portion belonging to the selected day.
  // For repeated multi-day events, calculate the actual occurrence anchor first.
  const timed=daily.filter(i=>!i.allDay).map(i=>{
-  const anchor=i.repeat==='none'?i.startDay:occurrenceStartForDay(i,state.focus,data.years)??i.startDay;
+  const anchor=i._occurrenceStart??i.startDay;
   const last=anchor+Math.max(0,(i.endDay??i.startDay)-i.startDay);
   return {...i,_dayStart:state.focus>anchor?0:i.startMinutes,_dayEnd:state.focus<last?1440:i.endMinutes};
  });
@@ -213,17 +213,17 @@ function dayView(){
    let col=ends.findIndex(v=>v<=item._dayStart);
    if(col<0){col=ends.length;ends.push(-1);}
    ends[col]=Math.max(item._dayEnd||item._dayStart+60,item._dayStart+15);
-   layout.set(item.id,{col,cols:0});
+   layout.set(item.id+':'+(item._occurrenceStart??item.startDay),{col,cols:0});
   }
-  for(const item of cluster)layout.get(item.id).cols=ends.length;
+  for(const item of cluster)layout.get(item.id+':'+(item._occurrenceStart??item.startDay)).cols=ends.length;
  }
  const blocks=timed.map(i=>{
   const start=Math.max(0,Math.min(1439,i._dayStart||0)),end=Math.max(start+15,Math.min(1440,i._dayEnd??start+60));
   const cal=schedule.calendars.find(c=>c.id===i.calendarId);
   const color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
-  const pos=layout.get(i.id)||{col:0,cols:1},width=100/pos.cols;
+  const pos=layout.get(i.id+':'+(i._occurrenceStart??i.startDay))||{col:0,cols:1},width=100/pos.cols;
   const resizable=i.repeat==='none'&&i.startDay===i.endDay;
-  return '<div class="timeline-event" role="group" data-occurrence="'+state.focus+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+quickDeleteButton(i,'event-delete-timeline')+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+quickDeleteButton(i,'event-delete-timeline')+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
  return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
@@ -231,15 +231,13 @@ function dayView(){
 
 function listView(){
  const groups=[];
- for(let d=state.focus;d<=Math.min(max(),state.focus+59);d++)if(items(d).length||festivalsOn(d).length)groups.push(agenda(d));
- const hiddenStart=state.focus,hiddenEnd=Math.min(max(),state.focus+59);
- const hiddenDays=[];
- if(!groups.length){
-  for(let d=hiddenStart;d<=hiddenEnd;d++)if(hiddenItemsForDay(schedule,d,data.years).length){hiddenDays.push(d);break;}
- }
- return '<div class="list-page">'+(groups.length ? groups.join('') : hiddenDays.length
-  ?hiddenCalendarNotice(hiddenDays[0])
-  :'<div class="schedule-empty"><div class="empty-art" aria-hidden="true">▤</div><h2>'+safe(T().noUpcoming)+'</h2><p>'+safe(T().noEvents)+'</p><button class="primary" data-new>'+safe(T().addFirst)+'</button></div>')+'</div>';
+ for(let d=state.focus;d<=Math.min(max(),state.focus+59);d++)
+  if(items(d).length||festivalsOn(d).length||hiddenItemsForDay(schedule,d,data.years).length)
+   groups.push(agenda(d));
+ return '<div class="list-page">'+(groups.length?groups.join(''):
+  '<div class="schedule-empty"><div class="empty-art" aria-hidden="true">▤</div><h2>'+
+  safe(T().noUpcoming)+'</h2><p>'+safe(T().noEvents)+'</p><button class="primary" data-new>'+
+  safe(T().addFirst)+'</button></div>')+'</div>';
 }
 
 function settingsView(){
@@ -495,7 +493,7 @@ root.addEventListener('click',ev=>{
   state.saveNotice=false;state.dialog=null;render();return;
  }
  const complete=ev.target.closest('[data-complete]');
- if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,state.focus);if(!saveScheduler(sched)){alert(lang()==='ar'?'تعذر حفظ التذكير':'Could not save reminder');return;}render();}return;}
+ if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,Number(complete.dataset.completeOccurrence??state.focus));if(!saveScheduler(sched)){alert(lang()==='ar'?'تعذر حفظ التذكير':'Could not save reminder');return;}render();}return;}
  // Timeline events are accessible divs, not buttons. Open them directly.
  const timelineEvent=ev.target.closest('.timeline-event[data-edit]');
  if(timelineEvent&&!ev.target.closest('.event-resize')){

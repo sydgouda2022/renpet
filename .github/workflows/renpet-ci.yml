@@ -1,4 +1,4 @@
-name: Renpet CI and automatic keyboard dependency updates
+name: Renpet CI with pinned headless keyboard APIs
 on:
   push:
     branches: [main]
@@ -11,14 +11,12 @@ on:
       - 'wrangler.worker.toml'
       - '.github/workflows/renpet-ci.yml'
   pull_request:
-  schedule:
-    - cron: '7 * * * *'
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: renpet-keyboards-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -30,22 +28,15 @@ jobs:
         with: {python-version: '3.12'}
       - uses: actions/setup-node@v5
         with: {node-version: '24'}
-      - name: Check pinned dependencies or stage independent upstream updates
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" = pull_request ]; then
-            python tools/sync_keyboards.py --verify
-          else
-            python tools/sync_keyboards.py
-          fi
+      - name: Verify locked executable source modules and lexicon releases
+        run: python tools/sync_keyboards.py --verify
       - name: Run standalone calendar, keyboard and offline verification
         run: |
           set -euo pipefail
           node --check web/app.js
           node --check web/keyboard-api.mjs
           node --check web/keyboards/cop/core.mjs
+          node --check web/keyboards/cop/editor.mjs
           node --check web/keyboards/egy/keyboard_api.mjs
           node --test tests/*.test.mjs
           bash tools/build_release.sh
@@ -78,19 +69,6 @@ jobs:
           node tests/safari-save.cjs
           node tests/safari-direct-actions.cjs
           node tests/offline-startup.cjs
-      - name: Commit updated lock and checked browser assets
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs
-          if git diff --cached --quiet; then
-            echo 'Keyboard releases unchanged'
-          else
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Update independently verified upstream keyboard releases'
-            git push origin HEAD:main
-          fi
       - name: Install Cloudflare Wrangler ONLY after explicit cutover
         if: github.event_name != 'pull_request' && vars.CUTOVER_ENABLED == 'true'
         run: npm install --global wrangler@4

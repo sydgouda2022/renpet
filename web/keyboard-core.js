@@ -1,5 +1,6 @@
 import {suggestions} from './keyboard-api.mjs';
 import {nativeNumber} from './calendar.js';
+import {backspaceRange} from './keyboards/cop/editor.mjs';
 
 export {COPTIC_KEYS as COPTIC_LETTERS} from './keyboards/cop/core.mjs';
 export const EGY_NUMBERS=[
@@ -18,13 +19,4 @@ export function wordRange(input, caret, lang){
 }
 // The independent keyboard APIs own prediction and linguistic evidence.
 export {suggestions};
-export function deleteGrapheme(value,start,end){
- if(start!==end)return {start,end,text:''};
- if(start===0)return {start:0,end:0,text:''};
- const s=value.slice(0,start);
- if(typeof Intl!=='undefined'&&Intl.Segmenter){
-  let last=0;for(const t of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(s))last=t.index;
-  return {start:last,end:start,text:''};
- }
- return {start:start-[...s].at(-1).length,end:start,text:''};
-}
+export function deleteGrapheme(value,start,end){return backspaceRange(value,start,end);}
