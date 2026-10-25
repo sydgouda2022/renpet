@@ -61,7 +61,7 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[]}={}
    // DTEND is exclusive; next-day midnight is the previous day's ending.
    const midnightEnd=!allDay&&b.day>a.day&&b.minutes===0;
    const last=allDay||midnightEnd?b.day-1:b.day;
-   if(a.day<minDay||last>maxDay||last<a.day||(last===a.day&&!allDay&&b.minutes<=a.minutes)){
+   if(a.day<minDay||last>maxDay||last<a.day||(!allDay&&(b.day<a.day||(b.day===a.day&&b.minutes<=a.minutes)))){
     counts.invalid++;continue;
    }
    const rule=prop('RRULE')?.value,parts=Object.fromEntries((rule||'').split(';').filter(Boolean).map(s=>s.split('=')));
