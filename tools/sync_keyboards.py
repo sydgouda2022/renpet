@@ -94,8 +94,9 @@ def stage(name, sha):
             # The hieroglyphic publisher now ships a single self-contained,
             # provenance-checked keyboard_search.mjs; no generic helper exists.
             pass
-        if language == "egy":
-            files["web/assets/dictionaries/signs.json"] = get("release/signs.json")
+        # Renpet owns its keyboard sign-page layout and generates the
+        # sign catalog from its own pinned tools/build_keyboard_signs.py.
+        # Hieroglyphic upstream now publishes the lexicon, not sign pages.
     else:
         if language != "egy":
             raise ValueError("Coptic is not a MdwNfr dependency")
