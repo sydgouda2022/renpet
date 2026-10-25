@@ -50,7 +50,7 @@ const far=exportICS({...state,items:[yearly]},years,occursOn,opts);
 assert.ok(far.count>=3,'Egyptian yearly repeats survive the 2-year boundary');
 assert.ok(far.text.includes('DTSTART:202810'));
 const alarm=exportICS({...state,items:[{...item,id:'reminder',kind:'reminder',alert:'15min'}]},years,resolver,opts);
-assert.match(alarm.text,/BEGIN:VALARM\\r\\nACTION:DISPLAY/);
+assert.match(alarm.text,/BEGIN:VALARM\r\nACTION:DISPLAY/);
 assert.match(alarm.text,/TRIGGER:-PT15M/);
 const incoming=parseICS(alarm.text);
 assert.equal(incoming.imported,1);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from '../web/calendar-presentation.mjs';
-import {toGregorian,dayNumber} from '../web/calendar.js';
+import {toGregorian,toEgyptian,dayNumber} from '../web/calendar.js';
 
 const data=JSON.parse(await readFile(new URL('../web/data.json',import.meta.url),'utf8'));
 // Verify each boundary using actual dates, including the sixth year-end day
