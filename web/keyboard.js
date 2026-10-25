@@ -76,13 +76,13 @@ async function load(lang){
 }
 function pageButtons(lang){
  if(lang!=='egy')return '';
- return '<div class="kb-tabs" role="tablist" aria-label="Hieroglyphic sign classes">'+[
-  ['uni','𓄿','Uniliterals'],['bi','𓉐','Biliterals'],['tri','𓆣','Triliterals']
+ return '<div class="kb-tabs" role="tablist" aria-label="𓏺 · 𓏺𓏺 · 𓏺𓏺𓏺">'+[
+  ['uni','𓄿','𓏺'],['bi','𓉐','𓏺𓏺'],['tri','𓆣','𓏺𓏺𓏺']
  ].map(([p,icon,label])=>'<button type="button" role="tab" aria-selected="'+(tab===p)+'" class="'+(p===tab?'selected':'')+'" data-kb-tab="'+p+'" aria-label="'+label+'"><span>'+icon+'</span><small>'+(p==='uni'?'𓏺':p==='bi'?'𓏺𓏺':'𓏺𓏺𓏺')+'</small></button>').join('')+'</div>';
 }
 function numberButtons(lang){
  const values=lang==='cop'?COP_NUMBERS:EGY_NUMBERS;
- return '<div class="kb-numbers" aria-label="Number signs">'+values.map(n=>'<button type="button" class="kb-num" data-kb-insert="'+escape(n.text)+'" title="'+n.value+'" aria-label="'+n.value+'">'+n.text+'</button>').join('')+'</div>';
+ return '<div class="kb-numbers" aria-label="𓎆 · ⲓ">'+values.map(n=>'<button type="button" class="kb-num" data-kb-insert="'+escape(n.text)+'" title="'+n.value+'" aria-label="'+n.value+'">'+n.text+'</button>').join('')+'</div>';
 }
 function keys(lang){
  const options=lang==='cop'?COPTIC_LETTERS.map(ch=>[upper?ch.toLocaleUpperCase():ch,'']):(catalog.egy?.pages?.[tab]||[]);
@@ -112,10 +112,10 @@ function draw(){
  const title=lang==='cop'?'Ⲥⲁϩⲓⲇⲓⲕⲏ · Ⲃⲟϩⲁⲓⲣⲓⲕⲏ':'𓄿 · 𓉐 · 𓆣';
  keyboard.setAttribute('aria-label',title);
  keyboard.innerHTML='<div class="kb-top"><span class="kb-name">'+title+'</span><button type="button" data-kb-done aria-label="Close keyboard">✓</button></div>'
-  +(lang==='cop'?'<div class="kb-dialects" role="group" aria-label="Coptic dialect">'+[['all','Both'],['sahidic','Sahidic'],['bohairic','Bohairic']].map(([id,label])=>'<button type="button" data-kb-dialect="'+id+'" aria-pressed="'+(copticDialect===id)+'" class="'+(copticDialect===id?'selected':'')+'">'+label+'</button>').join('')+'</div>':'')
+  +(lang==='cop'?'<div class="kb-dialects" role="group" aria-label="Coptic dialect">'+[['all','Ⲥ + Ⲃ'],['sahidic','Ⲥⲁϩⲓⲇⲓⲕⲏ'],['bohairic','Ⲃⲟϩⲁⲓⲣⲓⲕⲏ']].map(([id,label])=>'<button type="button" data-kb-dialect="'+id+'" aria-pressed="'+(copticDialect===id)+'" class="'+(copticDialect===id?'selected':'')+'">'+label+'</button>').join('')+'</div>':'')
   +predictBar(lang)+pageButtons(lang)+numberButtons(lang)+keys(lang)
   +'<div class="kb-controls">'+(lang==='cop'?'<button type="button" data-kb-shift aria-pressed="'+upper+'">⇧</button>':'')
-  +'<button type="button" data-kb-insert="،">،</button><button type="button" class="kb-space" data-kb-space>Space</button>'
+  +'<button type="button" data-kb-insert="،">،</button><button type="button" class="kb-space" data-kb-space aria-label="␣">␣</button>'
   +'<button type="button" data-kb-back aria-label="Backspace">⌫</button></div>';
  // Leave form controls above the dock rather than obscuring them.
  requestAnimationFrame(()=>{if(active?.isConnected)active.scrollIntoView({block:'nearest',behavior:'instant'});});
@@ -212,9 +212,8 @@ export function initKeyboard(getLanguage){
   // The Add/Edit click creates and focuses a new editor before this event
   // bubbles to document. Never immediately hide that newly opened keyboard.
   if(e.target.closest('[data-new],[data-edit],[data-hour]'))return;
-  // Key input immediately rebuilds keyboard.innerHTML. The original key
-  // may already be detached by the time click reaches document; the event's
-  // composed path still reliably identifies it as an inside-keyboard tap.
+  // Dialect, sign-page and shift controls may rebuild the keyboard. Inspect
+  // the composed path so the tap remains recognized after a replacement.
   const keyboardTap=e.composedPath?.().includes(keyboard)||keyboard.contains(e.target);
   if(!keyboard.hidden&&!keyboardTap&&e.target!==active&&!eligible(e.target))hide();
  });

@@ -1,8 +1,9 @@
 import { createBackup, parseBackup, restoreBackup } from './backup-core.mjs';
+import {syncModalFocus} from './dialog-focus.mjs';
 import { exportICS, eventUID } from './ics-core.mjs';
 import { parseICS } from './ics-import.mjs';
 import { dayNumber } from './calendar.js';
-import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot } from './scheduler.js';
+import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, removeItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot, CORRUPT_RECORD_STORE } from './scheduler.js';
 
 // Backup and restore work entirely on the user's device. No account or upload.
 const words = {
@@ -19,6 +20,7 @@ function close() {
   dialog.remove();
   dialog = null;
   if (lastFocus?.isConnected) lastFocus.focus();
+  syncModalFocus();
 }
 function download(text, filename, mime='application/json;charset=utf-8') {
   const url = URL.createObjectURL(new Blob([text], { type:mime }));
@@ -55,14 +57,20 @@ async function importCalendarICS(){
    const calendar=await result.json(),sched=loadScheduler();
    const parsed=parseICS(await file.text(),{
     minDay:dayNumber(calendar.min_date),maxDay:dayNumber(calendar.max_date),
-    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean)
+    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean),
+    knownSeriesIds:sched.items.map(i=>i.id)
    });
+   const eligibleCancellations=parsed.cancellations.filter(uid=>sched.items.some(item=>item.importUID===uid));
    const counts=''+parsed.imported+' '+(lang()==='ar'?'موعد صالح · ':'events ready · ')+
     parsed.unsupported+' '+(lang()==='ar'?'تكرارات/مناطق زمنية غير مدعومة · ':'unsupported · ')+
-    parsed.invalid+' '+(lang()==='ar'?'غير صالح · ':'invalid · ')+parsed.duplicate+' '+(lang()==='ar'?'مكرر':'already imported');
-   if(!parsed.imported){window.alert(counts);return;}
+    parsed.invalid+' '+(lang()==='ar'?'غير صالح · ':'invalid · ')+parsed.duplicate+' '+(lang()==='ar'?'مكرر · ':'already imported · ')+
+    eligibleCancellations.length+' '+(lang()==='ar'?'إلغاء لمواعيد مستوردة':'confirmed cancellations');
+   if(!parsed.imported&&!eligibleCancellations.length){window.alert(counts);return;}
    if(!window.confirm((lang()==='ar'?'استيراد هذه المواعيد إلى رنبت؟':'Import these events into Renpet?')+'\n'+counts))return;
    try{download(createBackup(localStorage),'renpet-before-ics-import-'+new Date().toISOString().slice(0,10)+'.json');}catch{}
+   for(const uid of eligibleCancellations){
+    for(const matching of sched.items.filter(item=>item.importUID===uid))removeItem(sched,matching.id);
+   }
    for(const imported of parsed.items){
     const event={...createItem({...imported,kind:'event',calendarId:'personal'}),importUID:imported.importUID,
      excludedDays:imported.excludedDays};
@@ -110,6 +118,7 @@ function open() {
     <button type="button" data-backup="import-ics" class="renpet-backup-action secondary"></button>
     <button type="button" data-backup="import" class="renpet-backup-action secondary"></button>
     <button type="button" data-backup="recover" class="renpet-backup-action secondary" hidden></button>
+    <button type="button" data-backup="damaged" class="renpet-backup-action secondary" hidden></button>
   </section>`;
   dialog.querySelector('h2').textContent = t.title;
    dialog.querySelector('.renpet-backup-close').setAttribute('aria-label',t.close);
@@ -120,7 +129,11 @@ function open() {
   dialog.querySelector('[data-backup="import-ics"]').textContent = t.importICS;
   const recoveryButton=dialog.querySelector('[data-backup="recover"]');
   recoveryButton.textContent=t.recover;
-  recoveryButton.hidden=!schedulerRecoveryStatus(localStorage).recoveryAvailable;
+  const recoveryState=schedulerRecoveryStatus(localStorage);
+  recoveryButton.hidden=!recoveryState.recoveryAvailable;
+  const rawButton=dialog.querySelector('[data-backup="damaged"]');
+  rawButton.textContent=lang()==='ar'?'تصدير البيانات التالفة الأصلية':'Export original damaged records';
+  rawButton.hidden=recoveryState.primaryValid&&!localStorage.getItem(CORRUPT_RECORD_STORE);
   dialog.dir = lang() === 'ar' ? 'rtl' : 'ltr';
   dialog.addEventListener('click', event => {
     const action = event.target.closest('[data-backup]')?.dataset.backup;
@@ -130,6 +143,11 @@ function open() {
     else if (action === 'import') importData();
     else if (action === 'ics') exportCalendar();
     else if (action === 'import-ics') importCalendarICS();
+    else if (action === 'damaged') {
+      const raw=localStorage.getItem(CORRUPT_RECORD_STORE)||
+       (!schedulerRecoveryStatus(localStorage).primaryValid?localStorage.getItem('renpet.scheduler.v1'):null);
+      if(raw!==null)download(raw,'renpet-original-damaged-calendar.json','application/octet-stream');
+    }
     else if (action === 'recover' && window.confirm(t.confirm)) {
       const outcome=restoreSchedulerSnapshot(localStorage);
       if(outcome.restored)window.location.reload();
@@ -137,7 +155,7 @@ function open() {
     }
   });
   document.body.append(dialog);
-  dialog.querySelector('[data-backup="export"]')?.focus();
+  syncModalFocus();
 }
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && dialog) close(); });
 export function openBackup(){open();}

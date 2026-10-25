@@ -1,6 +1,8 @@
 import {toEgyptian,toGregorian} from './calendar.js';
 
 export const SCHEDULER_STORE='renpet.scheduler.v1';
+export const CORRUPT_RECORD_STORE='renpet.scheduler.corrupt.v1';
+const MIN_DAY=-25567,MAX_DAY=84370,MAX_SPAN=3660;
 export const DEFAULT_CALENDARS=[
  {id:'personal',name:{ar:'شخصي',cop:'ⲛⲟⲩⲓ',egy:'𓀀'},color:'#187568',visible:true},
  {id:'work',name:{ar:'العمل',cop:'ⲃⲱⲕ',egy:'𓂋𓐍𓏏'},color:'#C8A24A',visible:true},
@@ -30,19 +32,23 @@ export const SCHEDULER_RECOVERY_KEYS=Object.freeze(['renpet.scheduler.recovery.1
 /** Strict validation for app saves, recovery snapshots and imported backups. */
 export function validateSchedulerData(state){
  if(!state||typeof state!=='object'||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
- const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly']);
+ const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly','gregMonthly','gregYearly']);
  for(const c of state.calendars){
   if(!c||typeof c.id!=='string'||!c.id||calendars.has(c.id)||typeof c.color!=='string')return false;
   calendars.add(c.id);
  }
  for(const i of state.items){
-  if(!i||typeof i.id!=='string'||!i.id||items.has(i.id)||!['event','reminder'].includes(i.kind)||typeof i.title!=='string'||!Number.isInteger(i.startDay))return false;
+  if(!i||typeof i.id!=='string'||!i.id||items.has(i.id)||!['event','reminder'].includes(i.kind)||typeof i.title!=='string'||i.title.length>200||!Number.isInteger(i.startDay)||i.startDay<MIN_DAY||i.startDay>MAX_DAY)return false;
   const end=i.endDay??i.startDay;
-  if(!Number.isInteger(end)||end<i.startDay)return false;
+  if(!Number.isInteger(end)||end<i.startDay||end>MAX_DAY||end-i.startDay>MAX_SPAN)return false;
   if(i.startMinutes!=null&&(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440))return false;
   if(i.endMinutes!=null&&(!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440))return false;
   if(i.repeat!=null&&!repeat.has(i.repeat))return false;
-  if(i.excludedDays!=null&&(!Array.isArray(i.excludedDays)||i.excludedDays.some(d=>!Number.isInteger(d))))return false;
+  if(i.excludedDays!=null&&(!Array.isArray(i.excludedDays)||i.excludedDays.length>50000||i.excludedDays.some(d=>!Number.isInteger(d)||d<i.startDay||d>MAX_DAY)))return false;
+  if(i.completedDays!=null&&(!Array.isArray(i.completedDays)||i.completedDays.length>50000||i.completedDays.some(d=>!Number.isInteger(d)||d<i.startDay||d>MAX_DAY)))return false;
+  if(i.alert!=null&&!['none','atTime','5min','15min','1hour','1day'].includes(i.alert))return false;
+  if(i.location!=null&&(typeof i.location!=='string'||i.location.length>300))return false;
+  if(i.notes!=null&&(typeof i.notes!=='string'||i.notes.length>4000))return false;
   items.add(i.id);
  }
  return true;
@@ -79,7 +85,9 @@ export function saveScheduler(state,storage=globalThis.localStorage){
   const current=storage.getItem(SCHEDULER_STORE);
   // An invalid primary without a usable snapshot must not be overwritten by
   // the empty fallback: that would permanently erase the only salvageable copy.
-  if(current!==null&&!parseStored(current)&&!SCHEDULER_RECOVERY_KEYS.some(k=>parseStored(storage.getItem(k))))return false;
+  // Never silently replace a corrupt primary with an older recovered snapshot.
+  // Require explicit user-initiated restoration; preserve forensic raw bytes.
+  if(current!==null&&!parseStored(current))return false;
   const value=JSON.stringify(state);
   if(!parseStored(value))return false;
   // Verify primary before changing the optional rotating recovery copies.
@@ -98,6 +106,11 @@ export function saveScheduler(state,storage=globalThis.localStorage){
 export function restoreSchedulerSnapshot(storage=globalThis.localStorage){
  try{
   const existing=storage.getItem(SCHEDULER_STORE);
+  // Keep the original damaged string before overwriting it with a snapshot.
+  if(existing!==null&&!parseStored(existing)){
+   storage.setItem(CORRUPT_RECORD_STORE,existing);
+   if(storage.getItem(CORRUPT_RECORD_STORE)!==existing)throw Error('Could not preserve damaged calendar record');
+  }
   for(const key of SCHEDULER_RECOVERY_KEYS){
    const raw=storage.getItem(key);
    if(!parseStored(raw))continue;
@@ -191,6 +204,13 @@ function isStartOccurrence(item,day,years){
  if(item.repeat==='daily')return true;
  if(item.repeat==='weekly')return delta%7===0;
  if(item.repeat==='egy10')return delta%10===0;
+ if(item.repeat==='gregMonthly'||item.repeat==='gregYearly'){
+  const origin=new Date(item.startDay*86400000),current=new Date(day*86400000);
+  if(item.repeat==='gregMonthly')return current.getUTCDate()===origin.getUTCDate()&&
+   current.getUTCFullYear()*12+current.getUTCMonth()>=origin.getUTCFullYear()*12+origin.getUTCMonth();
+  return current.getUTCFullYear()>=origin.getUTCFullYear()&&
+   current.getUTCMonth()===origin.getUTCMonth()&&current.getUTCDate()===origin.getUTCDate();
+ }
  const base=toEgyptian(item.startDay,years),candidate=toEgyptian(day,years);
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;

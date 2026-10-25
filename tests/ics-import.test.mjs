@@ -21,3 +21,26 @@ assert.equal(x.unsupported,1);assert.equal(x.imported,0);
 const badExdate=multi.replace('EXDATE:20261105T090000','EXDATE:20261105T090000,notadate');
 x=parseICS(badExdate);assert.equal(x.unsupported,1);assert.equal(x.imported,1);
 console.log('ICS UTC, midnight and invalid exclusion regression tests passed');
+
+// Standard IANA time zones convert to local device wall time, without silently
+// treating foreign-zone appointments as floating times.
+const tzEvent='BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:zone-1\r\nDTSTART;TZID=America/New_York:20260115T090000\r\nDTEND;TZID=America/New_York:20260115T100000\r\nSUMMARY:New York appointment\r\nEND:VEVENT\r\nEND:VCALENDAR';
+const zoned=parseICS(tzEvent);
+assert.equal(zoned.imported,1);
+const unknownZone=tzEvent.replaceAll('America/New_York','Not_A_Real_Zone');
+assert.equal(parseICS(unknownZone).invalid,1,'Unknown IANA timezones cannot shift appointment times');
+
+// Gregorian recurrence rules are distinct from Egyptian monthly/yearly cycles.
+for(const [rule,repeat] of [['FREQ=MONTHLY','gregMonthly'],['FREQ=YEARLY','gregYearly']]){
+ const entry=['BEGIN:VCALENDAR','BEGIN:VEVENT','UID:greg-'+repeat,'DTSTART:20260115T090000','DTEND:20260115T100000','RRULE:'+rule,'SUMMARY:Gregorian recurrence','END:VEVENT','END:VCALENDAR'].join('\r\n');
+ assert.equal(parseICS(entry).items[0].repeat,repeat);
+}
+
+// Cancel only a complete previously imported series, by its known external UID.
+const cancelled=['BEGIN:VCALENDAR','BEGIN:VEVENT','UID:cancelled-external','STATUS:CANCELLED','END:VEVENT','END:VCALENDAR'].join('\r\n');
+const cancelResult=parseICS(cancelled,{knownUIDs:['cancelled-external']});
+assert.equal(cancelResult.cancelled,1);
+assert.deepEqual(cancelResult.cancellations,['cancelled-external']);
+assert.equal(cancelResult.invalid,0);
+const singleCancellation=cancelled.replace('STATUS:CANCELLED','RECURRENCE-ID:20261025T090000\r\nSTATUS:CANCELLED');
+assert.equal(parseICS(singleCancellation).unsupported,1);

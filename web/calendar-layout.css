@@ -162,7 +162,7 @@ body[data-language=egy] .date-fields select[name=endEgyDay]{font-size:27px!impor
 .festival-sources-links a{color:#176c59;text-decoration:underline;min-height:40px;padding:8px 0}
 
 
-/* Script-localized festival titles and source notes (Renpet 7.1.1).
+/* Script-localized festival titles and source notes.
    Avoid raw URLs and the mixed-script glyph fallback seen in the old modal. */
 .festival-detail-sheet{min-width:0;overflow-wrap:anywhere}
 .festival-detail-sheet .festival-evidence{white-space:pre-line;overflow-wrap:anywhere;word-break:normal}

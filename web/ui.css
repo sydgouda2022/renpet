@@ -1,4 +1,4 @@
-/* RENPET 5 — one shared rubrical palette and calendar layout for every language.
+/* A shared rubrical palette and calendar layout for every language.
    Script size may vary, but colors and navigation semantics never do. */
 
 @font-face{font-family:CairoRenpet;src:url('assets/fonts/Cairo-VF.ttf') format('truetype');font-weight:200 1000;font-style:normal;font-display:swap}
@@ -28,6 +28,8 @@ button svg{flex-shrink:0}
 .empty{color:var(--muted);text-align:center;padding:24px 8px;font-size:14px}
 
 /* Persistent application frame — toolbar / one view / one nav */
+.scheduler-recovery-banner{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#fff1dd;color:#5c341f;border-bottom:2px solid #a66829;font-size:13px;line-height:1.5}
+.scheduler-recovery-banner button{min-height:44px;border:1px solid #a66829;border-radius:8px;padding:8px 12px;background:#fff;white-space:nowrap}
 .app-shell{display:flex;flex-direction:column;width:100%;max-width:850px;margin:0 auto;height:100dvh;min-height:0;overflow:hidden;background:var(--bg)}
 .main-scroll{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .main-scroll::-webkit-scrollbar{display:none}
@@ -379,7 +381,7 @@ body[data-language=egy] .month-agenda{
  body[data-language=egy] .date-fields select[name=egyYear]{font-size:19px!important}
 }
 
-/* Renpet 6 — compact Apple-style year with visible dates and a red today.
+/* Calendar interaction: compact Apple-style year with visible dates and a red today.
    Same component/data model in Arabic (7 days) and Coptic/Egyptian (10 days).
    Coptic and hieroglyphic 10-day cards show six rows of five dates. */
 .year-month{display:flex;flex-direction:column;align-items:stretch;justify-content:start;gap:7px;min-height:0;height:auto;padding:10px 8px 11px;overflow:hidden}
@@ -409,25 +411,25 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 /* No Close X in settings: the existing backdrop is the dismiss control. */
 .ux-panel-head{justify-content:flex-start}
 
-/* Renpet 6.1: immediate, accessible feedback when an appointment cannot be saved. */
+/* Calendar interaction: immediate, accessible feedback when an appointment cannot be saved. */
 .event-error{margin:0;padding:10px 16px;border-bottom:1px solid var(--rubric);background:var(--rubric-soft);color:var(--rubric);font-weight:700;line-height:1.45}
 .ux-bottom:has(.ux-nav-item:nth-child(2):last-child){justify-content:space-evenly}
 .ux-bottom:has(.ux-nav-item:nth-child(2):last-child) .ux-nav-item{flex:0 1 44%;max-width:240px}
 
 
-/* Renpet 6.2: never silently save offscreen. The confirmation stays in a
+/* Calendar interaction: never silently save offscreen. The confirmation stays in a
    dedicated visible status strip, above overlays and below modal content. */
 .save-confirmation{position:fixed;z-index:23;left:50%;transform:translateX(-50%);top:calc(max(env(safe-area-inset-top),10px) + 58px);
   min-height:42px;padding:10px 17px;border:1px solid var(--green);border-radius:14px;
   background:var(--surface);color:var(--green);font-weight:750;box-shadow:0 4px 18px #1b292429;
   max-width:calc(100vw - 40px);text-align:center;pointer-events:none}
 
-/* Renpet 6.3 — reveal old appointments saved into hidden calendar layers. */
+/* Calendar interaction: reveal old appointments saved into hidden calendar layers. */
 .hidden-calendar-notice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:12px 12px 16px;padding:12px 14px;background:var(--rubric-soft);border:1px solid var(--rubric);border-radius:13px;color:var(--rubric);font-weight:650;line-height:1.5}
 .hidden-calendar-notice button{min-height:42px;padding:8px 14px;color:white;background:var(--green);border:0;border-radius:11px;font-weight:750}
 
 
-/* Renpet 6.4 — quick deletion is available directly in Month/Day/List, while
+/* Calendar interaction: quick deletion is available directly in Month/Day/List, while
    Day timeline events expose a large, touchable lower resize grip. */
 .event-row-shell{display:flex;align-items:center;gap:7px;min-width:0;width:100%}
 .event-row-shell .event-row{flex:1 1 auto;width:auto;min-width:0;margin:6px 0}
