@@ -4,7 +4,7 @@ import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {AMUN_SOURCE,loadFestivalCatalog,enabledSourceIds,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
-import {loadScheduler,saveScheduler,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
+import {loadScheduler,saveScheduler,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {openBackup} from './backup.js';
 import {initKeyboard,syncKeyboard,closeKeyboard,primeEgyptianLexicon,primeCopticLexicon} from './keyboard.js';
 import {timeEditorFields,openTimeEditor,updateTimeChoice,closeTimeEditor} from './time-editor.js';
@@ -50,7 +50,8 @@ const week=()=>[7,10].includes(prefs.weeks[lang()])?prefs.weeks[lang()]:(lang()=
 const min=()=>dayNumber(data.min_date),max=()=>dayNumber(data.max_date),clamp=d=>Math.min(max(),Math.max(min(),d));
 const savePrefs=()=>{try{localStorage.setItem(SETTINGS,JSON.stringify(prefs));}catch{}};
 const selectedFestivalIds=()=>enabledSourceIds(prefs.festivalSources,festivalCatalog);
-const festivalsOn=day=>festivalHitsForDay(day,data.years,festivalCatalog,prefs.festivalSources);
+const itemCache=new Map(),festivalCache=new Map();
+const festivalsOn=day=>{if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,data.years,festivalCatalog,prefs.festivalSources));return festivalCache.get(day);};
 
 const egy=d=>toEgyptian(d,data.years);
 const monthName=m=>m===13?LOCALES[lang()].epagomenal:lang()==='egy'?('𓇹 '+N(m)):data.months[lang()][m-1];
@@ -63,7 +64,7 @@ const monthStart=e=>toGregorian({year:e.year,month:e.month,day:1},data.years);
 const yearStart=y=>dayNumber(data.years.find(v=>v.year===y).start);
 const adjacent=(e,delta)=>{let m=e.month+delta,y=e.year;while(m>13){m-=13;y++;}while(m<1){m+=13;y--;}return data.years.some(v=>v.year===y)?{year:y,month:m,day:1}:null;};
 const calName=c=>c.name?.[lang()]||c.name?.ar||c.id;
-const items=d=>itemsForDay(schedule,d,data.years);
+const items=d=>{if(!itemCache.has(d))itemCache.set(d,itemsForDay(schedule,d,data.years));return itemCache.get(d);};
 const icon=name=>{const p={back:'<path d="m15 5-7 7 7 7"/>',search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',plus:'<path d="M12 4v16M4 12h16"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',settings:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',star:'<path d="m12 2 3 7 7 .5-5.5 5 1.5 7L12 18l-6 3.5 1.5-7L2 9.5 9 9Z"/>',check:'<path d="m4 12 5 5L20 6"/>'};return '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p[name]+'</svg>';};
 function quickDeleteButton(item,extraClass=''){
  return '<button type="button" class="event-delete-action '+extraClass+'" data-quick-delete="'+safe(item.id)+'" aria-label="'+safe(T().delete)+' · '+safe(item.title)+'" title="'+safe(T().delete)+'">'+
@@ -72,7 +73,7 @@ function quickDeleteButton(item,extraClass=''){
 function eventRow(i,day=state.focus){
  const cal=schedule.calendars.find(c=>c.id===i.calendarId),color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
  const clock=i.allDay?safe(T().allDay):timeHtml(i.startMinutes,lang());
- return '<div class="event-row-shell"><button class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+day+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span>'+(i.kind==='reminder'?'<span class="reminder-box" data-complete="'+safe(i.id)+'">'+icon('check')+'</span>':'')+'</button>'+quickDeleteButton(i)+'</div>';
+ return '<div class="event-row-shell"><button class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+day+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span>'+(i.kind==='reminder'?'<span class="reminder-box'+(isCompleted(i,day)?' is-complete':'')+'" data-complete="'+safe(i.id)+'" aria-label="'+safe(T().reminder)+'">'+icon('check')+'</span>':'')+'</button>'+quickDeleteButton(i)+'</div>';
 }
 // Existing appointments in hidden calendars are never silently represented
 // as "no events". Offer one action to show them all without losing data.
@@ -183,7 +184,10 @@ function yearView(){
  }).join('');
  const days=monthDays({year:yr,month:13});
  const epStart=monthStart({year:yr,month:13});
- const mini=Array.from({length:days},(_,i)=>'<span class="year-mini-day'+(epStart+i===current?' year-mini-today':'')+'">'+numHtml(i+1)+'</span>').join('');
+ const mini=Array.from({length:days},(_,i)=>{
+  const day=epStart+i,events=items(day).length,festivals=festivalsOn(day).length;
+  return '<span class="year-mini-day'+(day===current?' year-mini-today':'')+(events?' has-appointments':'')+(festivals?' has-festivals':'')+'">'+numHtml(i+1)+(events?'<i class="year-mini-dot" aria-hidden="true"></i>':'')+(festivals?'<i class="year-mini-festival" aria-hidden="true"></i>':'')+'</span>';
+ }).join('');
  return '<div class="year-overview">'+groups+'<button class="epagomenal-tile" data-open-month="13"><span>✦</span><strong>'+safe(LOCALES[lang()].epagomenal)+'</strong><span class="year-mini-epagomenal">'+mini+'</span></button></div>';
 }
 function dayView(){
@@ -199,7 +203,7 @@ function dayView(){
  const clusters=[];let current=[],end=-1;
  for(const item of ordered){
   if(current.length&&item._dayStart>=end){clusters.push(current);current=[];end=-1;}
-  current.push(item);end=Math.max(end,item.endMinutes||item.startMinutes+60);
+  current.push(item);end=Math.max(end,item._dayEnd??item._dayStart+60);
  }
  if(current.length)clusters.push(current);
  const layout=new Map();
@@ -344,7 +348,7 @@ function render(){
  const viewKey=state.view;
  const oldMain=root.querySelector('#main-content');
  const keepScroll=viewKey===previousRenderKey?oldMain?.scrollTop:0;
- schedule=loadScheduler();
+ schedule=loadScheduler();itemCache.clear();festivalCache.clear();
  document.documentElement.lang=LOCALES[lang()].html;
  document.documentElement.dir=lang()==='ar'?'rtl':'ltr';
  document.body.dataset.language=lang();
@@ -475,7 +479,7 @@ root.addEventListener('click',ev=>{
  }
  const show=ev.target.closest('[data-show-all-calendars]');
  if(show){const sched=loadScheduler();revealSavedCalendars(sched);
-  saveScheduler(sched);render();return;}
+  if(!saveScheduler(sched)){alert(lang()==='ar'?'تعذر حفظ التقاويم':'Could not save calendars');return;}render();return;}
  const quickDelete=ev.target.closest('[data-quick-delete]');
  if(quickDelete){
   ev.preventDefault();
@@ -491,7 +495,7 @@ root.addEventListener('click',ev=>{
   state.saveNotice=false;state.dialog=null;render();return;
  }
  const complete=ev.target.closest('[data-complete]');
- if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,state.focus);saveScheduler(sched);render();}return;}
+ if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,state.focus);if(!saveScheduler(sched)){alert(lang()==='ar'?'تعذر حفظ التذكير':'Could not save reminder');return;}render();}return;}
  // Timeline events are accessible divs, not buttons. Open them directly.
  const timelineEvent=ev.target.closest('.timeline-event[data-edit]');
  if(timelineEvent&&!ev.target.closest('.event-resize')){
@@ -561,7 +565,11 @@ root.addEventListener('click',ev=>{
   return;
  }
  if(b.hasAttribute('data-backup')){state.panel=null;render();openBackup();return;}
- if(b.hasAttribute('data-remove-cal')){const v=loadScheduler();removeCalendar(v,b.dataset.removeCal);saveScheduler(v);render();return;}
+ if(b.hasAttribute('data-remove-cal')){
+  if(!confirm(lang()==='ar'?'حذف هذا التقويم ونقل مواعيده إلى تقويم آخر؟':'Delete calendar and move appointments?'))return;
+  const v=loadScheduler();if(!removeCalendar(v,b.dataset.removeCal))return;
+  if(!saveScheduler(v)){alert(lang()==='ar'?'تعذر حفظ التقويم':'Could not save calendar');return;}render();return;
+ }
 });
 
 root.addEventListener('change',ev=>{
@@ -588,7 +596,7 @@ root.addEventListener('change',ev=>{
   prefs.festivalSources=[...enabled];savePrefs();render();return;
  }
  else if(el.name==='week')prefs.weeks[lang()]=Number(el.value);
- else if(el.hasAttribute('data-visible')){const s=loadScheduler();updateCalendar(s,el.dataset.visible,{visible:el.checked});saveScheduler(s);render();return;}
+ else if(el.hasAttribute('data-visible')){const s=loadScheduler();updateCalendar(s,el.dataset.visible,{visible:el.checked});if(!saveScheduler(s))alert(lang()==='ar'?'تعذر حفظ التقاويم':'Could not save calendars');render();return;}
  else if(el.closest('#event-editor')&&['egyYear','egyMonth','egyDay','endEgyYear','endEgyMonth','endEgyDay'].includes(el.name)){
   const form=el.form,ending=el.name.startsWith('endEgy'),prefix=ending?'end':'';
   const ys=ending?'endEgyYear':'egyYear',ms=ending?'endEgyMonth':'egyMonth',ds=ending?'endEgyDay':'egyDay';
@@ -632,7 +640,7 @@ root.addEventListener('invalid',ev=>{
 },true);
 root.addEventListener('submit',ev=>{
  if(ev.target.id==='event-editor'){ev.preventDefault();try{submitEvent(ev.target);}catch(e){console.error('Renpet submit error',e);showEditorError(ev.target,lang()==='ar'?'تعذر حفظ الموعد':lang()==='cop'?'Ⲥⲱⲛϩ':'𓏞');}}
- if(ev.target.id==='new-calendar'){ev.preventDefault();const f=new FormData(ev.target),s=loadScheduler();if(createCalendar(s,f.get('name'),f.get('color'))){saveScheduler(s);render();}}
+ if(ev.target.id==='new-calendar'){ev.preventDefault();const f=new FormData(ev.target),s=loadScheduler();if(createCalendar(s,f.get('name'),f.get('color'))){if(!saveScheduler(s))alert(lang()==='ar'?'تعذر حفظ التقويم':'Could not save calendar');render();}}
 });
 // One gesture owner: drag from event body to move; stretch bottom grip to
 // resize in 15-minute increments. iOS pointer capture prevents the page swipe
@@ -760,7 +768,7 @@ async function init(){
  if(Array.isArray(previousFestivalSources)&&
     (previousFestivalSources.length!==prefs.festivalSources.length||
      previousFestivalSources.some((id,i)=>id!==prefs.festivalSources[i])))savePrefs();
- state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>data?.years);void Promise.allSettled([primeEgyptianLexicon(),primeCopticLexicon()]);
+ state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>data?.years);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
