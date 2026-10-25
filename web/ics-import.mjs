@@ -60,7 +60,7 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
   else a.push(line);
   return a;
  },[]);
- const found=[],known=new Set(knownUIDs),series=new Set(knownSeriesIds.map(id=>String(id).replace(/[^a-zA-Z0-9_-]/g,'-'))),counts={imported:0,duplicate:0,unsupported:0,invalid:0};
+ const found=[],cancellations=[],known=new Set(knownUIDs),series=new Set(knownSeriesIds.map(id=>String(id).replace(/[^a-zA-Z0-9_-]/g,'-'))),counts={imported:0,duplicate:0,unsupported:0,invalid:0};
  let event=null,total=0;
  for(const line of lines){
   if(line==='BEGIN:VEVENT'){if(event)throw Error('Invalid nested ICS event');event=[];total++;if(total>10000)throw Error('Too many ICS records');continue;}
@@ -69,6 +69,13 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
    const components=event;
    const p=properties(components);event=null;
    const prop=k=>p.get(k)?.[0],uid=unescapeICS(prop('UID')?.value||'').slice(0,240);
+   // An explicit full-series cancellation may omit DTSTART and DTEND.
+   // Instance cancellations need RECURRENCE-ID semantics and are not guessed.
+   if(prop('STATUS')?.value==='CANCELLED'){
+    if(uid&&!p.has('RECURRENCE-ID'))cancellations.push(uid);
+    else counts.unsupported++;
+    continue;
+   }
    const start=prop('DTSTART'),end=prop('DTEND');
    if(!start||!uid||!end){counts.invalid++;continue;}
    // A recurrence expanded for Egyptian calendar export has one UID per date.
@@ -135,5 +142,5 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
   }
   if(event!==null)event.push(line);
  }
- return {items:found,...counts,total};
+ return {items:found,cancellations,...counts,cancelled:cancellations.length,total};
 }

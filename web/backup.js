@@ -3,7 +3,7 @@ import {syncModalFocus} from './dialog-focus.mjs';
 import { exportICS, eventUID } from './ics-core.mjs';
 import { parseICS } from './ics-import.mjs';
 import { dayNumber } from './calendar.js';
-import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot, CORRUPT_RECORD_STORE } from './scheduler.js';
+import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, removeItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot, CORRUPT_RECORD_STORE } from './scheduler.js';
 
 // Backup and restore work entirely on the user's device. No account or upload.
 const words = {
@@ -60,12 +60,17 @@ async function importCalendarICS(){
     knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean),
     knownSeriesIds:sched.items.map(i=>i.id)
    });
+   const eligibleCancellations=parsed.cancellations.filter(uid=>sched.items.some(item=>item.importUID===uid));
    const counts=''+parsed.imported+' '+(lang()==='ar'?'موعد صالح · ':'events ready · ')+
     parsed.unsupported+' '+(lang()==='ar'?'تكرارات/مناطق زمنية غير مدعومة · ':'unsupported · ')+
-    parsed.invalid+' '+(lang()==='ar'?'غير صالح · ':'invalid · ')+parsed.duplicate+' '+(lang()==='ar'?'مكرر':'already imported');
-   if(!parsed.imported){window.alert(counts);return;}
+    parsed.invalid+' '+(lang()==='ar'?'غير صالح · ':'invalid · ')+parsed.duplicate+' '+(lang()==='ar'?'مكرر · ':'already imported · ')+
+    eligibleCancellations.length+' '+(lang()==='ar'?'إلغاء لمواعيد مستوردة':'confirmed cancellations');
+   if(!parsed.imported&&!eligibleCancellations.length){window.alert(counts);return;}
    if(!window.confirm((lang()==='ar'?'استيراد هذه المواعيد إلى رنبت؟':'Import these events into Renpet?')+'\n'+counts))return;
    try{download(createBackup(localStorage),'renpet-before-ics-import-'+new Date().toISOString().slice(0,10)+'.json');}catch{}
+   for(const uid of eligibleCancellations){
+    for(const matching of sched.items.filter(item=>item.importUID===uid))removeItem(sched,matching.id);
+   }
    for(const imported of parsed.items){
     const event={...createItem({...imported,kind:'event',calendarId:'personal'}),importUID:imported.importUID,
      excludedDays:imported.excludedDays};

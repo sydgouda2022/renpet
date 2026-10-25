@@ -35,3 +35,12 @@ for(const [rule,repeat] of [['FREQ=MONTHLY','gregMonthly'],['FREQ=YEARLY','gregY
  const entry=['BEGIN:VCALENDAR','BEGIN:VEVENT','UID:greg-'+repeat,'DTSTART:20260115T090000','DTEND:20260115T100000','RRULE:'+rule,'SUMMARY:Gregorian recurrence','END:VEVENT','END:VCALENDAR'].join('\r\n');
  assert.equal(parseICS(entry).items[0].repeat,repeat);
 }
+
+// Cancel only a complete previously imported series, by its known external UID.
+const cancelled=['BEGIN:VCALENDAR','BEGIN:VEVENT','UID:cancelled-external','STATUS:CANCELLED','END:VEVENT','END:VCALENDAR'].join('\r\n');
+const cancelResult=parseICS(cancelled,{knownUIDs:['cancelled-external']});
+assert.equal(cancelResult.cancelled,1);
+assert.deepEqual(cancelResult.cancellations,['cancelled-external']);
+assert.equal(cancelResult.invalid,0);
+const singleCancellation=cancelled.replace('STATUS:CANCELLED','RECURRENCE-ID:20261025T090000\\r\\nSTATUS:CANCELLED');
+assert.equal(parseICS(singleCancellation).unsupported,1);
