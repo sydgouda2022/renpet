@@ -70,7 +70,7 @@ async function scenario(engine,name) {
     // Reproduce an installed PWA retaining the full retired catalogs, even
     // when network revalidation cannot replace them. The current app must
     // reject the stale sources before loading their cached festival packs.
-    const currentManifest=JSON.parse(fs.readFileSync('renpet/web/festival-sources.json','utf8'));
+    const currentManifest=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../web/festival-sources.json'),'utf8'));
     await p.evaluate(async({release,manifest})=>{
      const key=(await caches.keys()).find(k=>k.startsWith('renpet-'+release+'-'));
      const cache=await caches.open(key);
