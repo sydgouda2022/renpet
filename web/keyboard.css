@@ -1,4 +1,4 @@
-/* Renpet 4 — one native-script keyboard dock, shared by Coptic and Egyptian. */
+/* Single native-script keyboard dock for Coptic and hieroglyphic editing. */
 :root{--renpet-kb-height:min(53dvh,355px)}
 .renpet-keyboard[hidden]{display:none!important}
 .renpet-keyboard{position:fixed;inset-inline:0;bottom:0;z-index:160;display:flex;flex-direction:column;gap:5px;height:var(--renpet-kb-height);max-height:390px;padding:7px max(6px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));background:#e4e9e3;border-top:1px solid #c7d2c9;box-shadow:0 -8px 18px #1b292425;direction:ltr;overflow:hidden}
