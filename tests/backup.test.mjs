@@ -8,7 +8,7 @@ class MemoryStorage {
 }
 const s = new MemoryStorage();
 s.setItem('renpet.settings.v1', '{"language":"ar","gregorian":true}');
-s.setItem('renpet.scheduler.v1', '{"events":[{"title":"مناسبة"}],"calendars":[]}');
+s.setItem('renpet.scheduler.v1', '{"version":1,"items":[{"id":"demo","kind":"event","title":"مناسبة","startDay":20740,"endDay":20740}],"calendars":[]}');
 s.setItem('renpet.keyboard.personal.v1', '{"egy:𓄿":7}');
 s.setItem('renpet.keyboard.coptic-dialect.v1', 'sahidic');
 s.setItem('unrelated.app', '{"private":"must not export"}');

@@ -30,7 +30,7 @@ assert not (root / "festival-packs/muslim-egypt.json").exists()
 
 assert "new Set([CACHE, ...older.slice(-1)])" in s, "Do not purge an active previous app cache"
 assert "RenpetBoot" in html and "renpet-startup-failed" in html, "Startup watchdog/retry absent"
-assert "getRegistrations()" in html, "Safe service-worker-only repair unavailable"
+assert "getRegistration('./')" in html, "Safe service-worker-only repair unavailable"
 assert "localStorage.clear" not in html and "caches.delete" not in html, "Startup repair must preserve user data"
 import base64, hashlib, re
 inline = re.findall(r"<script>([\s\S]*?)</script>", html)
