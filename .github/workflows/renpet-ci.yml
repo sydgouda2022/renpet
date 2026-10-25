@@ -33,10 +33,10 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [ "$EVENT" = schedule ] || [ "$EVENT" = workflow_dispatch ]; then
-            python tools/sync_keyboards.py
-          else
+          if [ "$EVENT" = pull_request ]; then
             python tools/sync_keyboards.py --verify
+          else
+            python tools/sync_keyboards.py
           fi
       - name: Run standalone calendar, keyboard and offline verification
         run: |
@@ -59,7 +59,7 @@ jobs:
           test ! -e web/assets/dictionaries/coptic.json
           test ! -e web/lexicon/lexicon.sqlite3
       - name: Commit updated lock and checked browser assets
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs web/assets/dictionaries/signs.json
