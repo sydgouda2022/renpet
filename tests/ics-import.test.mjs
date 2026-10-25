@@ -24,7 +24,7 @@ console.log('ICS UTC, midnight and invalid exclusion regression tests passed');
 
 // Standard IANA time zones convert to local device wall time, without silently
 // treating foreign-zone appointments as floating times.
-const tzEvent='BEGIN:VCALENDAR\\r\\nBEGIN:VEVENT\\r\\nUID:zone-1\\r\\nDTSTART;TZID=America/New_York:20260115T090000\\r\\nDTEND;TZID=America/New_York:20260115T100000\\r\\nSUMMARY:New York appointment\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR';
+const tzEvent='BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:zone-1\r\nDTSTART;TZID=America/New_York:20260115T090000\r\nDTEND;TZID=America/New_York:20260115T100000\r\nSUMMARY:New York appointment\r\nEND:VEVENT\r\nEND:VCALENDAR';
 const zoned=parseICS(tzEvent);
 assert.equal(zoned.imported,1);
 const unknownZone=tzEvent.replaceAll('America/New_York','Not_A_Real_Zone');
