@@ -91,7 +91,9 @@ def stage(name, sha):
             # The Coptic library publishes exactly one headless core.
             files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
         else:
-            files["web/keyboards/egy/_generic_search.mjs"] = get("src/_generic_search.mjs")
+            # The hieroglyphic publisher now ships a single self-contained,
+            # provenance-checked keyboard_search.mjs; no generic helper exists.
+            pass
         if language == "egy":
             files["web/assets/dictionaries/signs.json"] = get("release/signs.json")
     else:
