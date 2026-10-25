@@ -7,6 +7,8 @@ on:
       - 'tools/**'
       - 'tests/**'
       - 'keyboard-lock.json'
+      - 'worker.mjs'
+      - 'wrangler.worker.toml'
       - '.github/workflows/renpet-ci.yml'
   pull_request:
   schedule:
@@ -49,6 +51,10 @@ jobs:
           node tests/festival-catalog.test.mjs
           node tests/ui.test.mjs
           node tests/backup.test.mjs
+           node tests/ics.test.mjs
+           node tests/ics-import.test.mjs
+           node tests/clock.test.mjs
+           node tests/time-editor.test.mjs
           node --test tests/alerts.test.mjs tests/responsive-layout.test.mjs
           bash tools/build_release.sh
           python tools/sync_keyboards.py --verify

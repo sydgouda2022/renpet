@@ -199,7 +199,7 @@ function dayView(){
  const clusters=[];let current=[],end=-1;
  for(const item of ordered){
   if(current.length&&item._dayStart>=end){clusters.push(current);current=[];end=-1;}
-  current.push(item);end=Math.max(end,item.endMinutes||item.startMinutes+60);
+  current.push(item);end=Math.max(end,item._dayEnd??item.endMinutes??(item._dayStart+60));
  }
  if(current.length)clusters.push(current);
  const layout=new Map();
@@ -491,7 +491,7 @@ root.addEventListener('click',ev=>{
   state.saveNotice=false;state.dialog=null;render();return;
  }
  const complete=ev.target.closest('[data-complete]');
- if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,state.focus);saveScheduler(sched);render();}return;}
+ if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,state.focus);if(!saveScheduler(sched)){alert('Could not save reminder');return;}render();}return;}
  // Timeline events are accessible divs, not buttons. Open them directly.
  const timelineEvent=ev.target.closest('.timeline-event[data-edit]');
  if(timelineEvent&&!ev.target.closest('.event-resize')){

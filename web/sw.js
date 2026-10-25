@@ -66,6 +66,12 @@ self.addEventListener('fetch', event => {
     return cached ||
       new Response('Festival catalog unavailable offline', {status: 503});
   }
+  // Revalidate versioned resources to avoid mismatched HTML and JS after deployments.
+  if (url.searchParams.has('v')) {
+    try {const fresh=await fetch(event.request,{cache:'no-store'});
+      if(fresh.ok){event.waitUntil(cache.put(canonical.href,fresh.clone()).catch(()=>{}));return fresh;}
+    } catch {}
+  }
   if (cached) return cached;
   try {
    const response = await fetch(event.request);

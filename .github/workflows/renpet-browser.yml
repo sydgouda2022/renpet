@@ -7,6 +7,8 @@ on:
       - 'tools/**'
       - 'tests/**'
       - 'keyboard-lock.json'
+      - 'worker.mjs'
+      - 'wrangler.worker.toml'
       - '.github/workflows/renpet-browser.yml'
   pull_request:
   workflow_dispatch:

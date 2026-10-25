@@ -20,7 +20,7 @@ export function normalizeState(value){
   const valid=value.calendars.filter(c=>c&&typeof c.id==='string'&&typeof c.color==='string');
   if(valid.length)base.calendars=valid.map(c=>({...c,visible:c.visible!==false,name:nameObject(c.name||c.id)}));
  }
- if(Array.isArray(value.items))base.items=value.items.filter(i=>i&&typeof i.id==='string'&&['event','reminder'].includes(i.kind)&&Number.isInteger(i.startDay));
+ if(Array.isArray(value.items))base.items=value.items.filter(i=>i&&typeof i.id==='string'&&['event','reminder'].includes(i.kind)&&Number.isInteger(i.startDay)&&Number.isInteger(i.endDay??i.startDay)&&(i.endDay??i.startDay)>=i.startDay);
  return base;
 }
 

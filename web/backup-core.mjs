@@ -19,6 +19,9 @@ function validateEntry(value, key) {
   let decoded;
   try { decoded = JSON.parse(value); } catch { throw new Error('Corrupt backup entry: ' + key); }
   if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) throw new Error('Invalid backup data: ' + key);
+  if (key.startsWith('renpet.scheduler.')) {
+    if (!Array.isArray(decoded.items) || !Array.isArray(decoded.calendars) || decoded.items.some(i=>!i||typeof i.id!=='string'||!['event','reminder'].includes(i.kind)||!Number.isInteger(i.startDay)||!Number.isInteger(i.endDay??i.startDay)||(i.endDay??i.startDay)<i.startDay)) throw new Error('Invalid appointment backup: '+key);
+  }
   return value;
 }
 export function createBackup(storage, now = new Date()) {

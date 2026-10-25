@@ -44,11 +44,11 @@
    repair.disabled = true;
    try {
     if (navigator.serviceWorker) {
-     const registrations = await navigator.serviceWorker.getRegistrations();
-     await Promise.all(registrations.map(registration => registration.unregister()));
+     const registration = await navigator.serviceWorker.getRegistration('./');
+     if (registration) await registration.unregister();
     }
    } catch (error) { console.warn('Renpet boot repair',error); }
-   // Unregisters only the app shell service worker, not localStorage or data.
+   // Repair targets only the app registration; localStorage and user data are retained.
    location.reload();
   });
   console.error('Renpet startup incomplete:', reason);

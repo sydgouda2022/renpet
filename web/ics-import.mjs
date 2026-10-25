@@ -54,10 +54,10 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[]}={}
     counts.unsupported++;continue;
    }
    const allDay=start.params.includes('VALUE=DATE');
-   if(allDay!==end.params.includes('VALUE=DATE')){counts.unsupported++;continue;}
+   if(allDay!==end.params.includes('VALUE=DATE') || (!allDay && start.value.endsWith('Z')!==end.value.endsWith('Z'))){counts.unsupported++;continue;}
    const a=dateValue(start.value,allDay),b=dateValue(end.value,allDay);
    if(!a||!b){counts.invalid++;continue;}
-   const last=allDay?b.day-1:b.day;
+   const last=allDay?b.day-1:(b.day>a.day&&b.minutes===0?b.day-1:b.day);
    if(a.day<minDay||last>maxDay||last<a.day||(last===a.day&&!allDay&&b.minutes<=a.minutes)){
     counts.invalid++;continue;
    }
@@ -71,15 +71,15 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[]}={}
     else if(parts.FREQ==='WEEKLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='weekly';
     else{counts.unsupported++;continue;}
    }
-   const excludedDays=[];
+   const excludedDays=[];let invalidExdate=false;
    for(const exclusion of p.get('EXDATE')||[]){
     for(const value of exclusion.value.split(',')){
      const ex=dateValue(value,allDay);
-     if(!ex){counts.unsupported++;break;}
+     if(!ex||(!allDay&&value.endsWith('Z')!==start.value.endsWith('Z'))){invalidExdate=true;break;}
      excludedDays.push(ex.day);
     }
    }
-   if(p.get('EXDATE')?.length&&counts.unsupported&&excludedDays.length===0)continue;
+   if(invalidExdate){counts.unsupported++;continue;}
    const title=unescapeICS(prop('SUMMARY')?.value||'Imported event').slice(0,200).trim()||'Imported event';
    found.push({importUID:uid,title,startDay:a.day,endDay:last,startMinutes:allDay?540:a.minutes,
     endMinutes:allDay?600:b.minutes,allDay,location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
