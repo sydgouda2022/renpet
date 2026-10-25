@@ -1,20 +1,31 @@
 {
-  "format": "keyboard-dependencies-v1",
-  "migration_origin": "sydgouda2022/aaa",
+  "format": "keyboard-dependencies-v2",
   "dependencies": {
     "coptic-keyboard": {
       "upstream_repository": "sydgouda2022/coptic-keyboard",
-      "source_commit": "4f6f0ff864f89accc5864dcb6b9027309127d01e",
+      "source_commit": "82c2fcb1b2f8a4afca06ec0ae5f3ca10e871b024",
       "version": "coptic-expanded-a2d96bba65d01081",
       "manifest_sha256": "aa92bc1cd6ea541d0a8513afab096935e651c002a1b59e331e96482b2a7b955b",
-      "lexicon_sha256": "a2d96bba65d01081750f9539b8c7a26c94ba93665f3f9a14f7b2fb517f476799"
+      "lexicon_sha256": "a2d96bba65d01081750f9539b8c7a26c94ba93665f3f9a14f7b2fb517f476799",
+      "api_files": {
+        "web/keyboards/cop/core.mjs": "b7e1b4fbd348f8834dcb3b6ffcaf4cbe9acfee89",
+        "web/keyboards/cop/editor.mjs": "c15a9eade26632039b9db7df1346b0df827b9526",
+        "web/keyboards/cop/lexicon.mjs": "ad3486517a85bbda62b118d147b88ee12590e333",
+        "web/keyboards/cop/index.mjs": "398ab522e5711dcf908899ae5437e041dc8bc24f"
+      }
     },
     "hieroglyphic-keyboard": {
       "upstream_repository": "sydgouda2022/hieroglyphic-keyboard",
-      "source_commit": "cf6fea58322aaafa6e47011dfdca310910b2383b",
+      "source_commit": "d3f7e09cea45f10e26452c43d42127644f92bd03",
       "version": "late-egyptian-development-48f7769c20b1560f",
       "manifest_sha256": "c16fca798db1a61a79c122297e0bae1135b78a94c516631802abf4c84151eb01",
-      "lexicon_sha256": "48f7769c20b1560f76b0080e8ac5155b5e42c2b9fe2c1fe696f765e803dd5a39"
+      "lexicon_sha256": "48f7769c20b1560f76b0080e8ac5155b5e42c2b9fe2c1fe696f765e803dd5a39",
+      "api_files": {
+        "web/keyboards/egy/keyboard_api.mjs": "ec2286f72a891acd7c07ff4ad38a7d30337feba7",
+        "web/keyboards/egy/keyboard_catalog.js": "96088c7fe134aedd3652b7ae4ba72331c3de33b9",
+        "web/keyboards/egy/keyboard_search.mjs": "cc3604ba21e7d09d674c4e41576a0f38928ce567",
+        "web/keyboards/egy/lexicon_install.mjs": "f30260db8bb9175e91c60e3d886a0a723b33a06f"
+      }
     }
   }
 }

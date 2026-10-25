@@ -1,4 +1,4 @@
-name: Renpet CI and automatic keyboard dependency updates
+name: Renpet CI with pinned headless keyboard APIs
 on:
   push:
     branches: [main]
@@ -11,11 +11,9 @@ on:
       - 'wrangler.worker.toml'
       - '.github/workflows/renpet-ci.yml'
   pull_request:
-  schedule:
-    - cron: '7 * * * *'
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: renpet-keyboards-${{ github.ref }}
   cancel-in-progress: false
@@ -30,16 +28,8 @@ jobs:
         with: {python-version: '3.12'}
       - uses: actions/setup-node@v5
         with: {node-version: '24'}
-      - name: Check pinned dependencies or stage independent upstream updates
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" = pull_request ]; then
-            python tools/sync_keyboards.py --verify
-          else
-            python tools/sync_keyboards.py
-          fi
+      - name: Verify explicitly pinned keyboard executable code and data
+        run: python tools/sync_keyboards.py --verify
       - name: Run standalone calendar, keyboard and offline verification
         run: |
           set -euo pipefail
@@ -53,10 +43,10 @@ jobs:
           node tests/festival-catalog.test.mjs
           node tests/ui.test.mjs
           node tests/backup.test.mjs
-           node tests/ics.test.mjs
-           node tests/ics-import.test.mjs
-           node tests/clock.test.mjs
-           node tests/time-editor.test.mjs
+          node tests/ics.test.mjs
+          node tests/ics-import.test.mjs
+          node tests/clock.test.mjs
+          node tests/time-editor.test.mjs
           node --test tests/alerts.test.mjs tests/responsive-layout.test.mjs
           bash tools/build_release.sh
           python tools/sync_keyboards.py --verify
@@ -66,19 +56,6 @@ jobs:
           test -s web/lexicon/manifest.json
           test ! -e web/assets/dictionaries/coptic.json
           test ! -e web/lexicon/lexicon.sqlite3
-      - name: Commit updated lock and checked browser assets
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          git add keyboard-lock.json web/keyboards/ web/lexicon/ web/coptic-lexicon/ web/lexicon-install.mjs web/coptic-install.mjs web/keyboards/egy/keyboard_catalog.js
-          if git diff --cached --quiet; then
-            echo 'Keyboard releases unchanged'
-          else
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'Update independently verified upstream keyboard releases'
-            git push origin HEAD:main
-          fi
       - name: Install Cloudflare Wrangler ONLY after explicit cutover
         if: github.event_name != 'pull_request' && vars.CUTOVER_ENABLED == 'true'
         run: npm install --global wrangler@4
