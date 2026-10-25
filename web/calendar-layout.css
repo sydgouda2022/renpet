@@ -1,0 +1,187 @@
+/* RENPET 6.7 — horizontal week bands, not boxed date cells.
+   Small: vertical month + selected day. Large: navigation rail + two panes. */
+.week-bands,.month-section.ten-day .decades{display:flex;flex-direction:column;gap:0;padding:0}
+.week-band{position:relative;min-width:0;padding:6px 0 8px;border-bottom:1px solid var(--line)}
+.week-band:last-child{border-bottom:0}
+.week-days,.decade-days{display:grid;grid-template-columns:repeat(var(--cols,10),minmax(0,1fr));gap:0;direction:inherit}
+.week-headers{border-top:0;border-bottom:1px solid var(--line);padding:4px 0}
+.month-section .date,.month-section .blank{min-width:0;min-height:54px;border:0;background:transparent}
+.month-section .date{gap:2px;border-radius:7px;padding:2px 0;overflow:visible}
+.month-section .date .day-number{max-width:100%;min-width:0;line-height:1.1}
+.month-section .date:focus-visible{z-index:2}
+.month-section .date .fest-mark{inset-inline-end:1px;top:1px;font-size:8px;pointer-events:none}
+.month-section .date .dots{flex:0 0 5px;height:5px}
+.month-section .date .greg-day{font-size:9px;line-height:1.1}
+.month-section.ten-day .decade-days{grid-template-columns:repeat(10,minmax(0,1fr));gap:0}
+.month-section.ten-day .decade-days .date{min-height:60px}
+.month-section.ten-day .decade-days .date .day-number{font-size:15px;min-width:0;width:100%;height:34px;padding:2px 0}
+body[data-language=egy] .month-scroll{overflow:visible}
+body[data-language=egy] .month-section{flex:0 0 auto;min-height:0;overflow:visible}
+body[data-language=egy] .month-agenda{flex:1 1 auto;min-height:112px;max-height:none;overflow-y:auto}
+body[data-language=egy] .month-section.ten-day .decades{gap:0}
+body[data-language=egy] .month-section.ten-day .decade-days .date{min-height:90px}
+body[data-language=egy] .month-section.ten-day .decade-days .date .day-number{
+ width:100%;min-width:0;min-height:76px;height:76px;max-height:none;
+ padding:2px 0;font-size:14px;line-height:1;letter-spacing:normal;
+ overflow:visible;overflow-wrap:normal;word-break:normal;white-space:nowrap
+}
+body[data-language=egy] .month-section.ten-day .date.chosen .day-number{padding:2px 0}
+/* Egyptian numeral groups: large enough to read, never a single long row.
+   3 columns × 9px preserves the 10-column month even on a 320px iPhone.
+   Give all nine unit signs their own full-height rows (3×16px). */
+.egy-day-ink{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;width:100%;height:100%;white-space:nowrap;font-weight:800}
+.egy-date-tens{display:flex;justify-content:center;white-space:nowrap;font-size:clamp(17px,4.8vw,21px);line-height:1.12;letter-spacing:-2px;font-weight:800;-webkit-text-stroke:.32px currentColor;paint-order:stroke fill}
+.egy-date-ones{display:grid;grid-template-columns:repeat(3,9px);justify-content:center;gap:0;line-height:16px;font-size:16px;letter-spacing:0;font-weight:800;-webkit-text-stroke:.30px currentColor;paint-order:stroke fill}
+.egy-date-ones>span{display:block;width:9px;height:16px;line-height:16px;text-align:center}
+body[data-language=egy] .seven-day .date .day-number{min-height:76px;height:76px;font-size:26px}
+body[data-language=egy] .month-section .date.chosen .day-number{background:var(--green);color:#fff;border-radius:12px}
+@media(max-width:390px){
+ body[data-language=egy] .month-section.ten-day .decade-days .date .day-number{font-size:14px}
+ .month-section .date .fest-mark{font-size:7px}
+}
+/* Two GUIs chosen from available viewport CSS pixels, never user-agent.
+   phone: w<700 OR h<560; tablet-stacked: w>=700 & h>=560;
+   tablet-split: w>=1024 & h>=560. */
+html[data-renpet-layout^="tablet"] .app-shell{
+ display:grid;grid-template-columns:92px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+ max-width:1500px;width:100%;height:100dvh;border-inline:1px solid var(--line)
+}
+html[data-renpet-layout^="tablet"] .ux-toolbar{grid-column:2;grid-row:1;padding:12px 26px 2px}
+html[data-renpet-layout^="tablet"] .main-scroll{grid-column:2;grid-row:2;min-width:0}
+html[data-renpet-layout^="tablet"] .ux-bottom,
+html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child){
+ grid-column:1;grid-row:1/3;display:flex;flex-direction:column;
+ align-items:stretch;justify-content:flex-start;gap:12px;min-height:0;
+ padding:22px 9px;background:var(--surface);border-top:0;border-inline-end:1px solid var(--line)
+}
+html[data-renpet-layout^="tablet"] .ux-bottom .ux-nav-item,
+html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child) .ux-nav-item{
+ flex:0 0 auto;max-width:none;min-height:72px;width:100%;gap:5px
+}
+html[data-renpet-layout^="tablet"] body[data-language=egy] .ux-bottom .ux-nav-item{min-height:90px}
+html[data-renpet-layout^="tablet"] .month-scroll{
+ max-width:1250px;width:100%;height:100%;min-height:0;padding:12px 24px 20px
+}
+html[data-renpet-layout^="tablet"] .week-band{padding:10px 0 12px}
+html[data-renpet-layout^="tablet"] .month-section.ten-day .decade-days .date{min-height:80px}
+html[data-renpet-layout^="tablet"] body[data-language=egy] .month-section.ten-day .decade-days .date{min-height:116px}
+html[data-renpet-layout^="tablet"] .month-section.ten-day .decade-days .date .day-number{font-size:18px}
+html[data-renpet-layout^="tablet"] body[data-language=egy] .month-section.ten-day .date .day-number{min-height:102px;height:102px}
+html[data-renpet-layout^="tablet"] .egy-date-tens{font-size:26px}
+html[data-renpet-layout^="tablet"] .egy-date-ones{grid-template-columns:repeat(3,12px);font-size:21px;line-height:21px}
+html[data-renpet-layout^="tablet"] .egy-date-ones>span{width:12px;height:21px;line-height:21px}
+
+/* iPad portrait and constrained windows: full-width weeks above the agenda. */
+html[data-renpet-layout="tablet-stacked"] .month-scroll{
+ display:flex;flex-direction:column;gap:0;overflow:hidden
+}
+html[data-renpet-layout="tablet-stacked"] .month-section,
+html[data-renpet-layout="tablet-stacked"] body[data-language=egy] .month-section{
+ flex:1 1 65%;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain
+}
+html[data-renpet-layout="tablet-stacked"] .month-agenda,
+html[data-renpet-layout="tablet-stacked"] body[data-language=egy] .month-agenda{
+ flex:1 1 35%;min-height:150px;max-height:45%;height:auto;
+ overflow-y:auto;overscroll-behavior:contain;margin:8px 0 0;
+ padding:8px 0 0;border-top:1px solid var(--line);border-inline-start:0
+}
+
+/* iPad landscape and desktop: month plus permanent side agenda. */
+html[data-renpet-layout="tablet-split"] .month-scroll{
+ display:grid;grid-template-columns:minmax(0,1.6fr) minmax(210px,.9fr);gap:24px;overflow:hidden
+}
+html[data-renpet-layout="tablet-split"] .month-section,
+html[data-renpet-layout="tablet-split"] body[data-language=egy] .month-section{
+ min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain
+}
+html[data-renpet-layout="tablet-split"] .month-agenda,
+html[data-renpet-layout="tablet-split"] body[data-language=egy] .month-agenda{
+ min-height:0;height:100%;max-height:none;overflow-y:auto;overflow-x:hidden;
+ margin:0;padding:5px 0 8px 18px;border-top:0;border-inline-start:1px solid var(--line)
+}
+html[dir=rtl][data-renpet-layout="tablet-split"] .month-agenda{
+ padding-inline-start:18px;padding-inline-end:0
+}
+@media(min-width:1120px){
+ html[data-renpet-layout="tablet-split"] .app-shell{grid-template-columns:110px minmax(0,1fr)}
+ html[data-renpet-layout="tablet-split"] .month-scroll{grid-template-columns:minmax(0,1.8fr) minmax(300px,1fr);gap:35px}
+ html[data-renpet-layout="tablet-split"] .month-section.ten-day .decade-days .date{min-height:95px}
+}
+
+/* Phone GUI also applies to wide but short landscape windows.
+   Independent week scrolling keeps the selected day's agenda onscreen. */
+html[data-renpet-layout="phone"] .month-scroll{height:100%;min-height:0;overflow:hidden}
+html[data-renpet-layout="phone"] .month-section,
+html[data-renpet-layout="phone"] body[data-language=egy] .month-section{
+ flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none
+}
+html[data-renpet-layout="phone"] .month-section::-webkit-scrollbar{display:none}
+html[data-renpet-layout="phone"] .month-agenda,
+html[data-renpet-layout="phone"] body[data-language=egy] .month-agenda{
+ flex:0 0 clamp(126px,28%,170px);min-height:126px;max-height:38%;
+ overflow-y:auto;overscroll-behavior:contain
+}
+
+/* 6.10 — prominent, bold native numerals in date selectors and year overview.
+   Avoid enlarging Gregorian overlays or forcing all 9 unit signs into one line. */
+body[data-language=egy] .year-mini-day{font-size:22px;font-weight:800;-webkit-text-stroke:.24px currentColor;paint-order:stroke fill}
+body[data-language=egy] .year-month-index{font-size:19px;font-weight:800}
+body[data-language=egy] .year-shortcut-value .glyph{height:48px;max-width:185px;object-fit:contain}
+body[data-language=egy] .date-fields select[name=egyMonth],
+body[data-language=egy] .date-fields select[name=egyDay],
+body[data-language=egy] .date-fields select[name=endEgyMonth],
+body[data-language=egy] .date-fields select[name=endEgyDay]{font-size:27px!important;font-weight:800;-webkit-text-stroke:.26px currentColor}
+@media(max-width:390px){
+ body[data-language=egy] .year-shortcut-value .glyph{height:42px;max-width:150px}
+}
+
+/* End-date and per-occurrence controls share the native form layout. */
+.repeat-scope{display:grid;gap:7px;font-weight:600;color:var(--ink)}
+.repeat-scope select{width:100%;min-height:44px}
+.alert-limit{display:block;font-size:12px;line-height:1.45;color:var(--muted);font-weight:400}
+.renpet-reminder-toast{position:fixed;z-index:1001;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;background:#143f37;color:white;border-radius:14px;box-shadow:0 8px 32px #0004;max-width:520px;margin-inline:auto}
+.renpet-reminder-toast button{font-size:23px;color:white;background:none;border:0;min-width:40px;min-height:40px}
+
+/* Appointment density in month and year, festival detail overlays */
+.year-mini-day{position:relative}
+.year-mini-dot,.year-mini-festival{position:absolute;bottom:1px;width:4px;height:4px;border-radius:50%;background:#176c59;inset-inline-start:calc(50% - 5px);pointer-events:none}
+.year-mini-festival{background:#b58b34;inset-inline-start:calc(50% + 2px)}
+.year-mini-day.has-appointments{font-weight:800}
+.date-more-count{position:absolute;bottom:3px;inset-inline-end:2px;font:700 9px/1 system-ui;color:var(--ink,#163e36)}
+.festival-in-agenda{width:100%;text-align:start;cursor:pointer;display:flex;align-items:center;gap:10px}
+.festival-in-agenda .festival-title{display:grid;gap:2px;flex:1;min-width:0}
+.festival-detail-overlay{position:fixed;inset:0;z-index:1100;background:#0007;display:grid;place-items:center;padding:16px}
+.festival-detail-sheet{width:min(100%,580px);max-height:min(86dvh,850px);overflow:auto;background:var(--paper,#fff);color:var(--ink,#143b33);border-radius:20px;padding:22px;box-shadow:0 12px 45px #0003}
+.festival-detail-sheet header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.festival-detail-sheet h2{font-size:23px;line-height:1.5;margin:0}
+.festival-detail-sheet header button{min-width:44px;min-height:44px;border:0;background:transparent;font-size:28px;cursor:pointer}
+.festival-detail-sheet .festival-type{font-weight:700;color:#176c59}
+.festival-detail-sheet .festival-when{color:var(--muted,#527064)}
+.festival-detail-sheet .festival-evidence{white-space:pre-line;line-height:1.8;font-size:15px}
+.festival-sources-links{display:flex;flex-wrap:wrap;gap:9px}
+.festival-sources-links a{color:#176c59;text-decoration:underline;min-height:40px;padding:8px 0}
+
+
+/* Script-localized festival titles and source notes (Renpet 7.1.1).
+   Avoid raw URLs and the mixed-script glyph fallback seen in the old modal. */
+.festival-detail-sheet{min-width:0;overflow-wrap:anywhere}
+.festival-detail-sheet .festival-evidence{white-space:pre-line;overflow-wrap:anywhere;word-break:normal}
+.festival-detail-sheet .festival-sources-links a{overflow-wrap:anywhere;max-width:100%}
+.festival-detail-sheet .festival-translation-note{font-size:12px;line-height:1.6;color:var(--muted)}
+body[data-language=cop] .festival-in-agenda strong,
+body[data-language=cop] .festival-detail-sheet h2,
+body[data-language=cop] .festival-detail-sheet .festival-evidence,
+body[data-language=cop] .festival-detail-sheet .festival-type{font-family:Coptic,system-ui,sans-serif}
+body[data-language=cop] .festival-detail-sheet .festival-evidence{font-size:18px;line-height:1.85}
+body[data-language=egy] .festival-in-agenda strong,
+body[data-language=egy] .festival-detail-sheet h2,
+body[data-language=egy] .festival-detail-sheet .festival-evidence,
+body[data-language=egy] .festival-detail-sheet .festival-type,
+body[data-language=egy] .festival-detail-sheet .festival-translation-note,
+body[data-language=egy] .festival-detail-sheet h3{font-family:RenpetEgyptian,system-ui,sans-serif;font-weight:700;-webkit-text-stroke:.24px currentColor;paint-order:stroke fill}
+body[data-language=egy] .festival-in-agenda strong{font-size:19px;line-height:1.6}
+body[data-language=egy] .festival-detail-sheet h2{font-size:28px;line-height:1.65}
+body[data-language=egy] .festival-detail-sheet .festival-evidence{font-size:25px;line-height:1.85}
+body[data-language=egy] .festival-detail-sheet .festival-type{font-size:23px;line-height:1.6}
+body[data-language=egy] .festival-detail-sheet .festival-sources-links a{font-size:20px}
+@media(max-width:580px){.festival-detail-sheet{padding:18px;max-height:90dvh}}

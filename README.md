@@ -1,5 +1,11 @@
-# renpet
+# Renpet — Egyptian Calendar
 
-Repository created for the independently tested source split from `sydgouda2022/aaa`.
+Independent calendar and appointment-management source, migrated from
+`sydgouda2022/aaa/renpet`. Native predictive input is supplied by
+`sydgouda2022/coptic-keyboard` and
+`sydgouda2022/hieroglyphic-keyboard`.
 
-Source import and CI are pending. Do not mistake this bootstrap commit for completion.
+See `keyboard-lock.json` for pinned upstream commits and SHA-256 release
+hashes. `tools/sync_keyboards.py` updates only keyboard dependencies,
+not the user's appointments, saved calendar data or learning.
+Deployment is intentionally disabled until Cloudflare cutover.

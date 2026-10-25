@@ -1,0 +1,199 @@
+/* Renpet seasonal almanac. Artwork is decorative; all dates and controls
+   remain native HTML. One image per season supplies the paper and borders. */
+body{
+ --season-image:url('assets/seasons/akhet.webp');
+ --green:#0d655d;--deep-green:#154b43;--mint:#dceee6;
+ --gold:#b38a29;--gold-soft:#f5e9c8;--ink:#263b32;--muted:#69664f;
+ --line:#b9a77370;--soft:#f0e6cc;--rubric:#96372e;
+ --surface:#fff9e9ed;--bg:#f6e8c8;--paper:#fff8e7;
+ --art-top:36px;--art-edge:6px;--art-garden:100px;
+ --mini-size:12px;--mini-height:20px;
+ background:var(--bg)
+}
+body[data-season=peret]{
+ --season-image:url('assets/seasons/peret.webp');
+ --green:#2c653d;--deep-green:#244d2e;--mint:#e2edcf;--gold-soft:#edf0d2
+}
+body[data-season=shemu]{
+ --season-image:url('assets/seasons/shemu.webp');
+ --green:#725622;--deep-green:#56431e;--mint:#f0e2bd;--gold-soft:#f4e3b7
+}
+.app-shell{
+ position:relative;isolation:isolate;
+ padding-block-start:calc(var(--art-top) + env(safe-area-inset-top,0px));
+ padding-inline:var(--art-edge);background:var(--bg)
+}
+.season-art,.season-art *{pointer-events:none!important;user-select:none}
+.season-art{
+ position:absolute;inset:0;z-index:-1;overflow:hidden;
+ background-image:linear-gradient(#fff8e773,#fff8e773),var(--season-image);background-size:auto 250%;
+ background-position:center 45%;background-repeat:no-repeat
+}
+.season-frieze{
+ position:absolute;inset:0 0 auto;height:calc(var(--art-top) + env(safe-area-inset-top,0px));
+ background-image:var(--season-image);background-size:auto calc(var(--art-top)*8);
+ background-repeat:repeat-x;background-position:center top;
+ border-bottom:1px solid #b38a2980
+}
+.season-edge{
+ position:absolute;top:var(--art-top);bottom:0;width:var(--art-edge);
+ background-image:var(--season-image);background-size:auto 100%;background-repeat:no-repeat
+}
+.season-edge-start{left:0;background-position:left center}
+.season-edge-end{right:0;background-position:right center}
+.season-garden{
+ position:absolute;inset:auto 0 0;height:var(--art-garden);
+ background-image:var(--season-image);background-size:auto calc(var(--art-garden)*4.4);
+ background-repeat:repeat-x;background-position:center bottom
+}
+.ux-toolbar{
+ padding-top:0;background:#fbf1d8e8;
+ border-bottom:1px solid var(--line);box-shadow:0 1px 0 #fff8 inset
+}
+.ux-toolbar-actions button{background:#fffaeae8;border:1px solid #c7aa654a;box-shadow:0 1px 3px #6b542612}
+.ux-toolbar-head{padding-bottom:10px}
+.ux-heading h1{color:var(--deep-green)}
+.ux-heading p{color:var(--rubric);font-weight:650}
+.main-scroll{background:transparent}
+.ux-bottom{background:#fff5dfed;border-color:#b5984a70}
+.ux-bottom .ux-nav-item{color:var(--deep-green)}
+.ux-bottom .ux-nav-item.active{background:#fffaf080;box-shadow:0 0 0 1px #bd9a4050 inset}
+.month-section .date .greg-day,.month-section .date-range{color:#655e48}
+.week-band,.renpet-decade{border-color:var(--line)}
+.agenda-heading{padding:4px 5px;background:#fcf3dcd9;border-radius:6px}
+.agenda-empty{padding:8px;background:#fcf3dcd9;border-radius:9px}
+.event-row,.festival-in-agenda{border:1px solid #b5984a70;box-shadow:0 1px 2px #70582212}
+.festival-in-agenda{background:#fff2d5eb}
+.event-row{background:#fff9e9f5}
+.festival-in-agenda .festival-title strong{color:var(--deep-green)}
+.settings-actions,.ux-panel-head,.sheet-head{background:var(--surface)}
+.settings-group,.sheet-body input:not([type=checkbox]):not([type=radio]),
+.sheet-body select,.sheet-body textarea{background:var(--surface)}
+.schedule-empty{background:#fcf3dce8;border-radius:18px;margin-top:14px}
+.day-heading,.all-day{background:#fcf3dce8}
+.timeline{background:#fcf3dcdf;border-radius:12px}
+.timeline-hour>span{color:#534f3d}
+.list-page .agenda{background:#fcf3dce8;padding-inline:10px;border-radius:12px;margin-bottom:10px}
+.save-confirmation{background:var(--deep-green);color:#fff}
+
+/* The year keeps its existing 12 tappable mini-calendars and separate
+   year-end period, with four months belonging to each labelled season. */
+.year-overview{max-width:1400px;width:100%;margin:0 auto;padding:10px 7px 24px}
+.year-season{
+ --group-ink:#195d63;--group-fill:#e1efe5e8;--group-line:#92b3a9;
+ --group-art:url('assets/seasons/akhet.webp');
+ margin:0 0 11px;padding:10px;border:1px solid var(--group-line);
+ border-radius:15px;background:var(--group-fill);box-shadow:0 1px 0 #fff7 inset
+}
+.year-season[data-season=peret]{
+ --group-ink:#386132;--group-fill:#e9edcfe8;--group-line:#a2b180;
+ --group-art:url('assets/seasons/peret.webp')
+}
+.year-season[data-season=shemu]{
+ --group-ink:#8b5c19;--group-fill:#f5e6bce8;--group-line:#cbb16e;
+ --group-art:url('assets/seasons/shemu.webp')
+}
+.year-season[data-current-season=true]{
+ border-color:#ad8425;box-shadow:0 0 0 1px #b58c2a55,0 2px 7px #8e6f1c18
+}
+.year-season .season-heading{
+ display:flex;align-items:center;gap:8px;min-height:37px;margin:0 0 8px;
+ color:var(--group-ink);font-size:20px;font-weight:750;letter-spacing:0
+}
+.season-plant{
+ display:block;flex:0 0 36px;width:36px;height:34px;
+ background-image:var(--group-art);background-size:180px auto;
+ background-position:25% 88%;background-repeat:no-repeat;border-radius:5px
+}
+.season-current{
+ display:inline-flex;align-items:center;gap:4px;margin-inline-start:auto;
+ color:#856318;font-size:11px;font-weight:700;white-space:nowrap
+}
+.season-current i{width:7px;height:7px;border-radius:50%;background:#b78c23;box-shadow:0 0 0 2px #fff3c7}
+.year-months{gap:7px}
+.year-overview .year-month{padding:8px 6px 9px;gap:4px;border-radius:10px;border-color:#c6b98c80;background:#fffbefe8}
+.year-overview .year-month.active-month{border-color:var(--green);background:#eef7e9f5;box-shadow:0 0 0 1px #176c591a}
+.year-overview .year-month .year-mini-title{min-height:25px}
+.year-overview .year-month-name{font-size:14px;color:var(--rubric)}
+.year-overview .active-month .year-month-name{color:var(--green)}
+.year-overview .year-month-index{font-size:11px}
+.year-overview .year-month .year-mini-grid{row-gap:3px;column-gap:1px}
+.year-overview .year-month .year-mini-day{
+ min-height:var(--mini-height);font-size:var(--mini-size);line-height:1.12
+}
+.year-overview .year-month .year-mini-today{
+ min-width:20px;min-height:20px;border-radius:50%;background:#176c59;color:#fff;
+ box-shadow:0 0 0 1px #fff8;font-weight:800
+}
+.epagomenal-tile{border:1px solid #c8a752a0;background:#fff1d4f2;padding:9px 10px;border-radius:12px;gap:7px;margin-top:7px}
+.epagomenal-tile strong{font-size:12px}
+.year-mini-epagomenal{gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.year-mini-epagomenal .year-mini-day{border:1px solid #b5984a70;border-radius:50%;background:#fff9e8;min-width:22px;min-height:22px}
+body[data-language=cop]{--mini-size:14px}
+body[data-language=egy]{--mini-size:22px;--mini-height:28px}
+body[data-language=egy] .year-overview .year-month-name{font-size:23px}
+body[data-language=egy] .year-overview .season-heading{font-size:27px}
+body[data-language=egy] .epagomenal-tile strong{font-size:18px}
+
+@media(max-width:390px){
+ body{--art-top:30px;--art-garden:84px}
+ .year-season{padding:8px}
+ .year-overview{padding-inline:3px}
+ .year-overview .year-month-name{font-size:13px}
+ .epagomenal-tile{flex-wrap:wrap}
+ .epagomenal-tile strong{flex:1 1 65%}
+}
+html[data-renpet-layout=phone] .ux-toolbar{padding-inline:12px}
+html[data-renpet-layout=phone] .month-scroll{padding-inline:8px}
+html[data-renpet-layout=phone] .month-section{display:flex;flex-direction:column}
+html[data-renpet-layout=phone] .month-section>.date-range,
+html[data-renpet-layout=phone] .month-section>.week-headers,
+html[data-renpet-layout=phone] .month-section>.week-bands,
+html[data-renpet-layout=phone] .month-section>.decades{flex:0 0 auto}
+/* Occupy spare month space only. In a short or seven-day viewport the art
+   collapses rather than stealing height from the date rows or agenda. */
+html[data-renpet-layout=phone] .month-section::after{
+ content:'';display:block;flex:1 0 0;min-height:0;max-height:160px;margin-top:auto;
+ background-image:var(--season-image);background-size:auto 440%;
+ background-position:70% bottom;background-repeat:no-repeat;pointer-events:none;
+ border-radius:0 0 7px 7px
+}
+html[data-renpet-layout=phone] .month-agenda{border-color:#b5984a80}
+html[data-renpet-layout=phone] .ux-bottom{position:relative;z-index:3}
+
+html[data-renpet-layout^=tablet] body{--art-top:58px;--art-edge:18px;--art-garden:142px}
+html[data-renpet-layout^=tablet] .app-shell{max-width:1500px}
+html[data-renpet-layout^=tablet] .ux-toolbar{padding-top:5px;padding-inline:20px;background:#fbf1d8eb}
+html[data-renpet-layout^=tablet] .ux-bottom,
+html[data-renpet-layout^=tablet] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child){
+ background:#fff5dfd9;border-inline-end-color:#b5984a70;padding-top:14px
+}
+html[data-renpet-layout^=tablet] .ux-bottom .ux-nav-item{background:#fff9eaa8}
+html[data-renpet-layout^=tablet] .month-scroll{padding:12px 18px 18px}
+html[data-renpet-layout^=tablet] .year-overview{padding:8px 12px 22px}
+html[data-renpet-layout^=tablet] .year-months{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+html[data-renpet-layout^=tablet] .year-season{padding:8px;margin-bottom:9px}
+html[data-renpet-layout^=tablet] .year-overview .year-month{padding:6px;gap:3px}
+html[data-renpet-layout^=tablet] .year-overview .year-month .year-mini-title{min-height:23px}
+html[data-renpet-layout^=tablet] .year-overview .year-month .year-mini-grid{row-gap:2px}
+html[data-renpet-layout^=tablet] body{--mini-size:11px;--mini-height:17px}
+html[data-renpet-layout^=tablet] body[data-language=cop]{--mini-size:12px}
+html[data-renpet-layout^=tablet] body[data-language=egy]{--mini-size:22px;--mini-height:28px}
+html[data-renpet-layout^=tablet] .year-overview .year-month-name{font-size:14px}
+html[data-renpet-layout^=tablet] .year-overview .year-month .year-mini-today{min-width:18px;min-height:18px}
+html[data-renpet-layout^=tablet] .epagomenal-tile{min-height:42px;padding:7px 10px}
+html[data-renpet-layout=tablet-split] .year-season{display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px}
+html[data-renpet-layout=tablet-split] .year-season .season-heading{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;margin:0;font-size:24px;min-width:0}
+html[data-renpet-layout=tablet-split] .season-plant{flex:0 0 49px;width:72px;height:49px;background-size:290px auto;background-position:25% 87%}
+html[data-renpet-layout=tablet-split] .season-current{margin-inline-start:0;font-size:12px}
+html[data-renpet-layout^=tablet] body[data-language=egy] .year-overview .year-month-name{font-size:23px}
+@media(min-width:1250px){
+ html[data-renpet-layout^=tablet] body{--art-top:68px;--art-edge:27px;--art-garden:155px}
+ html[data-renpet-layout=tablet-split] .year-season{grid-template-columns:142px minmax(0,1fr)}
+ html[data-renpet-layout=tablet-split] .year-season .season-heading{font-size:29px}
+ html[data-renpet-layout^=tablet] .year-overview .year-month-name{font-size:17px}
+}
+@media(max-height:559px){
+ body{--art-top:22px;--art-garden:65px}
+ .ux-toolbar-head{padding-block:1px 4px}
+}

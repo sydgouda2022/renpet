@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "sourceId": "isis-philae",
+  "scope": "One securely identified epagomenal birthday; not a complete Isis/Philae temple calendar.",
+  "events": [
+    {
+      "id": "isis-epagomenal-birthday",
+      "ar": "ميلاد الإلهة إيزيس — اليوم الرابع من النسيء",
+      "month": 13,
+      "day": 4,
+      "duration": 1,
+      "description_ar": "تفيد قوائم الأيام الخمسة الزائدة في التقويم المصري بأن اليوم الرابع عيد ميلاد إيزيس. لا يتطابق هذا الإسقاط السكندري الحديث بالضرورة مع عيد تاريخي ثابت في نفس اليوم الميلادي أو في كل معبد.",
+      "sourceUrl": "https://www.ucl.ac.uk/museums-static/digitalegypt/ideology/festivaldates.html",
+      "cop": "Ⲡϣⲁⲓ ⲛ̀ⲡⲓϫⲓⲛⲙⲓⲥⲓ ⲛ̀Ⲏⲥⲓⲥ",
+      "egy": "𓎛𓃀𓎱 𓅓𓋴𓏏 𓊨𓏏𓁐",
+      "description_cop": "Ⲡⲓⲙⲁϩ 4 ⲛ̀ⲉϩⲟⲟⲩ ⲛ̀ⲛⲓⲕⲟⲩϫⲓ ⲛ̀ⲉϩⲟⲟⲩ ⲛ̀ⲧⲉ ⲡⲓⲣⲟⲙⲡⲓ ⲡⲉ ⲡⲓϫⲓⲛⲙⲓⲥⲓ ⲛ̀ϯⲛⲟⲩϯ Ⲏⲥⲓⲥ. Ⲡⲓⲉϩⲟⲟⲩ ⲉⲧⲑⲏϣ ⲙ̀ⲫⲣⲏϯ ⲛ̀ⲛⲓⲣⲟⲙⲡⲓ ⲛ̀ⲁⲗⲉⲝⲁⲛⲇⲣⲓⲁ.",
+      "description_egy": "𓎛𓃀𓎱 𓅓𓋴𓏏 ${IS} · 𓆳𓏏 · 𓏞"
+    }
+  ]
+}

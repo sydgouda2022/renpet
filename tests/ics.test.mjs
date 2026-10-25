@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import { exportICS } from '../web/ics-core.mjs';
+const days=n=>Math.floor(Date.parse(n+'T00:00:00Z')/86400000);
+const years=[{year:6282,start:'2026-09-11',days:365},{year:6283,start:'2027-09-11',days:366},{year:6284,start:'2028-09-11',days:365}];
+const item={id:'a',kind:'event',title:'موعد، مهم; جداً\\ملاحظة',startDay:days('2026-10-14'),endDay:days('2026-10-14'),startMinutes:540,endMinutes:600,allDay:false,repeat:'none',calendarId:'personal',location:'القاهرة',notes:'السطر الأول\nالسطر الثاني'};
+const state={calendars:[{id:'personal',name:{ar:'شخصي'}}],items:[item]};
+const resolver=(i,d)=>i.repeat==='daily'?d>=i.startDay:d===i.startDay;
+const opts={today:days('2026-10-14'),now:new Date('2026-10-14T12:00:00Z')};
+const result=exportICS(state,years,resolver,opts);
+assert.equal(result.count,1);
+assert.match(result.text,/BEGIN:VCALENDAR\r\nVERSION:2.0/);
+assert.match(result.text,/DTSTART:20261014T090000/);
+assert.match(result.text,/DTEND:20261014T100000/);
+assert.match(result.text,/LOCATION:القاهرة/);
+assert.match(result.text,/السطر الأول\\nالسطر الثاني/);
+assert.match(result.text,/SUMMARY:موعد، مهم\\; جداً\\\\ملاحظة/);
+assert.ok(result.text.split('\r\n').every(line=>new TextEncoder().encode(line).length<=75));
+const allDay={...item,id:'b',allDay:true,startDay:days('2026-10-14'),endDay:days('2026-10-16')};
+const multi=exportICS({...state,items:[allDay]},years,resolver,opts);
+assert.match(multi.text,/DTSTART;VALUE=DATE:20261014/);
+assert.match(multi.text,/DTEND;VALUE=DATE:20261017/);
+const daily={...item,id:'c',repeat:'daily',startDay:days('2026-10-14')};
+const bounded=exportICS({...state,items:[daily]},years,resolver,opts);
+assert.equal(bounded.count,1);
+assert.equal((bounded.text.match(/BEGIN:VEVENT/g)||[]).length,1);
+assert.match(bounded.text,/RRULE:FREQ=DAILY/);
+for(const [repeat,rule] of [['weekly','FREQ=WEEKLY'],['egy10','FREQ=DAILY;INTERVAL=10']]){
+ const recurring=exportICS({...state,items:[{...daily,repeat}]},years,resolver,opts);
+ assert.equal(recurring.count,1);
+ assert.ok(recurring.text.includes('RRULE:'+rule));
+}
+const excluded=exportICS({...state,items:[{...daily,excludedDays:[days('2026-10-15')]}]},years,resolver,opts);
+assert.match(excluded.text,/EXDATE:20261015T090000/);
+const midnight=exportICS({...state,items:[{...item,id:'midnight',endMinutes:1440}]},years,resolver,opts);
+assert.match(midnight.text,/DTEND:20261015T000000/);
+assert.doesNotMatch(midnight.text,/T240000/);
+assert.match(bounded.text,/END:VCALENDAR\r\n$/);
+console.log('Renpet ICS tests passed');

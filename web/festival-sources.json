@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "description": "Renpet festival-source registry. Add future catalogs here; each selected source is independently enabled. Calendar appointments are managed separately.",
+  "sources": [
+    {
+      "id": "amun-theban",
+      "category": "ancient-egyptian",
+      "status": "available",
+      "name": {
+        "ar": "آمون — طيبة",
+        "cop": "Ⲁⲙⲟⲩⲛ — Ⲑⲏⲃⲁⲓ",
+        "egy": "𓇋𓏠𓈖𓀭 𓌀𓏏𓊖"
+      },
+      "description": {
+        "ar": "أعياد لاهوت آمون الطيبي؛ التواريخ المثبتة في القائمة الحالية فقط",
+        "cop": "Ⲛⲓϣⲁⲓ ⲛ̀Ⲁⲙⲟⲩⲛ ⲛ̀Ⲑⲏⲃⲁⲓ. Ⲛⲓⲉϩⲟⲟⲩ ⲉⲧⲥϧⲏⲟⲩⲧ ⲙ̀ⲙⲁⲩⲁⲧⲟⲩ.",
+        "egy": "𓎛𓃀𓎱 𓇋𓏠𓈖𓀭 · 𓌀𓏏𓊖 · 𓏞𓏤"
+      },
+      "calendarRule": "egyptian-fixed",
+      "data": {
+        "type": "embedded",
+        "key": "festivals"
+      },
+      "defaultEnabled": true
+    },
+    {
+      "id": "national-egypt",
+      "category": "national",
+      "status": "available",
+      "name": {
+        "ar": "المناسبات الوطنية المصرية",
+        "cop": "Ⲛⲓϣⲁⲓ ⲛ̀ⲧⲉ Ⲭⲏⲙⲓ",
+        "egy": "𓎛𓃀𓎱 𓆳𓏺 𓈉𓏤"
+      },
+      "description": {
+        "ar": "ذكرى المناسبات الوطنية؛ شم النسيم يتبع القيامة، دون التنبؤ بنقل أيام الإجازة.",
+        "cop": "Ⲛⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ Ⲭⲏⲙⲓ ⲛⲉⲙ ⲡⲓϣⲁⲓ ⲛ̀Ϣⲱⲙ ⲛ̀Ⲛⲓⲥⲓⲙ. Ⲡⲓⲉϩⲟⲟⲩ ⲛ̀ⲧⲉ ϯⲙⲉⲧⲉⲣⲅⲁⲥⲓⲁ ⲙ̀ⲡⲓⲧⲁⲥⲑⲟ.",
+        "egy": "𓎛𓃀𓎱 𓈉𓏤 · 𓆳𓏺 · 𓏞𓏤"
+      },
+      "calendarRule": "gregorian-annual",
+      "data": {
+        "type": "file",
+        "path": "./festival-packs/national-egypt.json"
+      },
+      "defaultEnabled": false
+    },
+    {
+      "id": "esna-khnum",
+      "category": "ancient-egyptian",
+      "status": "available",
+      "name": {
+        "ar": "إسنا — خنوم ونيت",
+        "cop": "Ⲉⲥⲛⲁ — Ⲭⲛⲟⲩⲙ ⲛⲉⲙ Ⲛⲏⲑ",
+        "egy": "𓇋𓋴𓈖𓄿 𓎸𓅱𓀭 𓈖𓏏𓁐"
+      },
+      "description": {
+        "ar": "تواريخ موثقة مختارة من تقويم إسنا المتأخر؛ القائمة ليست شاملة. التثبيت السكندري إسقاط حديث.",
+        "cop": "Ⲛⲓϣⲁⲓ ⲛ̀Ⲉⲥⲛⲁ ⲙ̀ⲡⲓⲥⲏⲟⲩ ⲛ̀ⲛⲓⲣⲟⲙⲡⲓ ⲛ̀ⲃⲉⲣⲓ. Ⲡⲓⲧⲩⲡⲟⲥ ⲛ̀ⲛⲓⲉϩⲟⲟⲩ ⲉⲧⲑⲏϣ ⲟⲩⲙⲉⲧⲉⲣⲙⲏⲛⲓⲁ ⲡⲉ.",
+        "egy": "𓎛𓃀𓎱 𓇋𓋴𓈖𓄿 · 𓏞𓏤 · 𓆳𓏺"
+      },
+      "calendarRule": "egyptian-fixed",
+      "data": {
+        "type": "file",
+        "path": "./festival-packs/esna-khnum.json"
+      },
+      "defaultEnabled": false
+    },
+    {
+      "id": "isis-philae",
+      "category": "ancient-egyptian",
+      "status": "available",
+      "name": {
+        "ar": "إيزيس — فيلة",
+        "cop": "Ⲏⲥⲓⲥ — Ⲫⲓⲗⲁⲓ",
+        "egy": "𓊨𓏏𓁐 𓉐𓏤"
+      },
+      "description": {
+        "ar": "ذكرى ميلاد إيزيس المثبتة في أيام النسيء؛ تقويم أولي يحتاج توسعة، ولا ننسب له تواريخ غير موثقة.",
+        "cop": "Ⲡⲓϣⲁⲓ ⲛ̀ⲡⲓϫⲓⲛⲙⲓⲥⲓ ⲛ̀Ⲏⲥⲓⲥ ⲙ̀ⲡⲓⲙⲁϩ 4 ⲛ̀ⲉϩⲟⲟⲩ ⲛ̀ⲛⲓⲕⲟⲩϫⲓ ⲛ̀ⲉϩⲟⲟⲩ ⲛ̀ⲧⲉ ⲡⲓⲣⲟⲙⲡⲓ.",
+        "egy": "𓎛𓃀𓎱 𓊨𓏏𓁐 · 𓅓𓋴𓏏 · 𓆳𓏺"
+      },
+      "calendarRule": "egyptian-fixed",
+      "data": {
+        "type": "file",
+        "path": "./festival-packs/isis-philae.json"
+      },
+      "defaultEnabled": false
+    }
+  ]
+}

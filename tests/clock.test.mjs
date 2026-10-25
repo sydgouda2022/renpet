@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {nativeNumber} from '../web/calendar.js';
+import {inputClock,timeText,timeHtml,localMinutes,nowLineTop} from '../web/clock.js';
+
+assert.equal(inputClock(0),'00:00');
+assert.equal(inputClock(9*60+5),'09:05');
+assert.equal(inputClock(23*60+59),'23:59');
+assert.equal(timeText(0,'ar'),'٠٠:٠٠');
+assert.equal(timeText(9*60+5,'ar'),'٠٩:٠٥');
+assert.equal(timeText(10*60+59,'ar'),'١٠:٥٩');
+assert.equal(timeText(0,'cop'),'○:○');
+assert.equal(timeText(10*60+5,'cop'),nativeNumber(10,'cop')+':'+nativeNumber(5,'cop'));
+assert.equal(timeText(23*60+59,'cop'),nativeNumber(23,'cop')+':'+nativeNumber(59,'cop'));
+assert.equal(timeText(0,'egy'),'○:○');
+assert.equal(timeText(10*60+5,'egy'),nativeNumber(10,'egy')+':'+nativeNumber(5,'egy'));
+assert.ok(timeHtml(9*60+5,'ar').includes('٠٩:٠٥'));
+assert.ok(timeHtml(9*60+5,'cop').includes(nativeNumber(9,'cop')));
+assert.ok(timeHtml(10*60+5,'egy').includes('assets/numerals/10.svg'));
+assert.ok(timeHtml(10*60+5,'egy').includes('assets/numerals/5.svg'));
+assert.ok(!timeHtml(10*60,'egy').includes('/0.svg'),'No fictional Egyptian zero glyph');
+assert.ok(timeHtml(10*60,'egy').includes('clock-zero'),'Zero is an explicit neutral UI symbol');
+const instant=new Date(2026,9,24,9,30,15);
+assert.ok(Math.abs(localMinutes(instant)-(9*60+30+15/60))<0.01);
+assert.ok(Math.abs(nowLineTop(instant)-((9*60+30+15/60)*64/60))<0.01);
+console.log('Renpet localized clock and live indicator geometry tests passed');

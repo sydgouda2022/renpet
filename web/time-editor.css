@@ -1,0 +1,51 @@
+/* Renpet 4.1 — one localized appointment time selector.
+   Display clock numerals come from clock.js; stored values stay HH:MM. */
+.local-time-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.local-time-field{display:flex;flex-direction:column;min-width:0;gap:7px}
+.local-time-label{font-size:16px;font-weight:650;line-height:1.45;color:var(--rubric)}
+.local-time-value{display:grid;place-items:center;width:100%;min-height:53px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-size:18px;cursor:pointer}
+.local-time-value .clock-text{font-size:19px;direction:ltr}
+.local-time-value .clock-glyph{height:24px;max-width:40px}
+.local-time-value:focus-visible,.time-choice:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.sheet{position:relative}
+.time-picker-host[hidden]{display:none!important}
+.time-picker-host{position:absolute;inset:57px 0 0;z-index:10;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--bg);border-radius:20px 20px 0 0}
+.time-picker-top{display:flex;align-items:center;gap:10px;min-height:62px;flex:0 0 auto;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.time-picker-top>button{width:44px;height:44px;flex-shrink:0;border:0;border-radius:50%;background:var(--soft);font-size:26px;color:var(--green)}
+.time-picker-top strong{font-size:17px;min-width:0;flex:1;color:var(--rubric)}
+.time-picker-preview{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:94px;padding:0 8px;border-radius:12px;background:var(--mint);color:var(--deep-green)}
+.time-picker-preview .clock-text{font-size:17px}
+.time-picker-preview .clock-glyph{height:22px;max-width:39px}
+.time-picker-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));flex:1;min-height:0;gap:10px;padding:10px 14px}
+.time-picker-column{display:flex;flex-direction:column;gap:5px;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scroll-padding-block:48px}
+.time-choice{display:grid;place-items:center;flex:0 0 50px;min-height:50px;padding:5px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-size:18px}
+.time-choice.selected{background:var(--mint);border-color:var(--green);color:var(--deep-green);font-weight:750}
+.time-choice:disabled{opacity:.25}
+.time-choice .clock-text{font-size:17px}
+.time-choice .clock-glyph{height:20px;max-width:36px}
+.time-picker-foot{flex:0 0 auto;display:flex;justify-content:flex-end;padding:10px 14px max(12px,env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
+.time-picker-foot button{min-width:90px;min-height:46px;padding:8px 23px;background:var(--green);color:white;font-size:21px;border:0;border-radius:13px}
+body[data-language=egy] .local-time-value,body[data-language=egy] .time-choice{font-family:RenpetEgyptian,system-ui,sans-serif}
+@media(max-height:680px){
+ .time-picker-top{min-height:54px}
+ .time-picker-columns{padding:7px 10px;gap:8px}
+ .time-picker-foot{padding-block:7px}
+}
+
+/* Red rubric labels are language-independent. Sign sizing differs by script,
+   not by palette, so event times remain readable on smaller devices. */
+body[data-language=egy] .local-time-label{font-size:24px;line-height:1.4}
+body[data-language=egy] .local-time-value{min-height:69px}
+body[data-language=egy] .local-time-value .clock-glyph{height:33px;max-width:60px}
+body[data-language=egy] .local-time-value .clock-text{font-size:26px}
+body[data-language=egy] .time-picker-top strong{font-size:25px}
+body[data-language=egy] .time-picker-preview{min-height:55px}
+body[data-language=egy] .time-picker-preview .clock-glyph{height:31px;max-width:55px}
+body[data-language=egy] .time-choice{min-height:58px;flex-basis:58px}
+body[data-language=egy] .time-choice .clock-glyph{height:28px;max-width:48px}
+body[data-language=egy] .time-choice .clock-text{font-size:25px}
+
+/* Editor Save/Cancel must stay touchable while the time picker is open.
+   The old inset:0 positioned the picker above the whole form header on WebKit. */
+.sheet-head{position:relative;z-index:11}
+.time-picker-host{pointer-events:auto}

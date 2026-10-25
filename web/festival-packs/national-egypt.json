@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "sourceId": "national-egypt",
+  "scope": "Fixed national observances plus computed Sham El Nessim day; shifted government leave-days excluded.",
+  "events": [
+    {
+      "id": "revolution-police-day",
+      "ar": "ثورة ٢٥ يناير وعيد الشرطة",
+      "month": 1,
+      "day": 25,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀25 Ⲓⲁⲛⲟⲩⲁⲣⲓⲟⲥ ⲛⲉⲙ ⲛⲓⲣⲉϥⲉⲣⲛⲟⲙⲟⲥ",
+      "egy": "𓎛𓃀𓎱 𓆳𓏺 𓌳𓏏𓂝 𓏞",
+      "description_cop": "Ⲡⲓⲉϩⲟⲟⲩ 25 Ⲓⲁⲛⲟⲩⲁⲣⲓⲟⲥ ⲡⲉ ⲟⲩⲙⲉⲩⲓ ⲛ̀ⲧⲉ ⲧⲉϥⲙⲉⲧⲣⲉϥϯⲟⲩⲃⲉ ⲛⲉⲙ ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲛⲓⲣⲉϥⲉⲣⲛⲟⲙⲟⲥ. Ⲙ̀ⲡⲓⲉⲣⲙⲏⲛⲓⲁ ⲛ̀ⲁⲣⲭⲁⲓⲟⲥ ⲁⲛ.",
+      "description_egy": "𓎛𓃀𓎱 𓏞𓏤 𓆳𓏺 · 𓌳𓏏𓂝 · 𓏞"
+    },
+    {
+      "id": "sinai-liberation",
+      "ar": "عيد تحرير سيناء",
+      "month": 4,
+      "day": 25,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡⲓⲉϩⲟⲟⲩ ⲛ̀ϯⲉⲗⲉⲩⲑⲉⲣⲓⲁ ⲛ̀Ⲥⲓⲛⲁⲓ",
+      "egy": "𓎛𓃀𓎱 𓈉𓏤 𓋴𓇋𓈖𓄿",
+      "description_cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ 25 Ⲁⲡⲣⲓⲗⲓⲟⲥ ⲉⲑⲃⲉ ϯⲉⲗⲉⲩⲑⲉⲣⲓⲁ ⲛ̀Ⲥⲓⲛⲁⲓ. Ⲡⲓⲙⲉⲩⲓ ⲙ̀ⲡⲟⲩϩⲓⲙⲉⲛ ⲛ̀ⲥⲁⲃⲃⲁⲧⲟⲛ.",
+      "description_egy": "𓎛𓃀𓎱 𓈉𓏤 𓋴𓇋𓈖𓄿 · 𓆳𓏺"
+    },
+    {
+      "id": "labour-day",
+      "ar": "عيد العمال",
+      "month": 5,
+      "day": 1,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡϣⲁⲓ ⲛ̀ⲛⲓⲉⲣⲅⲁⲧⲏⲥ",
+      "egy": "𓎛𓃀𓎱 𓇋𓂝𓅓𓏏𓏥",
+      "description_cop": "Ⲡⲓϣⲁⲓ ⲛ̀ⲛⲓⲉⲣⲅⲁⲧⲏⲥ ⲛ̀ⲡⲓⲙⲁϩ 1 ⲛ̀Ⲙⲁⲓⲟⲥ. Ⲡⲓⲙⲉⲩⲓ ⲙ̀ⲙⲉⲧⲉⲣⲅⲁⲥⲓⲁ ⲛ̀ⲁⲣⲭⲁⲓⲟⲥ ⲁⲛ.",
+      "description_egy": "𓎛𓃀𓎱 𓇋𓂝𓅓𓏏𓏥 · 𓆳𓏺"
+    },
+    {
+      "id": "june-30-revolution",
+      "ar": "ذكرى ثورة ٣٠ يونيو",
+      "month": 6,
+      "day": 30,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀30 Ⲓⲟⲩⲛⲓⲟⲥ",
+      "egy": "𓎛𓃀𓎱 𓆳𓏺 𓏤𓏤𓏤",
+      "description_cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ 30 Ⲓⲟⲩⲛⲓⲟⲥ ⲛ̀Ⲭⲏⲙⲓ. Ⲟⲩⲙⲉⲩⲓ ⲛ̀ⲧⲉ ⲟⲩⲉⲣⲅⲁⲥⲓⲁ ⲛ̀ⲃⲉⲣⲓ ⲡⲉ.",
+      "description_egy": "𓎛𓃀𓎱 𓆳𓏺 𓏤𓏤𓏤 · 𓈉𓏤"
+    },
+    {
+      "id": "july-23-revolution",
+      "ar": "ذكرى ثورة ٢٣ يوليو",
+      "month": 7,
+      "day": 23,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀23 Ⲓⲟⲩⲗⲓⲟⲥ",
+      "egy": "𓎛𓃀𓎱 𓆳𓏺 𓏤𓏤",
+      "description_cop": "Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ 23 Ⲓⲟⲩⲗⲓⲟⲥ ⲛ̀Ⲭⲏⲙⲓ. Ⲡⲓⲉϩⲟⲟⲩ ⲛ̀ⲧⲉ ⲟⲩⲙⲉⲧⲃⲉⲣⲓ ⲡⲉ.",
+      "description_egy": "𓎛𓃀𓎱 𓆳𓏺 𓏤𓏤 · 𓈉𓏤"
+    },
+    {
+      "id": "armed-forces",
+      "ar": "عيد القوات المسلحة",
+      "month": 10,
+      "day": 6,
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "dateMeaning": "anniversary, not shifted public leave day",
+      "cop": "Ⲡϣⲁⲓ ⲛ̀ⲛⲓⲙⲁⲧⲟⲓ ⲛ̀Ⲭⲏⲙⲓ",
+      "egy": "𓎛𓃀𓎱 𓌙𓏤𓏥 𓈉𓏤",
+      "description_cop": "Ⲡⲓⲉϩⲟⲟⲩ 6 Ⲟⲕⲧⲱⲃⲣⲓⲟⲥ ⲡⲉ ⲡⲓϣⲁⲓ ⲛ̀ⲛⲓⲙⲁⲧⲟⲓ ⲛ̀ⲧⲉ Ⲭⲏⲙⲓ. Ⲛⲓⲡⲟⲗⲓⲧⲓⲕⲟⲛ ⲛⲉⲙ ⲛⲓⲙⲉⲩⲓ ⲛ̀ⲁⲣⲭⲁⲓⲟⲥ ⲁⲛ.",
+      "description_egy": "𓎛𓃀𓎱 𓌙𓏤𓏥 · 𓈉𓏤"
+    },
+    {
+      "id": "sham-el-nessim",
+      "ar": "شم النسيم",
+      "calendarRule": "orthodox-easter",
+      "sourceUrl": "https://www.presidency.eg/EN/%D9%85%D8%B5%D8%B1/%D8%A7%D9%84%D8%B9%D8%B7%D9%84%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%85%D9%8A%D8%A9/",
+      "offsetDays": 1,
+      "description_ar": "شم النسيم هو الاثنين التالي للقيامة القبطية. يحسب يوم الاحتفال؛ لا يتنبأ بأي تغيير لاحق في الإجازة الرسمية.",
+      "cop": "Ⲡϣⲁⲓ ⲛ̀Ϣⲱⲙ ⲛ̀Ⲛⲓⲥⲓⲙ",
+      "egy": "𓎛𓃀𓎱 𓆳𓂝𓏤 𓇳𓏺",
+      "description_cop": "Ⲡϣⲁⲓ ⲛ̀Ϣⲱⲙ ⲛ̀Ⲛⲓⲥⲓⲙ ⲙ̀ⲡⲓⲉϩⲟⲟⲩ ⲛ̀ⲥⲛⲁⲩ ⲙⲉⲛⲉⲛⲥⲁ ⲡⲓⲡⲁⲥⲭⲁ ⲛ̀ⲛⲓⲢⲉⲙⲛ̀Ⲭⲏⲙⲓ. Ⲡⲓⲛ̀ϩⲏⲧ ⲛ̀ⲧⲉ ⲡⲓϣⲁⲓ ⲁⲛ ⲛ̀ⲁⲣⲭⲁⲓⲟⲥ ⲙ̀ⲡⲓⲛⲁⲩ ⲛ̀ⲙⲉⲧⲁⲗⲉⲝⲁⲛⲇⲣⲓⲁ.",
+      "description_egy": "𓎛𓃀𓎱 𓆳𓂝𓏤 · 𓇳𓏺 𓏤𓏤"
+    }
+  ]
+}

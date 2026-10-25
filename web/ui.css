@@ -1,0 +1,485 @@
+/* RENPET 5 — one shared rubrical palette and calendar layout for every language.
+   Script size may vary, but colors and navigation semantics never do. */
+
+@font-face{font-family:CairoRenpet;src:url('assets/fonts/Cairo-VF.ttf') format('truetype');font-weight:200 1000;font-style:normal;font-display:swap}
+@font-face{font-family:Coptic;src:url('assets/fonts/Coptic.ttf') format('truetype');font-display:swap}
+:root{
+ color-scheme:light;
+ --green:#176c59;--deep-green:#114d40;--mint:#e5f2ea;--gold:#c4a165;
+ --ink:#202a25;--muted:#657168;--line:#e3e8e2;--soft:#f2f4ef;
+ --rubric:#96372e;--rubric-soft:#f5e9e6;
+ --surface:#fff;--bg:#f9faf6;--gold-soft:#f5eddc;
+}
+*{box-sizing:border-box}
+html,body,#app{margin:0;height:100%}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg);-webkit-tap-highlight-color:transparent}
+body[data-language=ar]{font-family:CairoRenpet,-apple-system,system-ui,sans-serif}
+body[data-language=ar] button,body[data-language=ar] input,body[data-language=ar] select,body[data-language=ar] textarea{font-family:CairoRenpet,-apple-system,system-ui,sans-serif}
+body[data-language=cop]{font-family:Coptic,-apple-system,system-ui,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+button:disabled{opacity:.4}
+button svg{flex-shrink:0}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.glyph{display:inline-block;height:1.05em;width:auto;max-width:100%;vertical-align:middle}
+.subtle,.date-preview,.build-label{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:24px 8px;font-size:14px}
+
+/* Persistent application frame — toolbar / one view / one nav */
+.app-shell{display:flex;flex-direction:column;width:100%;max-width:850px;margin:0 auto;height:100dvh;min-height:0;overflow:hidden;background:var(--bg)}
+.main-scroll{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.main-scroll::-webkit-scrollbar{display:none}
+.ux-toolbar{flex:0 0 auto;padding:env(safe-area-inset-top,0px) 16px 0;background:var(--bg);position:relative;z-index:4}
+.ux-toolbar-top{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:50px}
+.ux-back{flex:1;min-width:0}
+.ux-back button{display:flex;align-items:center;gap:4px;min-height:44px;max-width:150px;padding:0;border:0;background:transparent;color:var(--green);font-size:14px}
+.ux-back button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ux-back button svg{width:19px;height:19px}
+html[dir=rtl] .ux-back button svg{transform:scaleX(-1)}
+.ux-toolbar-actions{display:flex;flex:0 0 auto;gap:9px}
+.ux-toolbar-actions button{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--surface);color:var(--green);box-shadow:0 1px 2px #15271e0c}
+.ux-toolbar-actions button:active{background:var(--mint)}
+.ux-toolbar-actions svg{width:21px;height:21px}
+.ux-toolbar-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0 9px}
+.ux-heading{flex:1;min-width:0}
+.ux-heading h1{margin:0;line-height:1.05;font-size:clamp(27px,7.5vw,36px);font-weight:740;letter-spacing:-.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ux-heading p{margin:4px 0 0;font-size:11px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ux-period-controls{display:flex;gap:3px}
+.ux-period-controls button{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--green);font-size:26px;line-height:1}
+.search-panel{padding:0 0 14px;background:var(--bg)}
+.search-panel input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:13px;background:#fff;font-size:16px}
+.search-results{max-height:235px;overflow:auto}
+.search-results button{display:flex;align-items:center;justify-content:space-between;gap:15px;width:100%;min-height:46px;padding:10px;border:0;border-bottom:1px solid var(--line);background:#fff;text-align:start}
+.search-results small{font-size:12px;color:var(--muted)}
+
+/* The four primary views share one bottom navigation. */
+.ux-bottom{display:flex;flex:0 0 auto;min-height:66px;align-items:center;justify-content:space-around;gap:2px;padding:5px 7px max(6px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--surface)}
+.ux-bottom .ux-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:52px;padding:4px 2px;border:0;border-radius:12px;background:transparent;color:var(--muted);font-size:11px;line-height:1.15}
+.ux-bottom .ux-nav-item.active{color:var(--green);font-weight:740}
+.ux-bottom .ux-nav-item svg{height:23px;width:23px}
+.ux-bottom .ux-nav-item:active{background:var(--mint)}
+
+/* Month: same date cell in Arabic / Coptic / hieroglyphs. Only geometry changes. */
+.month-scroll{max-width:670px;margin:0 auto;padding:0 13px 5px;min-height:0;height:100%;display:flex;flex-direction:column}
+.month-section{flex:0 0 auto;margin:0}
+.month-section .date-range{margin:0;padding:0 0 5px;font-size:10px;line-height:13px}
+.week-headers,.dates{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.week-headers{padding:6px 0 5px;border-top:1px solid var(--line)}
+.week-headers span{text-align:center;font-size:12px;font-weight:580;color:var(--muted);overflow:hidden;white-space:nowrap}
+.dates{gap:2px 0}
+.date,.blank{position:relative;min-width:0;min-height:44px;border:0;background:transparent}
+.date{display:flex;flex-direction:column;align-items:center;gap:0;border-radius:11px;padding:2px 0 1px}
+.date .day-number{display:grid;place-items:center;width:auto;min-width:30px;max-width:100%;height:29px;padding:0 3px;border-radius:12px;font-size:15px;line-height:1;font-weight:630;white-space:nowrap}
+.date .day-number .glyph{height:17px;max-width:95%}
+.date.chosen .day-number{background:var(--green);color:#fff;padding-inline:7px}
+.date.chosen .day-number .glyph{filter:brightness(0) invert(1)}
+.date.is-today:not(.chosen) .day-number{border:1px solid var(--green);color:var(--green)}
+.date small{color:var(--muted);font-size:9px;line-height:10px}
+.date .dots{display:flex;justify-content:center;align-items:center;gap:3px;height:4px}
+.dots i{display:block;height:4px;width:4px;border-radius:50%}
+.fest-mark{position:absolute;inset-inline-end:2px;top:3px;color:var(--gold);font-size:9px;font-style:normal}
+.date:active,.date:hover{background:var(--mint)}
+.month-section.ten-day .decades{display:flex;flex-direction:column;gap:5px;padding-top:2px}
+.renpet-decade{min-width:0}
+.decade-label{margin:0 0 2px;font-size:10px;font-weight:560;color:var(--muted)}
+.decade-days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px 5px}
+.decade-days .date{min-height:39px}
+.decade-days .date .day-number{height:26px;font-size:14px}
+body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
+.month-agenda{flex:1 1 auto;min-height:112px;overflow-y:auto;overscroll-behavior:contain;margin:7px 0 0;padding:6px 0 0;border-top:1px solid var(--line)}
+.month-agenda .agenda{padding:4px 0 11px}
+
+/* Shared agenda: appointment and reminder cards */
+.agenda{padding:10px 13px 13px}
+.agenda h3{margin:0 0 2px;font-size:18px}
+.agenda .subtle{margin:0;font-size:11px}
+.agenda .empty{padding:10px 4px}
+.event-row{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:9px;margin:6px 0;text-align:start;border:0;border-radius:12px;background:var(--surface);box-shadow:0 1px 0 #1b29240b}
+.event-row:before{content:'';display:block;align-self:stretch;flex:0 0 4px;min-height:40px;border-radius:3px;background:var(--event)}
+.event-clock{flex:0 0 52px;font-size:12px;color:var(--muted)}
+.event-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.event-copy strong{font-size:14px;overflow-wrap:anywhere}
+.event-copy small{font-size:12px;color:var(--muted)}
+.reminder-box{margin-inline-start:auto;color:var(--green)}
+.reminder-box svg{width:18px;height:18px}
+
+/* Year: precisely twelve month tiles plus a separate epagomenal entry. */
+.year-overview{max-width:650px;margin:auto;padding:0 16px 20px}
+.year-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.year-month{display:flex;align-items:center;justify-content:space-between;gap:7px;min-width:0;min-height:62px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:start}
+.epagomenal-tile{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin:12px 0 0;padding:12px;border:0;border-radius:13px;background:var(--gold-soft);color:var(--deep-green);text-align:start}
+.epagomenal-tile strong{flex:1}
+.epagomenal-tile small{font-size:11px;color:var(--muted)}
+
+/* Day: proportional 24-hour time line; drag/resize logic remains unchanged. */
+.day-page,.list-page{max-width:760px;margin:0 auto;padding:0 0 25px}
+.day-heading{display:flex;align-items:baseline;gap:10px;padding:9px 23px 15px;font-size:23px;font-weight:720}
+.day-heading small{font-size:12px;color:var(--muted);font-weight:400}
+.all-day{padding:6px 20px}
+.timeline{position:relative;min-height:1536px;margin:10px 17px 28px 9px}
+.timeline-hour{display:flex;align-items:flex-start;gap:10px;height:64px}
+.timeline-hour>span{flex:0 0 53px;transform:translateY(-8px);text-align:end;font-size:12px;color:var(--muted);direction:ltr}
+.timeline-slot{flex:1;min-width:0;height:64px;padding:0;border:0;border-top:1px solid var(--line);background:transparent}
+.timeline-events{position:absolute;top:0;bottom:0;inset-inline-start:72px;inset-inline-end:4px;pointer-events:none}
+.timeline-event{position:absolute;pointer-events:auto;display:flex;flex-direction:column;min-width:0;padding:0;overflow:hidden;text-align:start;color:var(--ink);background:color-mix(in srgb,var(--event) 17%,white);border:0;border-inline-start:4px solid var(--event);border-radius:11px;touch-action:none;user-select:none}
+.event-drag{display:flex;flex:1;flex-direction:column;gap:2px;min-height:0;width:100%;overflow:hidden;padding:6px 7px;cursor:grab}
+.event-drag:active{cursor:grabbing}
+.event-drag strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.event-drag small{font-size:11px}
+.event-resize{height:10px;min-height:10px;width:100%;border-top:1px solid color-mix(in srgb,var(--event) 30%,white);cursor:ns-resize}
+.list-page{padding-inline:18px}
+.list-page .agenda{padding:13px 4px 18px;border-bottom:1px solid var(--line)}
+
+/* Secondary features have ONE entry point, and open over the calendar. */
+.ux-panel-backdrop{position:fixed;inset:0;z-index:25;background:rgba(18,35,27,.38);touch-action:manipulation}
+.ux-panel{position:fixed;z-index:26;inset:auto 0 0;display:flex;flex-direction:column;width:min(100%,600px);max-height:min(70dvh,650px);margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;box-shadow:0 -8px 30px #0002;overflow:hidden}
+.ux-panel-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;min-height:58px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line)}
+.ux-panel-head strong{font-size:17px}
+.ux-panel-head button{min-width:43px;min-height:43px;padding:0;border:0;background:transparent;color:var(--green);font-size:30px}
+.ux-panel-body{flex:1;min-height:0;overflow:auto}
+.page{padding:18px 19px 28px}
+.ux-panel .page h1{display:none}
+.page>p{font-size:13px;color:var(--muted)}
+.settings-group{padding:2px 14px;margin:0 0 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.settings-group>label{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:55px;border-bottom:1px solid var(--line);font-size:15px}
+.settings-group>label:last-child{border:0}
+.settings-group select,.settings-group input:not([type=checkbox]):not([type=color]){max-width:56%;padding:8px;border:0;border-radius:7px;background:var(--soft)}
+.settings-group input[type=checkbox],.cal-row input{width:21px;height:21px;accent-color:var(--green)}
+.build-label{font-size:12px;text-align:center;margin:10px}
+.cal-row{display:flex;align-items:center;gap:12px;min-height:53px;border-bottom:1px solid var(--line)}
+.cal-row:last-child{border:0}
+.cal-row button{margin-inline-start:auto;border:0;background:transparent;color:#b44141;font-size:24px}
+.color-dot{width:12px;height:12px;flex-shrink:0;border-radius:50%}
+.primary{display:block;width:100%;min-height:46px;padding:12px;border:0;border-radius:11px;background:var(--green);color:#fff}
+.delete{width:100%;padding:13px;border:0;border-radius:11px;background:white;color:#b32c35;font-weight:650}
+
+/* One event-editor sheet, shared by all four views. */
+.sheet-overlay{position:fixed;inset:0;z-index:50;display:flex;justify-content:center;align-items:flex-end;background:#12231b70}
+.sheet{display:flex;flex-direction:column;width:100%;max-width:600px;max-height:95dvh;padding:0 0 env(safe-area-inset-bottom);overflow:hidden;border-radius:20px 20px 0 0;background:var(--bg)}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;min-height:57px;padding:0 15px;border-bottom:1px solid var(--line);background:#fff}
+.sheet-head button{border:0;background:transparent;color:var(--green);padding:10px}
+.sheet-head .save-button{font-weight:720}
+.sheet-body{display:flex;flex-direction:column;gap:13px;overflow:auto;padding:16px}
+.sheet-body>label{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:14px}
+.sheet-body input:not([type=checkbox]):not([type=radio]),.sheet-body select,.sheet-body textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:16px;color:var(--ink)}
+.sheet-body label.check-row{display:flex;flex-direction:row;justify-content:space-between;align-items:center;color:var(--ink)}
+.check-row input{width:22px;height:22px;accent-color:var(--green)}
+.kind-toggle{display:flex;padding:4px;border-radius:11px;background:var(--soft)}
+.kind-toggle label{flex:1;text-align:center;font-size:14px;padding:8px}
+.kind-toggle input{accent-color:var(--green)}
+.date-fields{display:grid;grid-template-columns:1fr 1.35fr .85fr;gap:5px}
+.date-fields input,.date-fields select{min-width:0;padding:9px 5px!important;font-size:14px!important}
+.date-preview{display:block;margin-top:5px;font-size:12px}
+.time-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.time-fields label{display:flex;flex-direction:column;gap:5px;font-size:14px;color:var(--muted)}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* Compact, readable daily navigation and selected-day preview. */
+.year-brand{display:inline-flex;align-items:center;min-height:44px;color:var(--green);font-size:15px;font-weight:650}
+.year-shortcut{min-height:44px;display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:0;border:0;background:transparent;color:var(--ink);font-size:14px}
+.year-shortcut .glyph{height:22px;max-width:100%}
+.agenda-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px}
+.agenda-heading h3{font-size:17px;line-height:1.3;flex-shrink:0}
+.agenda-heading .subtle{flex:1;text-align:end}
+.agenda-empty{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;color:var(--muted);font-size:13px}
+.agenda-empty p{margin:0}
+.festival-in-agenda{display:flex;gap:9px;align-items:start;padding:7px 9px;margin:4px 0;border-radius:9px;background:var(--gold-soft)}
+.festival-in-agenda>span{color:var(--gold);font-size:12px}
+.festival-in-agenda div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.festival-in-agenda strong{font-size:12px;font-weight:650}
+.festival-in-agenda small{font-size:10px;color:var(--muted)}
+.year-season{margin:0 0 15px}
+.year-season h2{font-size:13px;letter-spacing:.3px;font-weight:700;color:var(--deep-green);margin:0 0 7px}
+.year-month.active-month{border-color:var(--green);background:var(--mint)}
+.year-month-name{font-weight:690;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.year-month-index{color:var(--muted);font-size:12px;flex-shrink:0}
+.year-month-index .glyph{height:17px}
+.schedule-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 24px;max-width:400px;min-height:320px;margin:0 auto;text-align:center}
+.schedule-empty h2{font-size:19px;margin:0}
+.schedule-empty p{font-size:13px;color:var(--muted);margin:0 0 14px}
+.schedule-empty .empty-art{font-size:40px;color:var(--gold)}
+.schedule-empty .primary{max-width:225px}
+.settings-actions{display:flex;flex-direction:column;gap:0;background:#fff;border:1px solid var(--line);border-radius:14px}
+.settings-actions button{display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:start;font-size:14px}
+.settings-actions button:last-child{border:0}
+.settings-actions button span{font-size:22px;color:var(--muted)}
+.advanced-fields{padding:0;border:0}
+.advanced-fields>summary{display:flex;align-items:center;justify-content:space-between;min-height:45px;list-style:none;padding:12px;border-radius:11px;background:var(--surface);color:var(--green);font-size:14px;font-weight:670;cursor:pointer}
+.advanced-fields>summary::-webkit-details-marker{display:none}
+.advanced-fields>summary:after{content:'⌄';font-size:20px}
+.advanced-fields[open]>summary:after{transform:rotate(180deg)}
+.advanced-fields>label{display:flex;flex-direction:column;gap:7px;margin:12px 0;color:var(--muted);font-size:14px}
+.advanced-fields input,.advanced-fields select,.advanced-fields textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:16px;color:var(--ink)}
+@font-face{font-family:RenpetEgyptian;src:url('assets/fonts/NotoSansEgyptianHieroglyphs-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+body[data-language=egy] {font-family:RenpetEgyptian,-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+/* Bold native hieroglyphs consistently. Noto Egyptian Hieroglyphs is provided
+   only in Regular; allow synthetic bold and use a restrained hairline contour
+   for browsers (notably WebKit) that render its fine sign strokes too lightly.
+   Restrict this to script labels, numeric signs, and form date selectors;
+   Gregorian captions, user-written appointments, and other languages stay normal. */
+body[data-language=egy]{font-synthesis:weight}
+body[data-language=egy] :is(
+ .year-shortcut-label,.year-brand,.ux-heading h1,.ux-heading p,
+ .ux-bottom .ux-nav-item span,.month-section .day-number,.decade-label,
+ .agenda-heading h3,.day-heading,.year-season h2,.year-month-name,
+ .year-month-index,.epagomenal-tile strong,.date-fields select,
+ .sheet-head strong,.kind-toggle label,.advanced-fields>summary
+){
+ font-weight:700;
+ -webkit-text-stroke:.24px currentColor;
+ paint-order:stroke fill;
+}
+body[data-language=egy] :is(
+ .ux-heading h1,.agenda-heading h3,.day-heading,.year-season h2,.year-month-name
+){-webkit-text-stroke:.32px currentColor}
+/* Ten-column phone months need a finer outline to keep grouped unit signs open. */
+body[data-language=egy] .month-section .day-number{-webkit-text-stroke:.16px currentColor}
+
+body[data-language=egy] .ux-bottom .ux-nav-item{font-size:15px}
+body[data-language=egy] .year-month-name{font-size:19px}
+body[data-language=egy] .year-shortcut{font-size:16px}
+@media(max-width:390px){
+ .ux-toolbar{padding-inline:13px}
+ .ux-toolbar-top{min-height:48px}
+ .ux-toolbar-head{padding:2px 0 6px}
+ .ux-heading h1{font-size:29px}
+ .month-scroll{padding-inline:10px}
+ .date,.blank{min-height:42px}
+ .year-month{min-height:58px}
+}
+@media(min-height:800px){
+ .date,.blank{min-height:49px}
+ .month-agenda{min-height:150px}
+}
+
+@media(min-width:650px){.decade-days{grid-template-columns:repeat(10,minmax(0,1fr))}}
+
+
+/* Localized 24-hour clock; SVG numerals follow the same Nile Green font and
+   scale on Arabic, Coptic, and hieroglyphic timeline rows. */
+.clock-text{display:inline-flex;align-items:center;justify-content:center;gap:1px;direction:ltr;unicode-bidi:isolate;white-space:nowrap;font-variant-numeric:tabular-nums}
+.clock-part{display:inline-flex;align-items:center;justify-content:center;min-width:0}
+.clock-glyph{display:inline-block;width:auto;height:17px;max-width:24px;object-fit:contain}
+.clock-zero{font:13px/1 system-ui,sans-serif}
+.clock-separator{font:12px/1 system-ui,sans-serif}
+.timeline-hour>span{display:flex;align-items:center;justify-content:flex-end;overflow:visible;min-width:0}
+.timeline-hour .clock-text{font-size:11px}
+.event-clock .clock-text{font-size:11px}
+.event-drag .clock-text{font-size:11px}
+.event-drag .clock-glyph{height:14px;max-width:19px}
+.event-drag small{display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden}
+body[data-language=egy] .timeline-hour .clock-glyph{height:16px;max-width:23px}
+
+/* iOS-style live red time locator. No pointer events so hour cells and drag
+   operations continue to work underneath it. The top is set in JS using
+   device-local hours/minutes/seconds, 64px per hour. */
+.timeline-now{position:absolute;inset-inline:0;height:2px;display:flex;align-items:center;z-index:8;pointer-events:none;color:#cf343b}
+.timeline-now-clock{flex:0 0 70px;display:flex;align-items:center;justify-content:center;max-width:70px;min-height:26px;padding:3px 2px;border-radius:999px;background:#cf343b;color:white;box-shadow:0 1px 2px #0002}
+.timeline-now-clock .clock-text{font-size:11px;font-weight:700}
+.timeline-now-clock .clock-glyph{filter:brightness(0) invert(1);height:15px;max-width:22px}
+.timeline-now-clock .clock-zero,.timeline-now-clock .clock-separator{color:white}
+.timeline-now-rule{position:relative;flex:1;min-width:0;height:2px;background:#cf343b}
+.timeline-now-rule::before{position:absolute;content:'';inset-inline-start:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#cf343b}
+
+/* Date editor: script-aware year selector, with native numeric values only under the hood. */
+.date-fields select[name=egyYear]{width:100%;min-width:0;text-overflow:ellipsis;font-variant-numeric:normal}
+body[data-language=cop] .date-fields select[name=egyYear]{font-family:Coptic,system-ui,sans-serif;font-size:14px!important}
+body[data-language=egy] .date-fields{grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:9px}
+body[data-language=egy] .date-fields select[name=egyYear]{grid-column:1/-1;min-height:64px;font-family:RenpetEgyptian,system-ui,sans-serif;font-size:20px!important;letter-spacing:normal;overflow:visible;text-overflow:clip}
+body[data-language=egy] .date-fields select[name=egyMonth],body[data-language=egy] .date-fields select[name=egyDay]{min-height:57px;font-size:23px!important;font-family:RenpetEgyptian,system-ui,sans-serif}
+
+
+/* Rubrication is shared across all three scripts: headings and labels in
+   Egyptian red, values in dark ink, selection/actions in Nile green. */
+.ux-heading p,.month-section .date-range,.decade-label,.year-season h2,
+.year-month-name,.settings-group>label,.sheet-body>label,.sheet-body .check-row,
+.kind-toggle label,.advanced-fields>label,.ux-panel-head strong,
+.advanced-fields>summary,.agenda-heading h3,.year-shortcut-label{
+ color:var(--rubric);
+}
+.year-shortcut-value,.year-shortcut-value .glyph{color:var(--ink)}
+.year-shortcut-label{font-size:14px;font-weight:680}
+.year-shortcut-value{display:inline-flex;align-items:center;min-width:0}
+.ux-bottom .ux-nav-item:not(.active) span{color:var(--rubric)}
+.ux-bottom .ux-nav-item.active span{color:var(--green)}
+.year-season h2{color:var(--rubric)}
+.year-month.active-month .year-month-name{color:var(--green)}
+.sheet-body input,.sheet-body select,.sheet-body textarea{color:var(--ink)}
+.date-preview,.date small{color:var(--muted)}
+/* Hieroglyphs have narrow sign contours and tall complexes. Allocate physical
+   space rather than downscaling them into alphabetic control dimensions. */
+body[data-language=egy] .ux-toolbar-top{min-height:61px}
+body[data-language=egy] .year-shortcut{gap:7px;min-height:55px}
+body[data-language=egy] .year-shortcut-label{font-size:23px;line-height:1.15}
+body[data-language=egy] .year-shortcut-value .glyph{height:43px;max-width:170px;object-fit:contain}
+body[data-language=egy] .year-brand{font-size:26px}
+body[data-language=egy] .ux-heading h1{font-size:37px;line-height:1.25;min-height:44px}
+body[data-language=egy] .ux-heading h1 .glyph{height:43px;max-width:100%}
+body[data-language=egy] .ux-heading p{font-size:22px;line-height:1.4}
+body[data-language=egy] .ux-bottom{min-height:87px}
+body[data-language=egy] .ux-bottom .ux-nav-item{min-height:72px;gap:1px}
+body[data-language=egy] .ux-bottom .ux-nav-item span{font-size:23px;line-height:1.25;min-height:28px}
+body[data-language=egy] .ux-bottom .ux-nav-item svg{width:27px;height:27px}
+body[data-language=egy] .month-section .date-range{font-size:15px;line-height:1.4}
+body[data-language=egy] .decade-label{font-size:21px;line-height:1.4;margin:1px 0 3px}
+body[data-language=egy] .month-section.ten-day .decades{gap:7px}
+body[data-language=egy] .decade-days .date{min-height:50px}
+body[data-language=egy] .decade-days .date .day-number{
+ min-height:43px;height:auto;max-height:49px;min-width:43px;max-width:100%;
+ padding:4px 2px;font-size:28px;line-height:1.05;letter-spacing:-.3px;
+ overflow-wrap:anywhere;white-space:normal;word-break:break-all;text-align:center;
+}
+body[data-language=egy] .decade-days .date .glyph{height:31px;max-width:100%}
+body[data-language=egy] .date.chosen .day-number{padding-inline:3px}
+body[data-language=egy] .agenda-heading h3{font-size:27px;line-height:1.3}
+body[data-language=egy] .agenda-empty{font-size:19px;line-height:1.4}
+body[data-language=egy] .year-season h2{font-size:25px;line-height:1.4}
+body[data-language=egy] .year-month{min-height:78px}
+body[data-language=egy] .year-month-name{font-size:30px;line-height:1.25}
+body[data-language=egy] .year-month-index{font-size:23px}
+body[data-language=egy] .year-month-index .glyph{height:25px}
+body[data-language=egy] .epagomenal-tile strong{font-size:25px}
+body[data-language=egy] .day-heading{font-size:29px;line-height:1.3}
+body[data-language=egy] .timeline-hour .clock-glyph{height:22px;max-width:36px}
+body[data-language=egy] .timeline-hour>span{flex-basis:65px}
+body[data-language=egy] .timeline-events{inset-inline-start:84px}
+body[data-language=egy] .sheet-body>label,
+body[data-language=egy] .sheet-body .check-row,
+body[data-language=egy] .kind-toggle label,
+body[data-language=egy] .advanced-fields>summary,
+body[data-language=egy] .advanced-fields>label{font-size:23px;line-height:1.5}
+body[data-language=egy] .sheet-body{gap:15px}
+body[data-language=egy] .sheet-body input:not([type=checkbox]):not([type=radio]),
+body[data-language=egy] .sheet-body select,
+body[data-language=egy] .sheet-body textarea{min-height:53px}
+body[data-language=egy] .kind-toggle label{padding-block:12px}
+body[data-language=egy] .date-preview{font:12px/1.5 system-ui,sans-serif}
+/* Keep the selected-day agenda visible even on the smallest iPhone. The
+   six rows of 10-day signs scroll independently; glyphs remain full size. */
+body[data-language=egy] .month-scroll{overflow:hidden}
+body[data-language=egy] .month-section{
+ flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:none;
+}
+body[data-language=egy] .month-section::-webkit-scrollbar{display:none}
+body[data-language=egy] .month-agenda{
+ flex:0 0 122px;min-height:115px;max-height:31%;margin-top:6px;
+ overflow-y:auto;
+}
+/* Compact iPhones: preserve sign size; allow the calendar or form to scroll. */
+@media(max-width:390px){
+ body[data-language=egy] .year-shortcut-value .glyph{height:38px;max-width:145px}
+ body[data-language=egy] .year-shortcut-label{font-size:22px}
+ body[data-language=egy] .decade-days .date .day-number{font-size:27px}
+ body[data-language=egy] .ux-heading h1{font-size:33px}
+ body[data-language=egy] .date-fields select[name=egyYear]{font-size:19px!important}
+}
+
+/* Renpet 6 — compact Apple-style year with visible dates and a red today.
+   Same component/data model in Arabic (7 days) and Coptic/Egyptian (10 days).
+   Coptic and hieroglyphic 10-day cards show six rows of five dates. */
+.year-month{display:flex;flex-direction:column;align-items:stretch;justify-content:start;gap:7px;min-height:0;height:auto;padding:10px 8px 11px;overflow:hidden}
+.year-mini-title{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:25px;width:100%}
+.year-mini-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px 1px;align-items:center;width:100%;direction:ltr}
+.year-mini-grid[data-week="10"]{grid-template-columns:repeat(5,minmax(0,1fr));row-gap:5px}
+.year-mini-day,.year-mini-blank{display:grid;place-items:center;min-width:0;min-height:20px;line-height:1.05;font-size:12px;white-space:nowrap;color:var(--ink);text-align:center}
+.year-mini-blank{color:transparent}
+.year-mini-day .glyph{height:15px;max-width:100%}
+.year-mini-day.year-mini-today{background:#f63841;color:white;border-radius:50%;font-weight:800;min-width:21px;min-height:21px;justify-self:center;align-self:center}
+.year-mini-day.year-mini-today .glyph{filter:brightness(0) invert(1)}
+.year-mini-day.year-mini-selected:not(.year-mini-today){background:var(--mint);color:var(--green);border-radius:50%}
+.year-month.active-month{border-color:var(--green)}
+.year-mini-epagomenal{display:flex;align-items:center;gap:4px}
+.year-mini-epagomenal .year-mini-day{min-width:23px;min-height:24px}
+body[data-language=egy] .year-month{min-height:0;padding:11px 7px;gap:9px}
+body[data-language=egy] .year-mini-title{min-height:35px}
+body[data-language=egy] .year-month-name{font-size:23px;line-height:1.1}
+body[data-language=egy] .year-month-index{font-size:15px}
+body[data-language=egy] .year-mini-day{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:19px;min-height:28px;line-height:1.15;white-space:normal;overflow-wrap:anywhere;word-break:break-all}
+body[data-language=egy] .year-mini-grid[data-week="10"]{row-gap:7px}
+body[data-language=egy] .year-mini-day.year-mini-today{border-radius:11px;min-height:31px;min-width:28px}
+body[data-language=cop] .year-mini-day{font-family:Coptic,system-ui,sans-serif;font-size:14px}
+body[data-language=ar] .year-mini-day{font-family:CairoRenpet,system-ui,sans-serif;font-size:13px}
+body[data-language=ar] .year-month-name{font-family:CairoRenpet,system-ui,sans-serif}
+html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* No Close X in settings: the existing backdrop is the dismiss control. */
+.ux-panel-head{justify-content:flex-start}
+
+/* Renpet 6.1: immediate, accessible feedback when an appointment cannot be saved. */
+.event-error{margin:0;padding:10px 16px;border-bottom:1px solid var(--rubric);background:var(--rubric-soft);color:var(--rubric);font-weight:700;line-height:1.45}
+.ux-bottom:has(.ux-nav-item:nth-child(2):last-child){justify-content:space-evenly}
+.ux-bottom:has(.ux-nav-item:nth-child(2):last-child) .ux-nav-item{flex:0 1 44%;max-width:240px}
+
+
+/* Renpet 6.2: never silently save offscreen. The confirmation stays in a
+   dedicated visible status strip, above overlays and below modal content. */
+.save-confirmation{position:fixed;z-index:23;left:50%;transform:translateX(-50%);top:calc(max(env(safe-area-inset-top),10px) + 58px);
+  min-height:42px;padding:10px 17px;border:1px solid var(--green);border-radius:14px;
+  background:var(--surface);color:var(--green);font-weight:750;box-shadow:0 4px 18px #1b292429;
+  max-width:calc(100vw - 40px);text-align:center;pointer-events:none}
+
+/* Renpet 6.3 — reveal old appointments saved into hidden calendar layers. */
+.hidden-calendar-notice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:12px 12px 16px;padding:12px 14px;background:var(--rubric-soft);border:1px solid var(--rubric);border-radius:13px;color:var(--rubric);font-weight:650;line-height:1.5}
+.hidden-calendar-notice button{min-height:42px;padding:8px 14px;color:white;background:var(--green);border:0;border-radius:11px;font-weight:750}
+
+
+/* Renpet 6.4 — quick deletion is available directly in Month/Day/List, while
+   Day timeline events expose a large, touchable lower resize grip. */
+.event-row-shell{display:flex;align-items:center;gap:7px;min-width:0;width:100%}
+.event-row-shell .event-row{flex:1 1 auto;width:auto;min-width:0;margin:6px 0}
+.event-row-shell .event-copy{min-width:0}
+.event-delete-action{
+ display:grid;place-items:center;flex:none;width:44px;height:44px;min-width:44px;
+ background:var(--rubric-soft);border:1px solid color-mix(in srgb,var(--rubric) 25%,white);
+ border-radius:12px;color:var(--rubric);cursor:pointer;touch-action:manipulation;
+}
+.event-delete-action:focus-visible,.event-resize:focus-visible{outline:3px solid var(--green);outline-offset:-2px}
+.timeline-event{overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.timeline-event .event-drag{
+ min-height:0;flex:1;cursor:grab;touch-action:none;
+ padding:5px 38px 1px 7px;
+}
+.timeline-event .event-drag strong{font-size:13px;min-height:13px}
+.timeline-event .event-resize{
+ position:relative;z-index:3;flex:0 0 26px;display:grid;place-items:center;
+ box-sizing:border-box;height:26px;min-height:26px;max-height:26px;
+ width:100%;padding:0;border:0;border-top:1px solid color-mix(in srgb,var(--event) 45%,white);
+ border-radius:0 0 9px 9px;background:color-mix(in srgb,var(--event) 18%,white);
+ color:var(--event);cursor:ns-resize;touch-action:none;user-select:none;
+}
+.timeline-event .event-resize span{
+ display:block;width:29px;height:5px;border-top:2px solid currentColor;
+ border-bottom:2px solid currentColor;border-radius:1px;
+}
+.timeline-event .event-delete-timeline{
+ position:absolute;z-index:4;top:1px;inset-inline-end:1px;
+ width:31px;height:31px;min-width:31px;border:0;border-radius:9px;
+ background:rgba(255,255,255,.88);color:var(--rubric);
+}
+.timeline-event .event-delete-timeline svg{width:17px;height:17px}
+@media(max-width:390px){
+ .timeline-event .event-drag{padding-inline-end:33px}
+ .timeline-event .event-delete-timeline{width:30px;height:30px;min-width:30px}
+}
+
+
+/* Festival sources — one multi-select within the existing Settings sheet.
+   Personal calendar appointments and birthdays are unaffected by this picker. */
+.festival-source-page{padding:16px;display:flex;flex-direction:column;gap:14px}
+.festival-source-intro,.festival-source-personal{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+.festival-source-options{display:flex;flex-direction:column;gap:10px}
+.festival-source-row{display:flex;align-items:center;gap:13px;min-height:66px;padding:12px 13px;background:var(--surface);
+ border:1px solid var(--line);border-radius:14px;cursor:pointer}
+.festival-source-row input[type=checkbox]{width:23px;height:23px;flex-shrink:0;accent-color:var(--green)}
+.festival-source-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+.festival-source-info strong{font-size:17px;color:var(--rubric);line-height:1.5;overflow-wrap:anywhere}
+.festival-source-info small{font-size:12px;color:var(--muted);line-height:1.5}
+.festival-source-personal{padding:11px 13px;background:var(--soft);border-radius:11px}
+.day-festivals{padding:8px 12px 12px;border-bottom:1px solid var(--line)}
+.day-festivals .festival-in-agenda{min-height:43px}
+
+/* Responsive calendars and typographic overrides are in calendar-layout.css. */

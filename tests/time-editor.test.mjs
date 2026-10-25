@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {timeEditorFields} from '../web/time-editor.js';
+import {inputClock,timeText,timeHtml,clockPartHtml} from '../web/clock.js';
+
+const ar=timeEditorFields('ar',9*60,10*60,'البداية','النهاية');
+assert.ok(ar.includes('٠٩:٠٠')&&ar.includes('١٠:٠٠'),'Arabic editor uses Arabic-Indic clock labels');
+assert.ok(!ar.includes('type="time"'),'Native time controls cannot render in English');
+assert.ok(ar.includes('type="hidden" name="start" value="09:00"'),'Start remains 24h machine value');
+assert.ok(ar.includes('type="hidden" name="end" value="10:00"'),'End remains 24h machine value');
+const cop=timeEditorFields('cop',9*60,10*60,'Ⲁⲣⲭⲏ','Ⲑⲁⲏ');
+assert.ok(cop.includes(timeText(9*60,'cop'))&&cop.includes(timeText(10*60,'cop')),'Coptic start/end displayed in native numeral script');
+assert.ok(!cop.includes('AM')&&!cop.includes('PM'),'No AM/PM labels in Coptic');
+assert.ok(cop.includes('name="start" value="09:00"'),'Coptic does not corrupt stored clock');
+const egy=timeEditorFields('egy',9*60,10*60,'𓇳','𓏤');
+assert.ok(egy.includes('/9.svg')&&egy.includes('/10.svg'),'Hieroglyphic start/end use existing numeral SVGs');
+assert.ok(egy.includes('name="end" value="10:00"'),'Hieroglyphic does not change scheduling semantics');
+assert.equal(inputClock(24*60),'24:00','End-of-day boundary remains available');
+assert.ok(clockPartHtml(0,'cop').includes('○'),'Zero uses documented neutral placeholder');
+assert.ok(clockPartHtml(59,'egy').includes('/59.svg'),'Full 0–59 minute range supported');
+assert.ok(!timeHtml(23*60+59,'ar').includes('AM'),'No 12h clock suffix');
+console.log('Renpet 4.1 localized event-time field contract passed');

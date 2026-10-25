@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#176C59"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Renpet">
+<title>Renpet</title><link rel="manifest" href="manifest.webmanifest?icon=shen-rope-20261025">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png?icon=shen-rope-20261025"><link rel="icon" type="image/svg+xml" href="assets/shen-rope.svg?icon=shen-rope-20261025"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?icon=shen-rope-20261025">
+<link rel="stylesheet" href="ui.css?v=7.2.1-75cd9059fdaa"><link rel="stylesheet" href="calendar-layout.css?v=7.2.1-5f3b3c401a12"><link rel="stylesheet" href="season-theme.css?v=7.2.1-1c2fd7cec0c4"><link rel="stylesheet" href="backup.css?v=7.2.1-fb194ea6ca62"><link rel="stylesheet" href="keyboard.css?v=7.2.1-7077d57cb757"><link rel="stylesheet" href="time-editor.css?v=7.2.1-293057e13060">
+<style>
+/* Boot CSS is inline deliberately: render a useful recovery page even if
+   an external stylesheet or the JavaScript module graph cannot load. */
+#app>.loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;
+ font:26px/1.3 system-ui,sans-serif;color:#176c59;background:#f9faf6}
+.renpet-startup-failed{box-sizing:border-box;min-height:100%;padding:36px 24px 70px;
+ background:#f9faf6;color:#202a25;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;text-align:center;font:16px/1.6 system-ui,sans-serif}
+.renpet-startup-failed h1{color:#96372e;margin:10px 0 6px;font-size:25px}
+.renpet-startup-failed p{max-width:340px;color:#52645b}
+.renpet-startup-failed button{border:0;border-radius:12px;min-height:48px;min-width:215px;
+ background:#176c59;color:white;font:bold 17px system-ui;padding:12px;margin:7px}
+.renpet-startup-failed button.secondary{background:#f1e9e6;color:#96372e;border:1px solid #d6b6ae}
+</style>
+<script>
+(function () {
+ let ready = false;
+ let timer = null;
+ function fail(reason) {
+  if (ready) return;
+  const el = document.getElementById('app');
+  if (!el) return;
+  if (el.querySelector('.app-shell')) { ready = true; return; }
+  el.innerHTML = '<div class="renpet-startup-failed" role="alert">'+
+   '<div style="font-size:44px;color:#176c59" aria-hidden="true">𓆳</div>'+
+   '<h1>تعذّر تشغيل رنبت</h1>'+
+   '<p>لم يكتمل تحميل التقويم. مواعيدك المحفوظة لم تُحذف.</p>'+
+   '<p>Calendar could not finish starting. Your saved appointments have not been deleted.</p>'+
+   '<button type="button" data-retry>إعادة المحاولة · Retry</button>'+
+   (navigator.onLine?'<button type="button" class="secondary" data-repair>إصلاح التحديث · Repair update</button>':'')+
+   '</div>';
+  el.querySelector('[data-retry]').addEventListener('click', function(){location.reload();});
+  const repair = el.querySelector('[data-repair]');
+  if (repair) repair.addEventListener('click', async function () {
+   repair.disabled = true;
+   try {
+    if (navigator.serviceWorker) {
+     const registrations = await navigator.serviceWorker.getRegistrations();
+     await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+   } catch (error) { console.warn('Renpet boot repair',error); }
+   // Unregisters only the app shell service worker, not localStorage or data.
+   location.reload();
+  });
+  console.error('Renpet startup incomplete:', reason);
+ }
+ window.RenpetBoot = {
+  ready: function () { ready = true; clearTimeout(timer); },
+  fail: fail
+ };
+ // A previous installed release may serve stale app.js and festival data
+ // from CacheStorage, even after its replacement has been deployed.
+ // Discover the new worker *before* the module starts, and reload once
+ // when a newer worker takes control. Never discard an open editor draft.
+ if ('serviceWorker' in navigator) {
+  const previousController = navigator.serviceWorker.controller;
+  let handledUpgrade = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+   if (!previousController || handledUpgrade || navigator.onLine === false) return;
+   handledUpgrade = true;
+   if (document.querySelector('#event-editor')) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'تحديث رنبت · Update Renpet';
+    button.setAttribute('aria-label', 'تحديث رنبت · Update Renpet');
+    button.style.cssText = 'position:fixed;z-index:9999;bottom:18px;left:18px;'+
+     'padding:12px 18px;border:0;border-radius:12px;background:#176c59;'+
+     'color:white;font:600 15px system-ui;box-shadow:0 2px 12px #0003';
+    button.addEventListener('click', function () { location.reload(); });
+    document.body.appendChild(button);
+    return;
+   }
+   location.reload();
+  });
+  function checkForUpdates() {
+   if (navigator.onLine === false) return;
+   navigator.serviceWorker.getRegistration().then(function (registration) {
+    if (registration) return registration.update();
+   }).catch(function (error) { console.warn('Renpet update check', error); });
+  }
+  checkForUpdates();
+  // Standalone Home Screen PWAs can stay suspended for days rather than
+  // navigating afresh. Recheck when the app returns to the foreground.
+  window.addEventListener('pageshow', function (event) {
+   if (event.persisted) checkForUpdates();
+  });
+  document.addEventListener('visibilitychange', function () {
+   if (!document.hidden) checkForUpdates();
+  });
+ }
+ window.addEventListener('error', function (event) {
+  // A broken module import leaves the HTML loading placeholder unchanged.
+  if (!ready && event.target && event.target.tagName === 'SCRIPT') {
+   setTimeout(function () { fail('module script unavailable'); }, 0);
+  }
+ }, true);
+ timer = setTimeout(function () { fail('startup deadline exceeded'); }, 9000);
+})();
+</script>
+<script type="module" src="app.js?v=7.2.1-9958e94e06fc"></script>
+</head>
+<body><div id="app"><p class="loading">𓆳𓏏𓏤</p></div><noscript>رنبت يحتاج إلى JavaScript · Ⲣⲉⲛⲡⲉⲧ · 𓆳𓏏𓏤</noscript></body>
+</html>

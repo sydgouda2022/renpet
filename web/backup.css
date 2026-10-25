@@ -1,0 +1,15 @@
+.renpet-backup-trigger{border:0;background:transparent;color:inherit;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;cursor:pointer;flex-shrink:0}
+.renpet-backup-trigger:focus-visible,.renpet-backup-close:focus-visible,.renpet-backup-action:focus-visible{outline:3px solid #176c59;outline-offset:2px}
+.renpet-backup-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;background:rgba(9,20,38,.44);padding:0 0 env(safe-area-inset-bottom)}
+.renpet-backup-panel{box-sizing:border-box;width:100%;max-width:540px;background:#fff;color:#1b2924;border-radius:24px 24px 0 0;padding:22px 22px 30px;box-shadow:0 16px 45px rgba(0,0,0,.2);font-family:system-ui,-apple-system,sans-serif}
+.renpet-backup-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.renpet-backup-head h2{font-size:1.22rem;margin:0;font-weight:700}
+.renpet-backup-close{font-size:1.8rem;border:0;background:#e5f2ea;border-radius:50%;width:44px;height:44px;cursor:pointer;color:#1b2924}
+.renpet-backup-info{line-height:1.65;color:#728078;margin:14px 0 20px}
+.renpet-backup-action{display:block;width:100%;padding:15px;border:0;border-radius:13px;background:#176c59;color:white;font-size:1rem;font-weight:600;margin-top:10px;cursor:pointer}
+.renpet-backup-action.secondary{background:#e5f2ea;color:#176c59}
+@media(min-width:700px){.renpet-backup-overlay{align-items:center;padding:20px}.renpet-backup-panel{border-radius:24px}}
+
+/* Cairo applies to Arabic backup/restore as well as the calendar shell. */
+body[data-language=ar] .renpet-backup-panel{font-family:CairoRenpet,-apple-system,system-ui,sans-serif}
+.renpet-backup-head h2{color:var(--rubric,#96372e)}

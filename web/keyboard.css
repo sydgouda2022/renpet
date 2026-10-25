@@ -1,0 +1,90 @@
+/* Renpet 4 — one native-script keyboard dock, shared by Coptic and Egyptian. */
+:root{--renpet-kb-height:min(53dvh,355px)}
+.renpet-keyboard[hidden]{display:none!important}
+.renpet-keyboard{position:fixed;inset-inline:0;bottom:0;z-index:160;display:flex;flex-direction:column;gap:5px;height:var(--renpet-kb-height);max-height:390px;padding:7px max(6px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));background:#e4e9e3;border-top:1px solid #c7d2c9;box-shadow:0 -8px 18px #1b292425;direction:ltr;overflow:hidden}
+.kb-top{display:flex;align-items:center;justify-content:space-between;min-height:28px;gap:5px;padding-inline:5px}
+.kb-name{font-size:15px;line-height:1.3;font-weight:700;color:var(--rubric);white-space:normal;overflow:hidden}
+.kb-top button{border:0;background:var(--green);color:white;border-radius:12px;min-width:38px;min-height:29px}
+.kb-suggestions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;min-height:37px}
+.kb-suggestions button{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px;min-height:36px;padding:4px;background:white;border:1px solid #cfddd2;border-radius:10px;color:var(--ink);overflow:hidden}
+.kb-suggestions button[aria-selected=true]{outline:1px solid var(--green)}
+.kb-suggestions button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:19px}
+.kb-suggestions button small{font:11px/1.2 system-ui,sans-serif;color:var(--rubric);flex-shrink:0}
+.kb-quiet{display:flex;align-items:center;justify-content:center;color:var(--rubric);font-size:15px;direction:ltr}
+.kb-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-height:32px}
+.kb-tabs button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:39px;border-radius:10px;border:0;background:#f3f6f1;color:var(--rubric);font-size:22px}
+.kb-tabs button.selected{background:var(--green);color:white}
+.kb-tabs button small{font:13px/1 system-ui,sans-serif}
+.kb-numbers{display:flex;align-items:center;gap:5px;min-height:49px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding-block:2px}
+.kb-numbers::-webkit-scrollbar{display:none}
+.kb-num,.kb-sign,.kb-controls button{font-weight:500;border:0;border-radius:9px;background:#fff;color:var(--ink);box-shadow:0 1px 1px #1b292420;touch-action:manipulation}
+.kb-num{flex:0 0 auto;min-width:47px;min-height:45px;padding:3px 7px;font-size:19px;white-space:nowrap;overflow:hidden}
+.kb-signs{flex:1;min-height:0;display:grid;align-content:start;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.kb-hiero{grid-template-columns:repeat(6,minmax(0,1fr))}
+.kb-sign{height:50px;min-width:0;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.kb-hiero .kb-sign{font:37px/1 RenpetEgyptian,system-ui,sans-serif}
+.kb-coptic .kb-sign{font:24px/1 Coptic,system-ui,sans-serif}
+.kb-controls{display:flex;gap:5px;min-height:40px}
+.kb-controls button{flex:0 0 48px;min-height:39px;background:#f3f6f1;font-size:20px}
+.kb-controls .kb-space{flex:1;background:white;font:14px/1.3 system-ui,sans-serif;color:var(--rubric)}
+.keyboard-open .sheet-overlay{padding-bottom:var(--renpet-kb-height)}
+.keyboard-open .sheet{max-height:calc(98dvh - var(--renpet-kb-height));border-radius:16px 16px 0 0}
+.keyboard-open .main-scroll{padding-bottom:var(--renpet-kb-height)}
+.keyboard-open .ux-bottom{visibility:hidden}
+.keyboard-open .renpet-backup-backdrop{bottom:var(--renpet-kb-height)}
+@media(max-height:680px){
+ :root{--renpet-kb-height:min(53dvh,350px)}
+ .kb-sign{height:45px}
+ .kb-tabs{min-height:36px}
+ .kb-tabs button{min-height:36px}
+ .kb-numbers{min-height:45px}
+ .kb-num{min-height:41px}
+ .kb-controls{min-height:38px}
+ .kb-controls button{min-height:38px}
+}
+
+/* The entire 32-letter Coptic alphabet must fit without internal scrolling. */
+.kb-coptic{grid-template-rows:repeat(4,minmax(32px,1fr));overflow:visible}
+.kb-coptic .kb-sign{height:100%;min-height:32px}
+.kb-top{min-height:24px}
+.kb-suggestions{min-height:33px}
+.kb-suggestions button{min-height:32px}
+.kb-numbers{min-height:36px}
+.kb-num{min-height:33px}
+.kb-controls{min-height:36px}
+.kb-controls button{min-height:36px}
+@media(max-height:680px){
+ .kb-coptic .kb-sign{min-height:32px}
+ .kb-numbers{min-height:33px}
+ .kb-num{min-height:32px}
+}
+
+/* The red label and ink sign system is shared; hieroglyphs alone require
+   physically larger slots and a scrollable six-column sign inventory. */
+body[data-language=egy] .kb-name{font-size:23px;line-height:1.3}
+body[data-language=egy] .kb-top{min-height:36px}
+body[data-language=egy] .kb-tabs button{min-height:45px}
+body[data-language=egy] .kb-tabs button>span{font:30px/1 RenpetEgyptian,system-ui,sans-serif}
+body[data-language=egy] .kb-tabs button small{font-size:13px}
+body[data-language=egy] .kb-num{font:800 31px/1.12 RenpetEgyptian,system-ui,sans-serif;min-height:56px;min-width:60px;-webkit-text-stroke:.32px currentColor;paint-order:stroke fill}
+body[data-language=egy] .kb-numbers{min-height:62px}
+body[data-language=egy] .kb-hiero .kb-sign{font-size:38px;min-height:51px}
+body[data-language=egy] .kb-suggestions button span{font:23px/1.2 RenpetEgyptian,system-ui,sans-serif}
+/* Explicitly override the font shorthand used by sign keys and prediction
+   chips; a 700 weight alone must not get reset to Regular in the keyboard. */
+body[data-language=egy] :is(
+ .kb-hiero .kb-sign,.kb-tabs button>span,.kb-num,.kb-suggestions button span,.kb-name
+){
+ font-weight:700;
+ -webkit-text-stroke:.28px currentColor;
+ paint-order:stroke fill;
+}
+
+body[data-language=cop] .kb-num{font-family:Coptic,system-ui,sans-serif}
+@media(min-width:550px){.kb-hiero{grid-template-columns:repeat(7,minmax(0,1fr))}}
+
+/* Coptic dialects are explicit search filters, not inferred properties of the text. */
+.kb-dialects{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;min-height:28px;flex-shrink:0}
+.kb-dialects button{min-height:28px;min-width:0;border:1px solid #c4d5c9;border-radius:9px;background:#f7f9f5;color:var(--rubric);font:600 12px/1.15 system-ui,sans-serif;touch-action:manipulation}
+.kb-dialects button.selected,.kb-dialects button[aria-pressed=true]{background:var(--green);color:#fff;border-color:var(--green)}
+@media(max-height:680px){.kb-dialects,.kb-dialects button{min-height:25px}}
