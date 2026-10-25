@@ -34,10 +34,11 @@ assert.equal(late.format,'mdwnfr-predict-v1','Same verified lexicon format as Md
 assert.equal(late.entries.length,release.spelling_records);
 assert.ok(late.entries.length>=6800,'TLA Late Egyptian and approved AES narratives incorporated');
 assert.equal(late.metadata.complete,false,'Current development seed is never declared full');
-const lateRows={rows:late.entries.map(r=>[r.signs,r.attestations||1,r.lemma||r.ref])};
 const example=late.entries.find(r=>r.signs.length>2);
 assert.ok(example,'Native hieroglyphic spellings present');
-const returned=suggestions([...example.signs][0],'egy',lateRows,{},4);
+// The independent hieroglyphic engine accepts only typed catalog entries,
+// never legacy tuple rows that discard source provenance.
+const returned=suggestions([...example.signs][0],'egy',late,{},4);
 assert.equal(returned[0].text,[...example.signs][0],'Raw hieroglyphic input remains first');
 assert.ok(returned.length>1&&returned.slice(1).every(v=>v.source==='LATE'),'No Earlier Egyptian suggestions');
 const copticCommon=suggestions('ⲛ','cop',coptic,{},4);
