@@ -12,7 +12,9 @@ const egy=/[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+$/u;
 export function wordRange(input, caret, lang){
  const left=input.slice(0,caret);
  const matched=left.match(lang==='cop'?cop:egy);
- return {start:caret-(matched?.[0].length||0),end:caret,raw:matched?.[0]||''};
+ // Replace the complete word, not only the characters left of the caret.
+  const right=input.slice(caret).match(lang==='cop'?/^[\p{Script=Coptic}\p{Script=Greek}\p{Mark}]+/u:/^[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+/u)?.[0]||'';
+  return {start:caret-(matched?.[0].length||0),end:caret+right.length,raw:(matched?.[0]||'')+right};
 }
 // The independent keyboard APIs own prediction and linguistic evidence.
 export {suggestions};
