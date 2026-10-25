@@ -43,7 +43,8 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
   if(line==='BEGIN:VEVENT'){if(event)throw Error('Invalid nested ICS event');event=[];total++;if(total>800)throw Error('Too many ICS records');continue;}
   if(line==='END:VEVENT'){
    if(!event){counts.invalid++;continue;}
-   const p=properties(event);event=null;
+   const components=event;
+   const p=properties(components);event=null;
    const prop=k=>p.get(k)?.[0],uid=unescapeICS(prop('UID')?.value||'').slice(0,240);
    const start=prop('DTSTART'),end=prop('DTEND');
    if(!start||!uid||!end){counts.invalid++;continue;}
@@ -78,7 +79,7 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
     else if(parts.FREQ==='WEEKLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='weekly';
     else{counts.unsupported++;continue;}
    }
-   const alarmCount=event.filter(line=>line==='BEGIN:VALARM').length;
+   const alarmCount=components.filter(line=>line==='BEGIN:VALARM').length;
    let alert='none';
    if(alarmCount){
     const trigger=prop('TRIGGER')?.value;
