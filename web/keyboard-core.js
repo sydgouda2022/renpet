@@ -15,14 +15,18 @@ export function wordRange(input, caret, lang){
  return {start:caret-(matched?.[0].length||0),end:caret,raw:matched?.[0]||''};
 }
 // A single prepared index is reused across keystrokes. All ranking and dialect
-// filtering is delegated to the shared Egyptian/Coptic prediction engine.
+// filtering is delegated to their independent version-pinned language engines.
 const indexCache=new WeakMap();
 export function suggestions(raw,language,lexicon,learned={},limit=4,options={}){
  if(!raw)return [];
  const pack=lexicon&&typeof lexicon==='object'?lexicon:null;
  let index=pack&&indexCache.get(pack);
  if(!index||index.language!==language){
-  index=prepareKeyboardIndex(language,pack||(language==='cop'?{rows:[]}:{entries:[]}));
+  // Hieroglyphic predictions require typed, source-provenanced entries.
+  // Never convert legacy positional rows into fabricated attestations.
+  const source=language==='egy' ? (Array.isArray(pack?.entries)?pack:{entries:[]})
+    : (pack||{rows:[]});
+  index=prepareKeyboardIndex(language,source);
   if(pack)indexCache.set(pack,index);
  }
  return predictKeyboard(index,raw,{limit,learned,dialect:options.dialect||'all',previous:options.previous||''});
