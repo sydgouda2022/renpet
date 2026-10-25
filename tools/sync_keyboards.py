@@ -77,22 +77,17 @@ def stage(name, sha):
         f"{dest}/manifest.json": raw_manifest,
         f"{dest}/coverage.json": get("release/coverage.json")
     }
-    if language == "cop":
-        files["web/coptic-install.mjs"] = get("src/coptic_install.mjs")
-    else:
-        files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
+    # Renpet owns its scheduler and Coptic IndexedDB storage adapter.
+    # Only the standalone headless prediction engine and published releases
+    # cross the keyboard dependency boundary.
     files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
     if language == "cop":
         files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
     else:
-        # The Egyptian publisher owns one provenance-aware, self-contained predictor.
-        pass
-        if language == "cop":
-            # Coptic UI is external; Renpet imports only the headless Unicode API.
-        else:
-            files[f"web/keyboards/{language}/keyboard_api.mjs"] = get("src/keyboard_api.mjs")
-            files[f"web/keyboards/{language}/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
-            files[f"web/keyboards/{language}/lexicon_install.mjs"] = get("src/lexicon_install.mjs")
+        files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
+        files["web/keyboards/egy/keyboard_api.mjs"] = get("src/keyboard_api.mjs")
+        files["web/keyboards/egy/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
+        files["web/keyboards/egy/lexicon_install.mjs"] = get("src/lexicon_install.mjs")
     return manifest, raw_manifest, catalog, files
 
 def update():
