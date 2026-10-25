@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {dayNumber} from '../web/calendar.js';
-import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
+import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,occurrenceStartsForDay,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
 const years=[{year:6282,start:'2026-09-11',days:365},{year:6283,start:'2027-09-11',days:365}];
 const day=dayNumber('2026-10-14');
 const state=emptyState();
@@ -77,4 +77,21 @@ assert.equal(restored.restored,true);
 assert.equal(loadScheduler(saved).items.length,1);
 const noRecovery={getItem:k=>k==='renpet.scheduler.v1'?'{broken':null,setItem:()=>{throw Error('Should not overwrite damaged scheduler')}};
 assert.equal(saveScheduler(emptyState(),noRecovery),false,'Never overwrite sole damaged primary');
-console.log('Scheduler compatibility and CRUD OK');
+// A three-day event starting every day produces three distinct occurrences on day 3.
+const overlap=createItem({title:'Long daily',startDay:day,endDay:day+2,repeat:'daily',calendarId:'personal'});
+const overlapState=emptyState();upsertItem(overlapState,overlap);
+assert.deepEqual(occurrenceStartsForDay(overlap,day+2,years),[day,day+1,day+2]);
+const live=itemsForDay(overlapState,day+2,years);
+assert.equal(live.length,3,'Overlapping recurring events are not collapsed');
+assert.deepEqual(live.map(i=>i._occurrenceStart),[day,day+1,day+2]);
+assert.equal(occurrenceStartForDay(overlap,day+2,years),day+2,'Direct occurrence has precedence');
+excludeOccurrence(overlap,day+1);
+assert.deepEqual(itemsForDay(overlapState,day+2,years).map(i=>i._occurrenceStart),[day,day+2]);
+assert.equal(itemsForDay(overlapState,day+3,years).length,2,'Excluding one occurrence keeps neighbors');
+toggleCompleted(overlap,day+2); // non-reminders do not acquire completion.
+const reminderMulti=createItem({title:'Long reminder',kind:'reminder',startDay:day,endDay:day+2,repeat:'daily',calendarId:'personal'});
+const multiState=emptyState();upsertItem(multiState,reminderMulti);
+toggleCompleted(reminderMulti,day+1);
+assert.equal(reminderMulti.completedDays.includes(day+1),true);
+assert.deepEqual(itemsForDay(multiState,day+2,years).map(i=>i._occurrenceStart),[day,day+1,day+2]);
+console.log('Scheduler compatibility, overlapping recurrences and CRUD OK');

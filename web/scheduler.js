@@ -150,7 +150,7 @@ export function revealSavedCalendars(state){
 }
 export function hiddenItemsForDay(state,day,years){
  const visible=visibleCalendars(state);
- return state.items.filter(item=>!visible.has(item.calendarId)&&occursOn(item,day,years));
+ return instancesForDay(state,day,years,item=>!visible.has(item.calendarId));
 }
 export function calendarFor(state,id){return state.calendars.find(c=>c.id===id)||state.calendars[0];}
 export function visibleCalendars(state){return new Set(state.calendars.filter(c=>c.visible!==false).map(c=>c.id));}
@@ -198,11 +198,22 @@ function isStartOccurrence(item,day,years){
 }
 // A concrete recurrence start is identified separately from a day within
 // a multi-day occurrence, so moving one event cannot delete the entire series.
-export function occurrenceStartForDay(item,day,years){
+/** Every recurrence anchor whose span contains this calendar day.
+ * A long event repeating daily may have multiple independent live instances.
+ * Exclusions apply to the anchor, not all trailing dates of that instance.
+ */
+export function occurrenceStartsForDay(item,day,years){
+ if(!Number.isInteger(day)||day<item.startDay)return [];
  const duration=Math.max(0,(item.endDay??item.startDay)-item.startDay);
+ const starts=[];
  for(let start=Math.max(item.startDay,day-duration);start<=day;start++)
-  if(isStartOccurrence(item,start,years))return start;
- return null;
+  if(isStartOccurrence(item,start,years))starts.push(start);
+ return starts;
+}
+export function occurrenceStartForDay(item,day,years){
+ const starts=occurrenceStartsForDay(item,day,years);
+ // Prefer the occurrence beginning on the selected date, if one exists.
+ return starts.at(-1)??null;
 }
 export function excludeOccurrence(item,start){
  if(item.repeat==='none'||!Number.isInteger(start))return false;
@@ -215,10 +226,19 @@ export function occursOn(item,day,years){
  return occurrenceStartForDay(item,day,years)!==null;
 }
 
+function instancesForDay(state,day,years,include){
+ return state.items.flatMap(item=>{
+  if(!include(item))return [];
+  const starts=occurrenceStartsForDay(item,day,years);
+  return item.repeat==='none'?(starts.length?[item]:[]):
+   starts.map(start=>({...item,_occurrenceStart:start}));
+ }).sort((a,b)=>Number(b.allDay)-Number(a.allDay)||
+  a.startMinutes-b.startMinutes||a.title.localeCompare(b.title)||
+  (a._occurrenceStart??a.startDay)-(b._occurrenceStart??b.startDay));
+}
 export function itemsForDay(state,day,years){
  const visible=visibleCalendars(state);
- return state.items.filter(item=>visible.has(item.calendarId)&&occursOn(item,day,years))
-  .sort((a,b)=>Number(b.allDay)-Number(a.allDay)||a.startMinutes-b.startMinutes||a.title.localeCompare(b.title));
+ return instancesForDay(state,day,years,item=>visible.has(item.calendarId));
 }
 
 export function itemsInRange(state,start,endExclusive,years){
