@@ -44,7 +44,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check web/app.js
-          node --check web/keyboard-search.mjs
+          node --check web/keyboard-api.mjs
+          node --check web/keyboards/cop/core.mjs
+          node --check web/keyboards/egy/keyboard_api.mjs
           node --test tests/*.test.mjs
           bash tools/build_release.sh
           python tools/sync_keyboards.py --verify
