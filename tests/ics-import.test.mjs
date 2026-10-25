@@ -29,3 +29,9 @@ const zoned=parseICS(tzEvent);
 assert.equal(zoned.imported,1);
 const unknownZone=tzEvent.replaceAll('America/New_York','Not_A_Real_Zone');
 assert.equal(parseICS(unknownZone).invalid,1,'Unknown IANA timezones cannot shift appointment times');
+
+// Gregorian recurrence rules are distinct from Egyptian monthly/yearly cycles.
+for(const [rule,repeat] of [['FREQ=MONTHLY','gregMonthly'],['FREQ=YEARLY','gregYearly']]){
+ const entry=tzEvent.replace('UID:zone-1','UID:greg-'+repeat).replace('SUMMARY:New York appointment','RRULE:'+rule+'\\r\\nSUMMARY:New York appointment');
+ assert.equal(parseICS(entry).items[0].repeat,repeat);
+}

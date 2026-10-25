@@ -34,7 +34,8 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=100000){
     // Genuine Gregorian-interval recurrences should survive beyond two years.
     // Egyptian month/year recurrence dates are expanded separately.
     const rule=repeat==='daily'?'FREQ=DAILY':repeat==='weekly'?'FREQ=WEEKLY':
-      repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':null;
+      repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':
+      repeat==='gregMonthly'?'FREQ=MONTHLY':repeat==='gregYearly'?'FREQ=YEARLY':null;
     if(repeat==='none'||rule){starts=[item.startDay];}
     else {
       // Expand the complete remaining supported Egyptian calendar range.

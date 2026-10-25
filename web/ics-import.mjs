@@ -102,6 +102,8 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
     if(parts.FREQ==='DAILY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='daily';
     else if(parts.FREQ==='DAILY'&&parts.INTERVAL==='10')repeat='egy10';
     else if(parts.FREQ==='WEEKLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='weekly';
+    else if(parts.FREQ==='MONTHLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='gregMonthly';
+    else if(parts.FREQ==='YEARLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='gregYearly';
     else{counts.unsupported++;continue;}
    }
    const alarmCount=components.filter(line=>line==='BEGIN:VALARM').length;

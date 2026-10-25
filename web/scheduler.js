@@ -32,7 +32,7 @@ export const SCHEDULER_RECOVERY_KEYS=Object.freeze(['renpet.scheduler.recovery.1
 /** Strict validation for app saves, recovery snapshots and imported backups. */
 export function validateSchedulerData(state){
  if(!state||typeof state!=='object'||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
- const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly']);
+ const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly','gregMonthly','gregYearly']);
  for(const c of state.calendars){
   if(!c||typeof c.id!=='string'||!c.id||calendars.has(c.id)||typeof c.color!=='string')return false;
   calendars.add(c.id);
@@ -204,6 +204,13 @@ function isStartOccurrence(item,day,years){
  if(item.repeat==='daily')return true;
  if(item.repeat==='weekly')return delta%7===0;
  if(item.repeat==='egy10')return delta%10===0;
+ if(item.repeat==='gregMonthly'||item.repeat==='gregYearly'){
+  const origin=new Date(item.startDay*86400000),current=new Date(day*86400000);
+  if(item.repeat==='gregMonthly')return current.getUTCDate()===origin.getUTCDate()&&
+   current.getUTCFullYear()*12+current.getUTCMonth()>=origin.getUTCFullYear()*12+origin.getUTCMonth();
+  return current.getUTCFullYear()>=origin.getUTCFullYear()&&
+   current.getUTCMonth()===origin.getUTCMonth()&&current.getUTCDate()===origin.getUTCDate();
+ }
  const base=toEgyptian(item.startDay,years),candidate=toEgyptian(day,years);
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;
