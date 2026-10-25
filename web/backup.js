@@ -55,7 +55,8 @@ async function importCalendarICS(){
    const calendar=await result.json(),sched=loadScheduler();
    const parsed=parseICS(await file.text(),{
     minDay:dayNumber(calendar.min_date),maxDay:dayNumber(calendar.max_date),
-    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean)
+    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean),
+    knownSeriesIds:sched.items.map(i=>i.id)
    });
    const counts=''+parsed.imported+' '+(lang()==='ar'?'موعد صالح · ':'events ready · ')+
     parsed.unsupported+' '+(lang()==='ar'?'تكرارات/مناطق زمنية غير مدعومة · ':'unsupported · ')+

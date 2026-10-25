@@ -16,9 +16,10 @@ function fold(line) {
   parts.push(part);return parts.join('\r\n');
 }
 const validDay = n => Number.isInteger(n) && n >= -25567 && n <= 100000;
+const ALARMS={atTime:'PT0S','5min':'-PT5M','15min':'-PT15M','1hour':'-PT1H','1day':'-P1D'};
 // Shared identity keeps an exported local event from being duplicated on re-import.
 export const eventUID=(item,start=item.startDay)=>String(item.id||'renpet').replace(/[^a-zA-Z0-9_-]/g,'-')+'-'+start+'@renpet.local';
-function calendarEvents(state,years,occursOn,today,maxOccurrences=5000){
+function calendarEvents(state,years,occursOn,today,maxOccurrences=100000){
   if(!Array.isArray(state?.items))throw Error('No calendar items');
   if(!Array.isArray(years)||!years.length)throw Error('Calendar years missing');
   const calendars=new Map((state.calendars||[]).map(c=>[c.id,c]));
@@ -36,8 +37,10 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=5000){
       repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':null;
     if(repeat==='none'||rule){starts=[item.startDay];}
     else {
-      const first=Math.max(item.startDay,today,startOfYears);
-      const last=Math.min(endOfYears, today+730);
+      // Expand the complete remaining supported Egyptian calendar range.
+      // Never silently truncate a lifelong monthly/yearly schedule at two years.
+      const first=Math.max(item.startDay,startOfYears);
+      const last=endOfYears;
       // Test only the recurrence start, not the trailing days of a multi-day event.
       const anchor={...item,endDay:item.startDay};
       for(let day=first;day<=last;day++){
@@ -67,14 +70,14 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=5000){
         start,end:actualEnd,startMinutes,endMinutes:exportEndMinutes,allDay,summary,rrule:rule,exdates,
         location:String(item.location||''),notes:String(item.notes||''),
         calendar:String(cal?.name?.ar||cal?.name||'Renpet'),
-        kind:item.kind||'event',completed:Boolean(item.completed),
+        kind:item.kind||'event',alert:ALARMS[item.alert]||null,completed:Boolean(item.completed),
         createdAt:item.createdAt,updatedAt:item.updatedAt
       });
     }
   }
   return out.sort((a,b)=>a.start-b.start||a.startMinutes-b.startMinutes);
 }
-export function exportICS(state,years,occursOn,{today=Math.floor(Date.now()/DAY_MS),now=new Date(),maxOccurrences=5000}={}){
+export function exportICS(state,years,occursOn,{today=Math.floor(Date.now()/DAY_MS),now=new Date(),maxOccurrences=100000}={}){
   if(typeof occursOn!=='function')throw Error('Recurrence resolver required');
   const entries=calendarEvents(state,years,occursOn,today,maxOccurrences);
   const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Renpet//Egyptian Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Renpet'];
@@ -88,6 +91,7 @@ export function exportICS(state,years,occursOn,{today=Math.floor(Date.now()/DAY_
     const notes=[e.notes,'Renpet calendar: '+e.calendar].filter(Boolean).join('\n');
     if(notes)lines.push('DESCRIPTION:'+escape(notes));
     if(e.kind==='reminder')lines.push('CATEGORIES:REMINDER');
+    if(e.alert)lines.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+escape(e.summary),'TRIGGER:'+e.alert,'END:VALARM');
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');

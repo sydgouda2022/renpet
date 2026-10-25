@@ -41,3 +41,19 @@ assert.match(midnight.text,/DTEND:20261015T000000/);
 assert.doesNotMatch(midnight.text,/T240000/);
 assert.match(bounded.text,/END:VCALENDAR\r\n$/);
 console.log('Renpet ICS tests passed');
+
+
+// Egyptian calendar schedules must not silently end after the next 730 days.
+const yearly={...item,id:'egy-year',repeat:'egyYearly',startDay:days('2026-10-14')};
+const far=exportICS({...state,items:[yearly]},years,resolver,opts);
+assert.ok(far.count>=3,'Egyptian yearly repeats survive the 2-year boundary');
+assert.ok(far.text.includes('DTSTART:202810'));
+const alarm=exportICS({...state,items:[{...item,id:'reminder',kind:'reminder',alert:'15min'}]},years,resolver,opts);
+assert.match(alarm.text,/BEGIN:VALARM\\r\\nACTION:DISPLAY/);
+assert.match(alarm.text,/TRIGGER:-PT15M/);
+const incoming=parseICS(alarm.text);
+assert.equal(incoming.imported,1);
+assert.equal(incoming.items[0].alert,'15min');
+const alreadyOwned=parseICS(far.text,{knownSeriesIds:['egy-year']});
+assert.equal(alreadyOwned.imported,0,'Owned Egyptian recurrence expansions must not duplicate');
+assert.equal(alreadyOwned.duplicate,far.count);
