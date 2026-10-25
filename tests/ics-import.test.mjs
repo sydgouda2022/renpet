@@ -42,5 +42,5 @@ const cancelResult=parseICS(cancelled,{knownUIDs:['cancelled-external']});
 assert.equal(cancelResult.cancelled,1);
 assert.deepEqual(cancelResult.cancellations,['cancelled-external']);
 assert.equal(cancelResult.invalid,0);
-const singleCancellation=cancelled.replace('STATUS:CANCELLED','RECURRENCE-ID:20261025T090000\\r\\nSTATUS:CANCELLED');
+const singleCancellation=cancelled.replace('STATUS:CANCELLED','RECURRENCE-ID:20261025T090000\r\nSTATUS:CANCELLED');
 assert.equal(parseICS(singleCancellation).unsupported,1);
