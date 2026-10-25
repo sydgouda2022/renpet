@@ -1,3 +1,4 @@
+import {validateSchedulerData} from './scheduler.js';
 // Renpet's private, offline-only backup format. Never reads unrelated site storage.
 export const BACKUP_FORMAT = 'renpet.backup.v1';
 export const STORAGE_KEYS = Object.freeze(['renpet.settings.v1', 'renpet.scheduler.v1',
@@ -19,6 +20,8 @@ function validateEntry(value, key) {
   let decoded;
   try { decoded = JSON.parse(value); } catch { throw new Error('Corrupt backup entry: ' + key); }
   if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) throw new Error('Invalid backup data: ' + key);
+  if (key.startsWith('renpet.scheduler.') && !validateSchedulerData(decoded))
+    throw new Error('Invalid calendar records in backup: ' + key);
   return value;
 }
 export function createBackup(storage, now = new Date()) {

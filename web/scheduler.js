@@ -27,13 +27,31 @@ export function normalizeState(value){
 // Personal calendar records have a recoverable primary copy and two rotating
 // snapshots, independent of dictionary IndexedDB caches. Never call clear().
 export const SCHEDULER_RECOVERY_KEYS=Object.freeze(['renpet.scheduler.recovery.1','renpet.scheduler.recovery.2']);
+/** Strict validation for app saves, recovery snapshots and imported backups. */
+export function validateSchedulerData(state){
+ if(!state||typeof state!=='object'||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
+ const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly']);
+ for(const c of state.calendars){
+  if(!c||typeof c.id!=='string'||!c.id||calendars.has(c.id)||typeof c.color!=='string')return false;
+  calendars.add(c.id);
+ }
+ for(const i of state.items){
+  if(!i||typeof i.id!=='string'||!i.id||items.has(i.id)||!['event','reminder'].includes(i.kind)||typeof i.title!=='string'||!Number.isInteger(i.startDay))return false;
+  const end=i.endDay??i.startDay;
+  if(!Number.isInteger(end)||end<i.startDay)return false;
+  if(i.startMinutes!=null&&(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440))return false;
+  if(i.endMinutes!=null&&(!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440))return false;
+  if(i.repeat!=null&&!repeat.has(i.repeat))return false;
+  if(i.excludedDays!=null&&(!Array.isArray(i.excludedDays)||i.excludedDays.some(d=>!Number.isInteger(d))))return false;
+  items.add(i.id);
+ }
+ return true;
+}
 const parseStored=text=>{
  if(typeof text!=='string')return null;
  try{
   const state=JSON.parse(text);
-  if(!state||typeof state!=='object'||!Array.isArray(state.items)||!Array.isArray(state.calendars))return null;
-  if(state.items.some(i=>!i||typeof i.id!=='string'||!['event','reminder'].includes(i.kind)||
-     !Number.isInteger(i.startDay)||!Number.isInteger(i.endDay??i.startDay)||(i.endDay??i.startDay)<i.startDay))return null;
+  if(!validateSchedulerData(state))return null;
   return normalizeState(state);
  }catch{return null;}
 };
@@ -64,17 +82,17 @@ export function saveScheduler(state,storage=globalThis.localStorage){
   if(current!==null&&!parseStored(current)&&!SCHEDULER_RECOVERY_KEYS.some(k=>parseStored(storage.getItem(k))))return false;
   const value=JSON.stringify(state);
   if(!parseStored(value))return false;
-  // Keep two *previous* verified versions; snapshots failing due to quota
-  // cannot erase the primary, but the verified write is still mandatory.
+  // Verify primary before changing the optional rotating recovery copies.
+  storage.setItem(SCHEDULER_STORE,value);
+  if(storage.getItem(SCHEDULER_STORE)!==value)return false;
   if(current&&parseStored(current)&&current!==value){
    const prior=storage.getItem(SCHEDULER_RECOVERY_KEYS[0]);
    try{
     if(prior&&parseStored(prior))storage.setItem(SCHEDULER_RECOVERY_KEYS[1],prior);
     storage.setItem(SCHEDULER_RECOVERY_KEYS[0],current);
-   }catch{}
+   }catch{/* Snapshot quota cannot invalidate a successful primary write. */}
   }
-  storage.setItem(SCHEDULER_STORE,value);
-  return storage.getItem(SCHEDULER_STORE)===value;
+  return true;
  }catch{return false;}
 }
 export function restoreSchedulerSnapshot(storage=globalThis.localStorage){

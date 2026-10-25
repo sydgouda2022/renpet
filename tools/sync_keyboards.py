@@ -16,8 +16,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "keyboard-lock.json"
-KIND = ROOT.name.lower()
-AGENT = {"User-Agent": "four-stream-migration-audit"}
+AGENT = {"User-Agent": "renpet-keyboard-api-consumer"}
 PREFIX = "https://raw.githubusercontent.com/{repo}/{sha}/{path}"
 
 def digest(b):
@@ -35,7 +34,7 @@ def current_lock():
     if j.get("format") != "keyboard-dependencies-v1":
         raise ValueError("Unsupported dependency lock schema")
     names = set(j["dependencies"])
-    if names not in ({"coptic-keyboard", "hieroglyphic-keyboard"}, {"hieroglyphic-keyboard"}):
+    if names != {"coptic-keyboard", "hieroglyphic-keyboard"}:
         raise ValueError("Unexpected dependency graph")
     return j
 
@@ -54,9 +53,6 @@ def verify():
             raise ValueError(f"Corrupted {name} counts")
         if locked["manifest_sha256"] != digest(manifest) or locked["lexicon_sha256"] != digest(catalog):
             raise ValueError(f"Untracked {name} release modification")
-    if "coptic-keyboard" not in j["dependencies"]:
-        if (ROOT / "core/mdwnfr/data/lexicon.json").read_bytes() != (ROOT / "web/lexicon/lexicon.json").read_bytes():
-            raise ValueError("MdwNfr browser and Python catalog diverged")
     print("Keyboard dependencies match exact locked hashes.")
 
 def stage(name, sha):
@@ -81,28 +77,17 @@ def stage(name, sha):
         f"{dest}/manifest.json": raw_manifest,
         f"{dest}/coverage.json": get("release/coverage.json")
     }
-    # Application storage is owned by Renpet, never by the headless Coptic
-    # package. Keep the existing web/coptic-install.mjs as a Renpet adapter.
-    if language == "egy":
-        files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
-    if "coptic-keyboard" in current_lock()["dependencies"]:
-        files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
-        if language == "cop":
-            # The Coptic library publishes exactly one headless core.
-            files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
-        else:
-            # The hieroglyphic publisher now ships a single self-contained,
-            # provenance-checked keyboard_search.mjs; no generic helper exists.
-            pass
-        # Renpet owns its keyboard sign-page layout and generates the
-        # sign catalog from its own pinned tools/build_keyboard_signs.py.
-        # Hieroglyphic upstream now publishes the lexicon, not sign pages.
+    # Renpet owns its scheduler and Coptic IndexedDB storage adapter.
+    # Only the standalone headless prediction engine and published releases
+    # cross the keyboard dependency boundary.
+    files[f"web/keyboards/{language}/keyboard_search.mjs"] = get("src/keyboard_search.mjs")
+    if language == "cop":
+        files["web/keyboards/cop/core.mjs"] = get("src/core.mjs")
     else:
-        if language != "egy":
-            raise ValueError("Coptic is not a MdwNfr dependency")
-        files["web/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
-        files["core/mdwnfr/data/lexicon.json"] = catalog
-        files["data/lexicon.sqlite3"] = get("release/lexicon.sqlite3")
+        files["web/lexicon-install.mjs"] = get("src/lexicon_install.mjs")
+        files["web/keyboards/egy/keyboard_api.mjs"] = get("src/keyboard_api.mjs")
+        files["web/keyboards/egy/keyboard_catalog.js"] = get("src/keyboard_catalog.js")
+        files["web/keyboards/egy/lexicon_install.mjs"] = get("src/lexicon_install.mjs")
     return manifest, raw_manifest, catalog, files
 
 def update():

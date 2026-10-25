@@ -118,7 +118,7 @@ export function festivalHitsForDay(day,years,catalog,selection){
    return rule==='egyptian-fixed'?festivalHits(day,years,[e]):hitGregorian(day,e,rule)||[];
   });
   for(const hit of hits)results.push({...hit,sourceId:source.id,
-   sourceName:source.name,category:source.category,calendarRule:source.calendarRule});
+   sourceName:source.name,category:source.category,calendarRule:hit.calendarRule||source.calendarRule});
  }
  return results;
 }

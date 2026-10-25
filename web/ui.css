@@ -483,3 +483,6 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 .day-festivals .festival-in-agenda{min-height:43px}
 
 /* Responsive calendars and typographic overrides are in calendar-layout.css. */
+
+/* Completion is visually distinct while preserving the calendar's accent. */
+.reminder-box.is-complete{background:var(--green);color:#fff;border-radius:7px}

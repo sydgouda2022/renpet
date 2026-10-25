@@ -1,35 +1,46 @@
-# Renpet Native-script Keyboards — Verified Sources and Behavior
+# Keyboard API dependencies in Renpet
 
-## Current source-backed lexicons (2026-10-24)
+Renpet is a calendar and appointment application. **Neither keyboard's
+dictionary, prediction algorithm or sign catalog is authored by Renpet.**
 
-- **Coptic:** 20,652 distinct written surfaces, with Sahidic/Bohairic classification only where source evidence supports it. From KELLIA Comprehensive Coptic Lexicon v1.2 TEI, Coptic SCRIPTORIUM and the pinned KELLIA popular-form supplement. CC BY-SA 4.0 and respective attribution requirements apply.
-- **Late Egyptian:** 41,330 SQLite spelling records representing **40,265 distinct Unicode hieroglyphic written forms**. Compiled from source-pinned TLA Late Egyptian v19 and AED crosswalk, eight explicitly screened AES literary documents (seven supply complete Unicode spells), and the CC BY 4.0 MaReTE Ramses word model, which contributes **34,144 new sign-sequence forms** beyond the original 7,186 records.
-- **Verified lemmata:** 3,129 TLA/AES lemma identities; the additional Ramses corpus forms have **unverified lexical identity**, never an invented TLA lemma or meaning. Keyboard provenance badges **LE** (lemmatized sources) and **RTC** (Ramses model, unlinked) clearly distinguish those source tiers.
-- **Incomplete encodings:** 10,930 model encodings did not fully map to Unicode sign names and were excluded. No partial word, damaged glyph, invented completion or transliteration-only record enters the suggestions.
-- **PWA runtime:** Both dictionaries download automatically, are verified by SHA-256 and cached offline with rollback on corruption. The canonical SQLite master is built and checked in CI; the browser receives the matching verified JSON projection, not the larger unneeded SQLite binary. Neither lexicon installer touches appointments, documents, settings or personal keyboard learning.
+The repositories are independent, headless programming APIs:
 
-## Input and prediction rules
+- [Coptic Keyboard](https://github.com/sydgouda2022/coptic-keyboard) — `src/core.mjs` and `src/keyboard_search.mjs`, API v2. Source-backed Sahidic and Bohairic input with optional local learning.
+- [Hieroglyphic Keyboard](https://github.com/sydgouda2022/hieroglyphic-keyboard) — `src/keyboard_api.mjs`, `keyboard_search.mjs` and `keyboard_catalog.js`, API v2. Native signs, verified lexicon records and source-aware suggestions.
 
-- Coptic uses a native Unicode alphabet and optional Sahidic/Bohairic selection.
-- Hieroglyphic input uses uniliteral/biliteral/triliteral sign pages with native numerals; no transliteration is required.
-- The raw user-typed spelling is always the first suggestion; other suggestions come from source records or explicitly tagged local personal learning. No silent correction.
-- Indexed prefix lookup, device-local learning and context-frequency ranking are supported; these do **not** establish comprehensive morphological coverage.
-- MdwNfr retains its separate quadrat-based text composition and its own Python ranking while sharing the source-backed Late Egyptian release.
+## Runtime boundary
 
-## Evidence and required attribution
+`web/keyboard-api.mjs` is the Renpet adapter: it calls the pinned library
+interfaces and prepares prediction engines once per loaded lexicon. Renpet's
+`web/keyboard.js` owns the input dock and editor integration only.
+`web/keyboard-core.js` owns Unicode selection, grapheme deletion and number
+key presentation; it does not own an independent prediction engine.
 
-- [TLA Late Egyptian premium v19](https://huggingface.co/datasets/thesaurus-linguae-aegyptiae/tla-late_egyptian-v19-premium), CC BY-SA 4.0.
-- [AED-TEI](https://github.com/simondschweitzer/aed-tei) and [AES](https://github.com/simondschweitzer/aes), CC BY-SA 4.0; only document-reviewed Late Egyptian AES records are accepted.
-- [University of Helsinki MaReTE Transliteration Models](https://github.com/MaReTEgyptologists/TranslitModels), CC BY 4.0; Heidi and Tommi Jauhiainen, derived from Serge Rosmorduc's Ramses Transliteration Corpus, which itself credits the original Ramsès research contributors.
-- [KELLIA Comprehensive Coptic Lexicon](https://github.com/KELLIA/dictionary) and [Coptic SCRIPTORIUM](https://github.com/CopticScriptorium), respecting separate upstream data-use conditions.
+The pinned upstream modules live under `web/keyboards/cop/` and
+`web/keyboards/egy/`. This local vendoring is required for offline use; there
+is no hosted API, telemetry or remote prediction service. References in
+`keyboard-lock.json` pin the source commit and released dictionary bytes.
+`tools/sync_keyboards.py` updates these dependencies intentionally from
+their repositories, checking release hashes and inventory counts.
 
-Counts represent available written forms, **not** the total historical vocabulary. Neither lexicon is certified exhaustive.
+Renpet owns local keyboard learning, personal text, events, reminders,
+preferences and exports. The Coptic browser installer remains an app-managed
+storage adapter; the published Coptic API is entirely headless. The Egyptian
+API's verified lexicon payload is independently sourced.
 
-## Renpet 7 runtime, backup and release contract
+## Historical data and limitations
 
-- The canonical browser prediction engine is `shared-language/src/keyboard_search.mjs`. `renpet/tools/build_release.sh` compiles the pinned source inventories and copies the same engine into the deployed PWA; mobile QA and production use the same script.
-- The browser installs individually verified Coptic and hieroglyphic JSON releases into independent IndexedDB databases, with checksum verification and rollback. The large SQLite Egyptian master is validated during the build but **not served as a Cloudflare static asset**.
-- Local keyboard learning, Coptic dialect preferences, and personal appointment data are kept separate from the lexicons. The Renpet JSON backup includes keyboard learning and two recent personal scheduler recovery snapshots when available.
-- GUI localization lives in `ui-words.js`; responsive week, agenda and hieroglyphic numeral styles live in `calendar-layout.css`. No language mode requires transliteration.
-- Release URLs are stamped from the authoritative `data.json.version` and content hashes of all linked JS/CSS, eliminating manual cache-buster edits.
-- Each named open dataset has attribution or share-alike requirements; the pinned sources and their terms must continue to be respected. Hash pinning alone does not confer redistribution rights.
+Coptic currently contains 20,652 distinct written forms, with dialect evidence
+only where supported. Late Egyptian includes 41,330 spelling records covering
+40,265 Unicode sequences; unlinked Ramses model forms are **not** verified
+lemmata. Neither inventory is a complete historical vocabulary. Suggestions
+are not automatic corrections or manuscript-specific attestations.
+
+Both dictionaries use an integrity-checked local install and may be unavailable
+when offline before first use. In that situation the keyboard still supports
+native signs/letters, while suggestions remain limited. Large dictionary
+payloads are no longer part of the app shell's atomic service-worker install.
+
+See the original libraries' SOURCE/NOTICE files for dataset attribution and
+redistribution constraints. Neither a Git SHA nor a checksum by itself grants
+rights to redistribute external materials.

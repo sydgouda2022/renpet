@@ -1,7 +1,7 @@
-import {prepareKeyboardIndex,predictKeyboard} from './keyboard-search.mjs';
+import {suggestions} from './keyboard-api.mjs';
 import {nativeNumber} from './calendar.js';
 
-export const COPTIC_LETTERS=[...'ⲁⲃⲅⲇⲉⲋⲍⲏⲑⲓⲕⲗⲙⲛⲝⲟⲡⲣⲥⲧⲩⲫⲭⲯⲱϣϥϧϩϫϭϯ'];
+export {COPTIC_KEYS as COPTIC_LETTERS} from './keyboards/cop/core.mjs';
 export const EGY_NUMBERS=[
  ...Array.from({length:9},(_,i)=>({value:i+1,text:'𓏺'.repeat(i+1)})),
  ...[[10,'𓎆'],[100,'𓍢'],[1000,'𓆼'],[10000,'𓂭'],[100000,'𓆐'],[1000000,'𓁨']].map(([value,text])=>({value,text}))
@@ -12,25 +12,12 @@ const egy=/[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+$/u;
 export function wordRange(input, caret, lang){
  const left=input.slice(0,caret);
  const matched=left.match(lang==='cop'?cop:egy);
- return {start:caret-(matched?.[0].length||0),end:caret,raw:matched?.[0]||''};
+ // Replace the complete word, not only the characters left of the caret.
+  const right=input.slice(caret).match(lang==='cop'?/^[\p{Script=Coptic}\p{Script=Greek}\p{Mark}]+/u:/^[\u{13000}-\u{1345f}\u{13460}-\u{143ff}]+/u)?.[0]||'';
+  return {start:caret-(matched?.[0].length||0),end:caret+right.length,raw:(matched?.[0]||'')+right};
 }
-// A single prepared index is reused across keystrokes. All ranking and dialect
-// filtering is delegated to their independent version-pinned language engines.
-const indexCache=new WeakMap();
-export function suggestions(raw,language,lexicon,learned={},limit=4,options={}){
- if(!raw)return [];
- const pack=lexicon&&typeof lexicon==='object'?lexicon:null;
- let index=pack&&indexCache.get(pack);
- if(!index||index.language!==language){
-  // Hieroglyphic predictions require typed, source-provenanced entries.
-  // Never convert legacy positional rows into fabricated attestations.
-  const source=language==='egy' ? (Array.isArray(pack?.entries)?pack:{entries:[]})
-    : (pack||{rows:[]});
-  index=prepareKeyboardIndex(language,source);
-  if(pack)indexCache.set(pack,index);
- }
- return predictKeyboard(index,raw,{limit,learned,dialect:options.dialect||'all',previous:options.previous||''});
-}
+// The independent keyboard APIs own prediction and linguistic evidence.
+export {suggestions};
 export function deleteGrapheme(value,start,end){
  if(start!==end)return {start,end,text:''};
  if(start===0)return {start:0,end:0,text:''};

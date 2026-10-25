@@ -185,3 +185,10 @@ body[data-language=egy] .festival-detail-sheet .festival-evidence{font-size:25px
 body[data-language=egy] .festival-detail-sheet .festival-type{font-size:23px;line-height:1.6}
 body[data-language=egy] .festival-detail-sheet .festival-sources-links a{font-size:20px}
 @media(max-width:580px){.festival-detail-sheet{padding:18px;max-height:90dvh}}
+
+/* Native ten-day periods remain grouped as tens; on narrow iPhones, display
+   two rows of five sufficiently wide date controls instead of ten tiny targets. */
+@media(max-width:480px){
+ .month-section.ten-day .decade-days{grid-template-columns:repeat(5,minmax(0,1fr))}
+ .month-section.ten-day .decade-days .date{min-height:64px}
+}
