@@ -39,3 +39,6 @@ for(const {id} of SEASONS){
 }
 assert.ok(total<1500000,'All three offline backgrounds must stay under 1.5 MB together');
 console.log('Season boundaries, sixth epagomenal day, native date labels and web artwork verified');
+
+// Binary search must include the final year in the published year table.
+assert.equal(toEgyptian(dayNumber('2028-10-14'),[{year:6282,start:'2026-09-11',days:366},{year:6283,start:'2027-09-12',days:365},{year:6284,start:'2028-09-11',days:365}]).year,6284);
