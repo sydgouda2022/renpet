@@ -28,6 +28,11 @@ assert ids == ["amun-theban", "national-egypt", "esna-khnum", "isis-philae"], "R
 assert not (root / "festival-packs/christian-coptic.json").exists()
 assert not (root / "festival-packs/muslim-egypt.json").exists()
 
+assets = json.loads(__import__('re').search(r'const ASSETS = (\[[^;]+\]);',s).group(1))
+assert len(assets) < 120, 'Offline install still eagerly downloads hundreds of SVGs'
+assert './assets/numerals/6400.svg' not in assets
+assert './assets/numerals/30.svg' in assets
+assert "const older = executable ? null" in s, 'Never use stale JS from previous release'
 assert "new Set([CACHE, ...older.slice(-1)])" in s, "Do not purge an active previous app cache"
 assert "RenpetBoot" in html and "renpet-startup-failed" in html, "Startup watchdog/retry absent"
 assert "getRegistration(appScope)" in html, "Scoped service-worker repair unavailable"
