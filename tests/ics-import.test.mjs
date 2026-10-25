@@ -21,3 +21,11 @@ assert.equal(x.unsupported,1);assert.equal(x.imported,0);
 const badExdate=multi.replace('EXDATE:20261105T090000','EXDATE:20261105T090000,notadate');
 x=parseICS(badExdate);assert.equal(x.unsupported,1);assert.equal(x.imported,1);
 console.log('ICS UTC, midnight and invalid exclusion regression tests passed');
+
+// Standard IANA time zones convert to local device wall time, without silently
+// treating foreign-zone appointments as floating times.
+const tzEvent='BEGIN:VCALENDAR\\r\\nBEGIN:VEVENT\\r\\nUID:zone-1\\r\\nDTSTART;TZID=America/New_York:20260115T090000\\r\\nDTEND;TZID=America/New_York:20260115T100000\\r\\nSUMMARY:New York appointment\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR';
+const zoned=parseICS(tzEvent);
+assert.equal(zoned.imported,1);
+const unknownZone=tzEvent.replaceAll('America/New_York','Not_A_Real_Zone');
+assert.equal(parseICS(unknownZone).invalid,1,'Unknown IANA timezones cannot shift appointment times');
