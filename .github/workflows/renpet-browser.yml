@@ -1,0 +1,66 @@
+name: Renpet iPhone iPad and offline browser acceptance
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'keyboard-lock.json'
+      - '.github/workflows/renpet-browser.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: renpet-mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: {node-version: '24'}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Build source-checked offline app and browsers
+        run: |
+          set -euo pipefail
+          python tools/sync_keyboards.py --verify
+          npm install --no-save --prefix /tmp/renpet-pw playwright@1.56.1
+          bash tools/build_release.sh
+          /tmp/renpet-pw/node_modules/.bin/playwright install --with-deps chromium webkit
+      - name: Serve actual packaged PWA
+        run: |
+          nohup python -m http.server 8765 --bind 127.0.0.1 --directory web > /tmp/renpet-browser-http.log 2>&1 &
+          for i in $(seq 1 15); do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Verify responsive interactive iPhone and iPad calendar
+        env:
+          NODE_PATH: /tmp/renpet-pw/node_modules
+        run: |
+          set -euo pipefail
+          node tests/mobile-ux.cjs
+          node tests/calendar-integrity.cjs
+          node tests/season-theme.cjs
+      - name: Verify Safari WebKit editing, persistence and offline recovery
+        env:
+          NODE_PATH: /tmp/renpet-pw/node_modules
+        run: |
+          set -euo pipefail
+          node tests/safari-save.cjs
+          node tests/safari-direct-actions.cjs
+          node tests/offline-startup.cjs
+      - name: Preserve screenshots and failures for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renpet-split-browser-evidence
+          path: renpet-mobile-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
