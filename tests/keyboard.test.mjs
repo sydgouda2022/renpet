@@ -11,7 +11,7 @@ assert.equal(new Set(COPTIC_LETTERS).size,32);
 assert.equal(COP_NUMBERS.length,12);
 assert.equal(EGY_NUMBERS.length,15);
 assert.equal(PREDICTION_API_VERSION,2);
-assert.equal(API_VERSION,'2.0.0');
+assert.match(API_VERSION,/^2\.\d+\.\d+$/,'Renpet requires compatible Egyptian keyboard API v2');
 const pages=egyptianSignPages();
 for(const group of ['uni','bi','tri'])assert.ok(pages[group].length>15);
 const engine=createKeyboardFromData({lexicon:egyptian});
