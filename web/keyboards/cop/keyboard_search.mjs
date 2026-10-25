@@ -1,18 +1,6 @@
-/** Independent script-scoped public predictive keyboard.
- * Generic Unicode comparison is vendored locally as a private implementation.
+/** Compatibility entry used by Renpet's version-locked keyboard adapter.
+ * The actual single Coptic predictor implementation lives in core.mjs.
  */
-import {keyboardKey as key,prepareKeyboardIndex as prepare,predictKeyboard as predict}
-  from './_generic_search.mjs';
-const LANGUAGE='cop';
-export function keyboardKey(value,language=LANGUAGE){
-  if(language!==LANGUAGE)throw new RangeError('Wrong keyboard language package');
-  return key(value,LANGUAGE);
-}
-export function prepareKeyboardIndex(language,pack){
-  if(language!==LANGUAGE)throw new RangeError('Wrong keyboard language package');
-  return prepare(language,pack);
-}
-export function predictKeyboard(index,raw,options={}){
-  if(index?.language!==LANGUAGE)throw new RangeError('Wrong keyboard language package');
-  return predict(index,raw,options);
-}
+export {LANGUAGE,PREDICTION_API_VERSION,COPTIC_KEYS,keyboardKey,keyboardReady,
+  prepareKeyboardIndex,predictKeyboard,isInsertableSurface,
+  createCopticKeyboard} from './core.mjs';
