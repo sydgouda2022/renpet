@@ -96,7 +96,8 @@ for(const dead of ['.more-sheet','.mini-grid','.ux-language','.festival-list'])a
 assert.ok(!has('Renpet:'),'No runtime errors');
 // Dates containing appointments in hidden calendars must appear in List
 // even when other visible appointments exist elsewhere in the same window.
-const hiddenDate=dayNumber('2026-10-27'),visibleDate=dayNumber('2026-10-28');
+const todayDay=dayNumber(new Date().toISOString().slice(0,10));
+const hiddenDate=todayDay+1,visibleDate=todayDay+2;
 const calendars=[{id:'personal',name:{ar:'شخصي'},color:'#187568',visible:true},
  {id:'hidden',name:{ar:'مخفي'},color:'#187568',visible:false}];
 memory.set('renpet.scheduler.v1',JSON.stringify({version:1,calendars,items:[
@@ -107,5 +108,7 @@ click('data-primary-view','today');
 click('data-primary-view','list');
 assert.ok(has('Visible public event'),'List includes visible event');
 assert.ok(has('data-show-all-calendars'),'List includes hidden-calendar recovery on separate dates');
-assert.ok(has('27')||has('٢٧'),'Hidden-only day receives an agenda heading');
+const hiddenGregorianDay=new Date(hiddenDate*86400000).getUTCDate();
+assert.ok(has(String(hiddenGregorianDay))||has(new Intl.NumberFormat('ar-EG').format(hiddenGregorianDay)),
+ 'Hidden-only day receives an agenda heading');
 console.log('Renpet direct Month/Year/Day navigation and hidden-date list smoke tests passed');
