@@ -408,8 +408,8 @@ body[data-language=cop] .year-mini-day{font-family:Coptic,system-ui,sans-serif;f
 body[data-language=ar] .year-mini-day{font-family:CairoRenpet,system-ui,sans-serif;font-size:13px}
 body[data-language=ar] .year-month-name{font-family:CairoRenpet,system-ui,sans-serif}
 html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,minmax(0,1fr))}
-/* No Close X in settings: the existing backdrop is the dismiss control. */
-.ux-panel-head{justify-content:flex-start}
+/* Settings, calendars and festivals share one explicit dismissal control. */
+.ux-panel-head{justify-content:space-between}
 
 /* Calendar interaction: immediate, accessible feedback when an appointment cannot be saved. */
 .event-error{margin:0;padding:10px 16px;border-bottom:1px solid var(--rubric);background:var(--rubric-soft);color:var(--rubric);font-weight:700;line-height:1.45}
