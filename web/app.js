@@ -49,6 +49,7 @@ async function saveScheduler(next){
  return true;
 }
 let previousRenderKey=null;
+let editorInitialState=null;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,revealItemId:null,saveNotice:false};
 
@@ -368,6 +369,8 @@ function render(){
  root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
    +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
    +panelContent()+(state.dialog?editor():'')+festivalDetails();
+ const activeEditor=root.querySelector('#event-editor');
+ editorInitialState=activeEditor?JSON.stringify([...new FormData(activeEditor)]):null;
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  }
@@ -457,6 +460,14 @@ async function submitEvent(form){
  state.view='day';state.revealItemId=item.id;state.saveNotice=true;render();
 }
 
+function discardEditor(){
+ const form=root.querySelector('#event-editor');
+ if(form&&editorInitialState!==null&&JSON.stringify([...new FormData(form)])!==editorInitialState){
+  const message=lang()==='ar'?'تجاهل التغييرات غير المحفوظة؟':lang()==='cop'?'Ⲭⲱ ⲛ̀ⲥⲁ ⲛⲓϣⲓⲃϯ ⲉⲧⲉⲙⲡⲟⲩⲥⲱⲛϩ?':'𓏞 𓏥 𓐍𓏏 ?';
+  if(!confirm(message))return;
+ }
+ closeKeyboard();state.dialog=null;render();
+}
 root.addEventListener('click',async ev=>{
  if(ev.target.closest('[data-close-festival]')||ev.target.matches?.('[data-close-festival-overlay]')){state.festivalDetail=null;render();return;}
  const festival=ev.target.closest('[data-festival-open]');
@@ -465,7 +476,7 @@ root.addEventListener('click',async ev=>{
  if(ev.target.classList?.contains('sheet-overlay')){
   const picker=root.querySelector('.time-picker-host:not([hidden])');
   if(picker){closeTimeEditor(root.querySelector('#event-editor'),false,lang());return;}
-  closeKeyboard();state.dialog=null;render();return;
+  discardEditor();return;
  }
  // Save from the header is always a one-tap action, even if the time
  // picker is currently open. Commit its selected hour/minute first.
@@ -530,7 +541,7 @@ root.addEventListener('click',async ev=>{
   return;
  }
  if(b.hasAttribute('data-close-panel')){state.panel=null;render();return;}
- if(b.hasAttribute('data-close')){state.dialog=null;render();return;}
+ if(b.hasAttribute('data-close')){discardEditor();return;}
  if(b.hasAttribute('data-hour')){state.saveNotice=false;state.dialog={kind:'event',hour:Number(b.dataset.hour)};render();return;}
  if(b.hasAttribute('data-new')){state.saveNotice=false;state.dialog={kind:'event'};render();root.querySelector('[name="title"]')?.focus();return;}
  if(b.hasAttribute('data-edit')){state.dialog={id:b.dataset.edit,occurrenceDay:Number(b.dataset.occurrence??state.focus)};render();return;}
@@ -765,7 +776,12 @@ document.addEventListener('click',ev=>{
  }
 });
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCurrentTimeLine();});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if(state.festivalDetail)state.festivalDetail=null;else if(state.dialog)state.dialog=null;else if(state.panel)state.panel=null;else if(state.search)state.search=false;render();}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
+  if(state.festivalDetail){state.festivalDetail=null;render();}
+  else if(state.dialog)discardEditor();
+  else if(state.panel){state.panel=null;render();}
+  else if(state.search){state.search=false;render();}
+ }});
 let gesture=null;
 root.addEventListener('touchstart',ev=>{
  if(ev.touches.length!==1||state.dialog||state.panel)return;
