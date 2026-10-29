@@ -104,7 +104,7 @@ body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
 .event-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
 .event-copy strong{font-size:14px;overflow-wrap:anywhere}
 .event-copy small{font-size:12px;color:var(--muted)}
-.reminder-box{margin-inline-start:auto;color:var(--green)}
+.reminder-box{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--green);cursor:pointer}
 .reminder-box svg{width:18px;height:18px}
 
 /* Year: precisely twelve month tiles plus a separate epagomenal entry. */
