@@ -13,10 +13,7 @@ assert "await cache.addAll(ASSETS)" in s, "Offline boot graph needs an atomic in
 for asset in ["calendar-presentation.mjs", "season-theme.css", "assets/seasons/akhet.webp", "assets/seasons/peret.webp", "assets/seasons/shemu.webp"]:
     assert '"./' + asset + '"' in s, "Seasonal asset must be installed atomically: " + asset
 assert f"season-theme.css?v={version}-" in html, "Seasonal CSS must use its current content hash"
-assert "url.pathname.endsWith('/festival-sources.json')" in s, "Registry must bypass old cache when online"
-assert "url.pathname.includes('/festival-packs/')" in s, "Festival pack updates must bypass old cache"
-assert "fetch(event.request, {cache: 'no-store'})" in s, "Current festival source must be fetched first"
-assert s.index("fetch(event.request, {cache: 'no-store'})") < s.index("if (cached) return cached;"), "No stale catalog cache-first"
+assert "url.pathname.endsWith('/festival-sources.json')" not in s, 'Static catalogs should be part of the immutable release cache'
 assert "serviceWorker.addEventListener('controllerchange'" in html, "Existing installed PWAs must reload after an update"
 assert "registration.update()" in html, "Installed PWAs must proactively check for updates"
 assert "document.addEventListener('visibilitychange'" in html, "Resumed iOS PWAs must check for new versions"
@@ -32,8 +29,6 @@ assets = json.loads(__import__('re').search(r'const ASSETS = (\[[^;]+\]);',s).gr
 assert len(assets) < 120, 'Offline install still eagerly downloads hundreds of SVGs'
 assert './assets/numerals/6400.svg' not in assets
 assert './assets/numerals/30.svg' in assets
-assert "const older = executable ? null" in s, 'Never use stale JS from previous release'
-assert "new Set([CACHE, ...older.slice(-1)])" in s, "Do not purge an active previous app cache"
 assert "RenpetBoot" in html and "renpet-startup-failed" in html, "Startup watchdog/retry absent"
 assert "getRegistration(appScope)" in html, "Scoped service-worker repair unavailable"
 assert "actualScript && new URL(actualScript).href === expectedScript" in html, "Repair must verify the Renpet worker identity"
@@ -46,5 +41,5 @@ digest = base64.b64encode(hashlib.sha256(inline[0].encode('utf-8')).digest()).de
 headers = (root / '_headers').read_text(encoding='utf-8')
 assert "script-src 'self' 'sha256-" + digest + "';" in headers, "CSP would block startup watchdog"
 assert "script-src 'self' 'unsafe-inline'" not in headers, "Do not weaken script CSP"
-print("Renpet offline query handling, boot recovery and safe update rules verified")
+print("Renpet offline boot, privacy and single-release caching verified")
 
