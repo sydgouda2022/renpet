@@ -1,0 +1,29 @@
+const ROOT='http://127.0.0.1:8765/';
+async function boot(page){
+ await page.goto(ROOT,{waitUntil:'domcontentloaded'});
+ await page.locator('.month-agenda').waitFor();
+}
+async function record(page,key){
+ return page.evaluate(async key=>(await import('./storage.js')).readRecord(key),key);
+}
+async function put(page,key,value){
+ return page.evaluate(async({key,value})=>(await import('./storage.js')).writeRecord(key,value),{key,value});
+}
+async function language(page,id){
+ await page.locator('header [data-open-panel=settings]').click();
+ await page.locator('[name=language]').selectOption(id);
+ await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
+}
+async function saveEvent(page,title){
+ await page.locator('header [data-new]').click();
+ const form=page.locator('#event-editor');
+ await form.locator('[name=title]').fill(title);
+ await form.locator('.save-button').click();
+ await page.locator('.save-confirmation').waitFor();
+ await page.locator('#event-editor').waitFor({state:'detached'});
+ const state=await record(page,'scheduler');
+ const item=state.items.find(i=>i.title===title);
+ if(!item)throw Error('Saved appointment missing from IndexedDB: '+title);
+ return item;
+}
+module.exports={ROOT,boot,record,put,language,saveEvent};
