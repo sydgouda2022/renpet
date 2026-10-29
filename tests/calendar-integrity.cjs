@@ -113,7 +113,7 @@ async function main(){
   assert.equal(await done.getAttribute('aria-pressed'),'false');
   await done.focus();
   await page.keyboard.press('Enter');
-  assert.equal(await page.locator('.reminder-box[data-complete="'+reminder.id+'"]').getAttribute('aria-pressed'),'true');
+  await page.locator('.reminder-box[data-complete="'+reminder.id+'"][aria-pressed="true"]').waitFor();
   assert.equal((await record(page,'scheduler')).items.find(i=>i.id===reminder.id).completed,true);
   await context.close();
   console.log('Renpet date editor, persistence, recurrence and reload passed');
