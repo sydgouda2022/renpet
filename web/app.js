@@ -501,6 +501,8 @@ root.addEventListener('click',async ev=>{
   }
   return;
  }
+ // Header Cancel always acts on the appointment, even with the time picker open.
+ if(ev.target.closest('#event-editor [data-close]')){discardEditor();return;}
  // Time picker is an overlay within the event form. Touching its backdrop
  // cancels the picker and never accidentally commits a hidden selection.
  const openPicker=root.querySelector('.time-picker-host:not([hidden])');
