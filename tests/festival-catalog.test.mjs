@@ -51,7 +51,7 @@ assert.deepEqual(enabledSourceIds(oldSelection,legacyCatalog),['national-egypt']
  'Legacy in-memory catalogs must also reject retired source selections');
 assert.ok(!enabledSourceIds(null,legacyCatalog).some(id=>retiredSources.some(source=>source.id===id)),
  'Retired default-enabled sources must never become enabled');
-assert.deepEqual(festivalHitsForDay(dayNumber('2026-10-06'),data.years,legacyCatalog,oldSelection).map(event=>event.id),
+assert.deepEqual(festivalHitsForDay(dayNumber('2026-10-06'),legacyCatalog,oldSelection).map(event=>event.id),
  ['armed-forces'],'A stale catalog must produce only the retained national festival');
 
 // Every festival, including embedded Amun and all three external packs,
@@ -89,38 +89,38 @@ assert.deepEqual(enabledSourceIds([],catalog),[],'Explicitly disabled source per
 assert.deepEqual(enabledSourceIds([AMUN_SOURCE,AMUN_SOURCE,'nonexistent'],catalog),[AMUN_SOURCE]);
 
 const festival=data.festivals.find(x=>x.month===1&&x.day===1);
-const newYear=toGregorian({year:6268,month:1,day:1},data.years);
+const newYear=toGregorian({year:6268,month:1,day:1});
 assert.equal(catalog.sources.find(s=>s.id==='national-egypt').events.length,7);
 assert.equal(catalog.sources.find(s=>s.id==='esna-khnum').events.length,3);
 assert.equal(catalog.sources.find(s=>s.id==='isis-philae').events.length,1);
-assert.ok(festivalHitsForDay(toGregorian({year:6268,month:11,day:13},data.years),data.years,catalog,['esna-khnum']).some(f=>f.id==='esna-neith-visit'));
-assert.ok(festivalHitsForDay(toGregorian({year:6268,month:13,day:4},data.years),data.years,catalog,['isis-philae']).some(f=>f.id==='isis-epagomenal-birthday'));
-assert.equal(festivalHitsForDay(toGregorian({year:6268,month:13,day:4},data.years),data.years,catalog,[]).length,0,'No historical catalog on opt-out');
-assert.ok(festivalHitsForDay(dayNumber('2026-04-13'),data.years,catalog,['national-egypt']).some(f=>f.id==='sham-el-nessim'));
+assert.ok(festivalHitsForDay(toGregorian({year:6268,month:11,day:13}),catalog,['esna-khnum']).some(f=>f.id==='esna-neith-visit'));
+assert.ok(festivalHitsForDay(toGregorian({year:6268,month:13,day:4}),catalog,['isis-philae']).some(f=>f.id==='isis-epagomenal-birthday'));
+assert.equal(festivalHitsForDay(toGregorian({year:6268,month:13,day:4}),catalog,[]).length,0,'No historical catalog on opt-out');
+assert.ok(festivalHitsForDay(dayNumber('2026-04-13'),catalog,['national-egypt']).some(f=>f.id==='sham-el-nessim'));
 const october6=dayNumber('2026-10-06');
-assert.ok(festivalHitsForDay(october6,data.years,catalog,['national-egypt']).some(f=>f.id==='armed-forces'),
+assert.ok(festivalHitsForDay(october6,catalog,['national-egypt']).some(f=>f.id==='armed-forces'),
  '6 October national festival remains attached to its absolute date on the Egyptian calendar');
-assert.equal(festivalHitsForDay(october6,data.years,catalog,[]).length,0,
+assert.equal(festivalHitsForDay(october6,catalog,[]).length,0,
  'Festival source selection, not Gregorian label display, is the visibility switch');
-assert.equal(festivalHitsForDay(october6,data.years,catalog,['national-egypt']).some(f=>f.id==='armed-forces'),true,
+assert.equal(festivalHitsForDay(october6,catalog,['national-egypt']).some(f=>f.id==='armed-forces'),true,
  'Hide-Gregorian mode must use the same independent absolute-date catalog');
 
-assert.ok(festivalHitsForDay(dayNumber('2027-05-03'),data.years,catalog,['national-egypt']).some(f=>f.id==='sham-el-nessim'),
+assert.ok(festivalHitsForDay(dayNumber('2027-05-03'),catalog,['national-egypt']).some(f=>f.id==='sham-el-nessim'),
  'Sham El Nessim remains an Egyptian national observance despite removing Christian festival lists');
 for(const removed of ['christian-coptic','muslim-egypt']){
  assert.deepEqual(enabledSourceIds([removed],catalog),[],removed+' cannot be selected');
- assert.equal(festivalHitsForDay(dayNumber('2026-04-12'),data.years,catalog,[removed]).length,0,removed+' cannot produce events');
+ assert.equal(festivalHitsForDay(dayNumber('2026-04-12'),catalog,[removed]).length,0,removed+' cannot produce events');
 }
 assert.ok(festival,'Existing Amun list contains Wepet Renpet');
-const defaultHits=festivalHitsForDay(newYear,data.years,catalog,[AMUN_SOURCE]);
+const defaultHits=festivalHitsForDay(newYear,catalog,[AMUN_SOURCE]);
 assert.ok(defaultHits.some(x=>x.id===festival.id),'Amun calendar dates remain intact');
-assert.equal(festivalHitsForDay(newYear,data.years,catalog,[]).length,0,'Disabling Amun removes festival overlays');
+assert.equal(festivalHitsForDay(newYear,catalog,[]).length,0,'Disabling Amun removes festival overlays');
 
 // Personal data remains independent when all festival sources are disabled.
 const personal=emptyState(),appointment=createItem({title:'Birthday',kind:'event',
  startDay:newYear,endDay:newYear,startMinutes:540,endMinutes:600,calendarId:'personal'});
 upsertItem(personal,appointment);
-assert.equal(itemsForDay(personal,newYear,data.years).length,1,'Personal appointments unaffected by festival filtering');
+assert.equal(itemsForDay(personal,newYear).length,1,'Personal appointments unaffected by festival filtering');
 
 // Keep the registry extensible with secular and ancient-Egyptian sources only.
 const nextManifest={schema:1,sources:[
@@ -139,11 +139,11 @@ const future=await loadFestivalCatalog(data,async url=>({ok:!!(url==='./festival
 assert.equal(future.sources.length,3,'Independent nonreligious and historical catalogs supported');
 assert.deepEqual(enabledSourceIds(null,future),[AMUN_SOURCE],'Additional catalogs require opt-in');
 const dec25=dayNumber('2026-12-25');
-const ancientStart=toGregorian({year:6268,month:4,day:16},data.years);
-assert.deepEqual(festivalHitsForDay(dec25,data.years,future,['national-test']).map(x=>x.id),['nat-1']);
-assert.deepEqual(festivalHitsForDay(ancientStart,data.years,future,['ancient-test']).map(x=>x.id),['anc-1']);
-assert.deepEqual(festivalHitsForDay(ancientStart+1,data.years,future,['ancient-test']).map(x=>x.id),['anc-1']);
-assert.equal(festivalHitsForDay(dec25,data.years,future,[]).length,0);
+const ancientStart=toGregorian({year:6268,month:4,day:16});
+assert.deepEqual(festivalHitsForDay(dec25,future,['national-test']).map(x=>x.id),['nat-1']);
+assert.deepEqual(festivalHitsForDay(ancientStart,future,['ancient-test']).map(x=>x.id),['anc-1']);
+assert.deepEqual(festivalHitsForDay(ancientStart+1,future,['ancient-test']).map(x=>x.id),['anc-1']);
+assert.equal(festivalHitsForDay(dec25,future,[]).length,0);
 
 const fallback=await loadFestivalCatalog(data,async()=>{throw Error('offline registry blocked')});
 assert.equal(fallback.sources[0].events.length,data.festivals.length,'Amun remains readable if registry request fails');
