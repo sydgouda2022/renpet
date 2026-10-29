@@ -37,10 +37,7 @@ function exportData() {
 }
 async function exportCalendar() {
   try {
-    const response=await fetch('./data.json');
-    if(!response.ok)throw Error('Calendar data unavailable');
-    const data=await response.json();
-    const {text,count}=exportICS(loadScheduler(localStorage),data.years,occursOn,{
+    const {text,count}=exportICS(loadScheduler(localStorage),occursOn,{
       today:Math.floor(Date.now()/86400000)
     });
     if(!count){window.alert(tr().empty);return;}
