@@ -82,7 +82,7 @@ async function run(){
    }catch(e){issues.push({width,lang,error:String(e.stack||e).slice(0,900)});await snap(lang+'-failed').catch(()=>{});}
   }
 
-  // Reproduce the exact screenshot: an appointment for 26 Baba 6282
+  // Reproduce the exact screenshot: an appointment for 26 Baba 6268
   // (5 Nov 2026) in a calendar hidden by a previous app iteration.
   const specific=await ctx.newPage();
   specific.setDefaultTimeout(6500);
@@ -102,7 +102,7 @@ async function run(){
   await specific.locator('header [data-new]').click();
   const form=specific.locator('#event-editor');
   await form.locator('[name=title]').fill('ميعاد السعادة');
-  await form.locator('[name=egyYear]').selectOption('6282');
+  await form.locator('[name=egyYear]').selectOption('6268');
   await form.locator('[name=egyMonth]').selectOption('2');
   await form.locator('[name=egyDay]').selectOption('26');
   await form.locator('.save-button').click();
