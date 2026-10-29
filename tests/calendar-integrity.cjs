@@ -40,6 +40,47 @@ async function main(){
   await page.locator('.save-confirmation').waitFor();
   const item=(await record(page,'scheduler')).items.find(i=>i.title==='Egyptian ten-day recurrence');
   assert.ok(item);assert.equal(item.repeat,'egy10');
+  // Editing a selected occurrence must never silently rewrite the whole series.
+  for(let step=0;step<10;step++)await page.locator('[data-next]').click();
+  const secondDay=item.startDay+10;
+  const recurrenceBlock=page.locator('.timeline-event[data-edit="'+item.id+'"]');
+  await recurrenceBlock.waitFor();
+  await recurrenceBlock.click();
+  const editor=page.locator('#event-editor');
+  assert.equal(await editor.locator('[name=repeatScope]').inputValue(),'one');
+  const expectedDate=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),secondDay);
+  assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),expectedDate.day);
+  await editor.locator('[name=title]').fill('Only this Egyptian day');
+  await editor.locator('.save-button').click();
+  await page.locator('.save-confirmation').waitFor();
+  let state=await record(page,'scheduler');
+  const series=state.items.find(i=>i.id===item.id);
+  assert.ok(series,'Series must survive editing one occurrence');
+  assert.ok(series.excludedDays.includes(secondDay),'Edited occurrence must be excluded from the parent series');
+  assert.ok(state.items.some(i=>i.repeat==='none'&&i.title==='Only this Egyptian day'&&i.startDay===secondDay));
+  // Quick deletion removes only the selected occurrence, not its parent series.
+  for(let step=0;step<10;step++)await page.locator('[data-next]').click();
+  const thirdDay=item.startDay+20;
+  await page.locator('.timeline-event[data-edit="'+item.id+'"] [data-quick-delete]').click();
+  state=await record(page,'scheduler');
+  assert.ok(state.items.some(i=>i.id===item.id),'Quick delete must retain the recurring series');
+  assert.ok(state.items.find(i=>i.id===item.id).excludedDays.includes(thirdDay));
+  // A Cancel or backdrop tap must ask before discarding real user changes.
+  await page.locator('header [data-new]').click();
+  await page.locator('#event-editor [name=title]').fill('Unsaved Egyptian event');
+  page.removeAllListeners('dialog');
+  let prompts=0;
+  page.on('dialog',d=>{prompts++;d.dismiss();});
+  await page.locator('#event-editor [data-close]').click();
+  assert.equal(await page.locator('#event-editor').count(),1,'Dismissed discard confirmation must preserve the editor');
+  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+  assert.equal(await page.locator('#event-editor').count(),1,'Backdrop must not discard changed input');
+  page.removeAllListeners('dialog');
+  page.on('dialog',d=>{prompts++;d.accept();});
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#event-editor').count(),0);
+  assert.equal(prompts,3,'Cancel, backdrop and Escape must each request confirmation');
+  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved Egyptian event'));
   await context.close();
   console.log('Renpet date editor, persistence, recurrence and reload passed');
  }finally{await browser.close();}
