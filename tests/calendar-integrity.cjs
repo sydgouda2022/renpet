@@ -34,7 +34,7 @@ async function main(){
   await recurring.locator('.advanced-fields summary').click();
   const repeat=recurring.locator('[name=repeat]');
   const values=await repeat.locator('option').evaluateAll(a=>a.map(x=>x.value));
-  assert.deepEqual(values,['none','daily','egy10','egyMonthly','egyYearly']);
+  assert.deepEqual(values,['none','daily','egy10','egyMonthly','egyYearly','custom']);
   await repeat.selectOption('egy10');
   await recurring.locator('.save-button').click();
   await page.locator('.save-confirmation').waitFor();
@@ -115,6 +115,30 @@ async function main(){
   await page.keyboard.press('Enter');
   await page.locator('.reminder-box[data-complete="'+reminder.id+'"][aria-pressed="true"]').waitFor();
   assert.equal((await record(page,'scheduler')).items.find(i=>i.id===reminder.id).completed,true);
+  // Custom Egyptian recurrence must be selectable and persisted after restart.
+  await page.locator('header [data-new]').click();
+  const customForm=page.locator('#event-editor');
+  await customForm.locator('[name=title]').fill('Buy food for the shift');
+  await customForm.locator('.advanced-fields summary').click();
+  assert.equal(await customForm.locator('.custom-repeat').isVisible(),false);
+  await customForm.locator('[name=repeat]').selectOption('custom');
+  assert.equal(await customForm.locator('.custom-repeat').isVisible(),true);
+  await customForm.locator('[name=repeatEvery]').selectOption('6');
+  await customForm.locator('[name=repeatUnit]').selectOption('day');
+  await customForm.locator('.save-button').click();
+  await page.locator('.save-confirmation').waitFor();
+  const custom=(await record(page,'scheduler')).items.find(i=>i.title==='Buy food for the shift');
+  assert.ok(custom);
+  assert.deepEqual([custom.repeat,custom.repeatEvery,custom.repeatUnit],['custom',6,'day']);
+  const pattern=await page.evaluate(async id=>{
+   const scheduler=await import('./scheduler.js');
+   const state=await(await import('./storage.js')).readRecord('scheduler');
+   const event=state.items.find(i=>i.id===id);
+   return Array.from({length:15},(_,offset)=>scheduler.occursOn(event,event.startDay+offset));
+  },custom.id);
+  assert.deepEqual(pattern,[true,false,false,false,false,false,true,false,false,false,false,false,true,false,false]);
+  await page.reload();await page.locator('.month-agenda').waitFor();
+  assert.equal((await record(page,'scheduler')).items.find(i=>i.id===custom.id)?.repeatEvery,6);
   await context.close();
   console.log('Renpet date editor, persistence, recurrence and reload passed');
  }finally{await browser.close();}

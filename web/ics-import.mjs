@@ -102,16 +102,21 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
     counts.invalid++;continue;
    }
    const rule=prop('RRULE')?.value,parts=Object.fromEntries((rule||'').split(';').filter(Boolean).map(s=>s.split('=')));
-   let repeat='none';
+   let repeat='none',customInterval=null;
    if(rule){
     const fields=Object.keys(parts);
-    if(fields.some(k=>!['FREQ','INTERVAL'].includes(k))){counts.unsupported++;continue;}
-    if(parts.FREQ==='DAILY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='daily';
-    else if(parts.FREQ==='DAILY'&&parts.INTERVAL==='10')repeat='egy10';
-    else if(parts.FREQ==='WEEKLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='weekly';
-    else if(parts.FREQ==='MONTHLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='gregMonthly';
-    else if(parts.FREQ==='YEARLY'&&(!parts.INTERVAL||parts.INTERVAL==='1'))repeat='gregYearly';
-    else{counts.unsupported++;continue;}
+    const interval=parts.INTERVAL===undefined?1:Number(parts.INTERVAL);
+    if(fields.some(k=>!['FREQ','INTERVAL'].includes(k))||parts.FREQ!=='DAILY'||
+      !/^[1-9][0-9]*$/.test(String(parts.INTERVAL??'1'))||!Number.isSafeInteger(interval)||
+      interval<1||interval>3650){counts.unsupported++;continue;}
+    if(interval===1)repeat='daily';
+    else if(interval===10)repeat='egy10';
+    else{
+     const decan=interval>365&&interval%10===0;
+     if(interval>365&&!decan){counts.unsupported++;continue;}
+     repeat='custom';
+     customInterval={repeatEvery:decan?interval/10:interval,repeatUnit:decan?'decan':'day'};
+    }
    }
    const alarmCount=components.filter(line=>line==='BEGIN:VALARM').length;
    let alert='none';
@@ -137,7 +142,7 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
    const title=unescapeICS(prop('SUMMARY')?.value||'Imported event').slice(0,200).trim()||'Imported event';
    found.push({importUID:uid,title,startDay:a.day,endDay:last,startMinutes:allDay?540:a.minutes,
     endMinutes:allDay?600:midnightEnd?1440:b.minutes,allDay,location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
-    notes:unescapeICS(prop('DESCRIPTION')?.value||'').slice(0,4000),repeat,alert,excludedDays:[...new Set(excludedDays)]});
+    notes:unescapeICS(prop('DESCRIPTION')?.value||'').slice(0,4000),repeat,...(customInterval||{}),alert,excludedDays:[...new Set(excludedDays)]});
    counts.imported++;known.add(uid);continue;
   }
   if(event!==null)event.push(line);

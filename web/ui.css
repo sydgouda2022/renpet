@@ -488,3 +488,12 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 
 /* Completion is visually distinct while preserving the calendar's accent. */
 .reminder-box.is-complete{background:var(--green);color:#fff;border-radius:7px}
+
+/* Custom Egyptian repetition stays inside the native touch-friendly editor. */
+.custom-repeat{display:grid;grid-template-columns:minmax(72px,0.7fr) minmax(0,2fr);gap:10px;align-items:end;margin:8px 0 14px}
+.custom-repeat[hidden]{display:none!important}
+.custom-repeat>label{display:flex;flex-direction:column;gap:7px;min-width:0;color:var(--rubric);font-size:14px}
+.custom-repeat select{min-height:48px;width:100%}
+body[data-language=egy] .custom-repeat>label{font-size:23px}
+body[data-language=egy] .custom-repeat select{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:21px}
+body[data-language=cop] .custom-repeat select{font-family:Coptic,system-ui,sans-serif}
