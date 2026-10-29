@@ -1,90 +1,67 @@
-// Source registry and date-rule dispatcher for Renpet festivals.
-// Source catalogs are separate from user-owned calendar appointments.
-// Future catalogs require only a manifest entry + static JSON pack.
+// Four locally bundled festival catalogs. Historical festivals are Egyptian-date
+// observations; national occasions retain their legal or astronomical source dates.
 import {festivalHits,dayNumber,isoDate,DAY} from './calendar.js';
 import {orthodoxEasterDay} from './festival-dates.mjs';
 
 export const AMUN_SOURCE='amun-theban';
-const fallback=[{
- id:AMUN_SOURCE,category:'ancient-egyptian',status:'available',
- name:{ar:'آمون — طيبة',cop:'Ⲁⲙⲟⲩⲛ — Ⲑⲏⲃⲁⲓ',egy:'𓇋𓏠𓈖 — 𓌀𓏏𓊖'},
- calendarRule:'egyptian-fixed',data:{type:'embedded',key:'festivals'},defaultEnabled:true
-}];
-
+const rules=new Set(['egyptian-fixed','gregorian-fixed','gregorian-annual','dated','orthodox-easter']);
 const dateCode=iso=>/^\d{4}-\d\d-\d\d$/.test(iso||'')&&
  Number.isFinite(Date.parse(iso+'T00:00:00Z')) &&
  new Date(iso+'T00:00:00Z').toISOString().slice(0,10)===iso;
-const duration=x=>Math.max(1,Math.min(366,Number.isInteger(x?.duration)?x.duration:1));
 const validId=id=>typeof id==='string'&&/^[a-z][a-z0-9-]{1,63}$/.test(id);
-// Legacy Amun festival IDs include an ICS UID suffix (@egyptian-calendar.local).
-// Preserve these source identifiers exactly; pack source IDs stay stricter.
-const validEventId=id=>typeof id==='string'&&id.length<=180&&/^[a-z0-9@._-]+$/i.test(id);
-const validPack=path=>typeof path==='string'&&/^\.\/festival-packs\/[a-z0-9-]+\.json$/.test(path);
-// Installed apps may retain old registries and packs while offline. Enforce
-// catalog retirement here as well as in the published source registry.
-const retiredIds=new Set(['christian-coptic','muslim-egypt']);
-const retiredCategories=new Set(['christian','muslim','islamic']);
-const retainedSource=s=>s&&!retiredIds.has(s.id)&&!retiredCategories.has(s.category);
-const validSource=s=>retainedSource(s)&&validId(s.id)&&s.status==='available'&&
- ['egyptian-fixed','gregorian-fixed','gregorian-annual','dated','orthodox-easter'].includes(s.calendarRule)&&
- (s.data?.type==='embedded'&&s.data.key==='festivals'||
-  s.data?.type==='file'&&validPack(s.data.path));
-
+const validPath=path=>typeof path==='string'&&/^\.\/festival-packs\/[a-z0-9-]+\.json$/.test(path);
+const translated=entry=>['ar','cop','egy'].every(language=>
+ typeof entry?.[language]==='string'&&entry[language].trim().length>0);
+function checkEvent(event,source){
+ if(!validId(event?.id)||!translated(event)||
+ !['cop','egy'].every(language=>typeof event['description_'+language]==='string'&&event['description_'+language].trim()))throw Error('Invalid festival: '+event?.id);
+ const rule=event.calendarRule||source.calendarRule;
+ if(!rules.has(rule))throw Error('Invalid festival date rule');
+ if(!Number.isInteger(event.duration??1)||(event.duration??1)<1||(event.duration??1)>366)throw Error('Invalid festival duration');
+ if(rule==='dated'&&dateCode(event.date))return;
+ if(rule==='orthodox-easter'&&Number.isInteger(event.offsetDays??0)&&Math.abs(event.offsetDays??0)<=100)return;
+ if(!Number.isInteger(event.month)||!Number.isInteger(event.day)||event.day<1)throw Error('Invalid festival day');
+ if(rule==='egyptian-fixed'&&event.month>=1&&event.month<=13&&event.day<=(event.month===13?6:30))return;
+ if(rule.startsWith('gregorian-')&&event.month>=1&&event.month<=12&&dateCode('2000-'+String(event.month).padStart(2,'0')+'-'+String(event.day).padStart(2,'0')))return;
+ throw Error('Invalid festival date');
+}
 export async function loadFestivalCatalog(data,fetcher=fetch){
- let manifest=fallback;
- try{
-  const result=await fetcher('./festival-sources.json');
-  if(!result.ok)throw Error('Registry unavailable');
-  const parsed=await result.json();
-  if(parsed.schema!==1||!Array.isArray(parsed.sources)||!parsed.sources.length)throw Error('Invalid registry');
-  manifest=parsed.sources;
- }catch(err){
-  console.warn('Renpet using embedded Amun source registry',err);
- }
+ const response=await fetcher('./festival-sources.json');
+ if(!response.ok)throw Error('Festival registry unavailable');
+ const manifest=await response.json();
+ if(!Array.isArray(manifest.sources)||manifest.sources.length!==4)throw Error('Unexpected festival catalog');
  const sources=[],seen=new Set();
- for(const source of manifest){
-  if(!validSource(source)||seen.has(source.id))continue;
+ for(const source of manifest.sources){
+  if(!validId(source.id)||seen.has(source.id)||!translated(source.name)||!translated(source.description)||
+   !rules.has(source.calendarRule)||source.status!=='available')throw Error('Invalid festival source');
   seen.add(source.id);
-  let events=[];
-  try{
-   if(source.data.type==='embedded')events=Array.isArray(data?.festivals)?data.festivals:[];
-   else{
-    const result=await fetcher(source.data.path);
-    if(!result.ok)throw Error('Missing festival pack '+source.id);
-    const pack=await result.json();
-    if(pack.sourceId!==source.id||pack.schema!==1||!Array.isArray(pack.events))throw Error('Invalid festival pack '+source.id);
-    events=pack.events;
-   }
-  }catch(err){console.warn('Renpet festival source unavailable',source.id,err);continue;}
-  // A source may contain a mix of fixed and verified per-year movable dates.
-  const normalized=events.filter(x=>{
-   if(!x||!validEventId(x.id)||typeof x.ar!=='string'||!x.ar.trim())return false;
-   const rule=x.calendarRule||source.calendarRule;
-   if(!['egyptian-fixed','gregorian-fixed','gregorian-annual','dated','orthodox-easter'].includes(rule))return false;
-   if(rule==='dated')return dateCode(x.date);
-   if(rule==='orthodox-easter')return Number.isInteger(x.offsetDays??0)&&Math.abs(x.offsetDays??0)<=100;
-   if(!Number.isInteger(x.month)||!Number.isInteger(x.day)||x.day<1)return false;
-   if(rule==='egyptian-fixed')return x.month>=1&&x.month<=13&&x.day<=(x.month===13?6:30);
-   return x.month>=1&&x.month<=12&&dateCode('2000-'+String(x.month).padStart(2,'0')+'-'+String(x.day).padStart(2,'0'));
-  }).map(event=>({...event,sourceId:source.id,calendarRule:event.calendarRule||source.calendarRule,duration:duration(event)}));
-  sources.push({...source,events:normalized});
- }
- // Never allow an unreachable registry to erase the existing Amun catalog.
- if(!sources.length&&Array.isArray(data?.festivals)){
-  return {sources:[{...fallback[0],events:data.festivals.map(x=>({...x,sourceId:AMUN_SOURCE,calendarRule:'egyptian-fixed',duration:duration(x)}))}]};
+  let events;
+  if(source.data?.type==='embedded'&&source.data.key==='festivals'){
+   events=data.festivals;
+  }else if(source.data?.type==='file'&&validPath(source.data.path)){
+   const fetched=await fetcher(source.data.path);
+   if(!fetched.ok)throw Error('Missing festival pack '+source.id);
+   const pack=await fetched.json();
+   if(pack.sourceId!==source.id)throw Error('Incorrect festival pack');
+   events=pack.events;
+  }else throw Error('Invalid festival data source');
+  if(!Array.isArray(events))throw Error('Missing festival entries');
+  for(const event of events)checkEvent(event,source);
+  sources.push({...source,events:events.map(event=>({...event,sourceId:source.id,
+   calendarRule:event.calendarRule||source.calendarRule,duration:event.duration??1}))});
  }
  return {sources};
 }
-
-export function enabledSourceIds(selection,catalog,legacyVisible=true){
- const sources=(catalog?.sources||[]).filter(retainedSource);
- const known=new Set(sources.map(s=>s.id));
- if(Array.isArray(selection))return [...new Set(selection.filter(id=>known.has(id)))];
- return legacyVisible===false?[]:sources.filter(s=>s.defaultEnabled===true).map(s=>s.id);
+export function enabledSourceIds(selection,catalog){
+ const sources=catalog.sources;
+ if(Array.isArray(selection)){
+  const known=new Set(sources.map(source=>source.id));
+  return [...new Set(selection.filter(id=>known.has(id)))];
+ }
+ return sources.filter(source=>source.defaultEnabled===true).map(source=>source.id);
 }
-
 export function festivalSourceName(source,language='ar'){
- return source.name?.[language]||source.name?.ar||source.id;
+ return source.name?.[language]||source.id;
 }
 
 // Gregorian rules are independent of Egyptian era conversion. Use 'dated'
@@ -108,14 +85,14 @@ function hitGregorian(day,event,rule){
  return starts.filter(start=>day>=start&&day<start+event.duration)
   .map(start=>({...event,start,end:start+event.duration}));
 }
-export function festivalHitsForDay(day,years,catalog,selection){
+export function festivalHitsForDay(day,catalog,selection){
  const allowed=new Set(enabledSourceIds(selection,catalog));
  const results=[];
  for(const source of catalog?.sources||[]){
   if(!allowed.has(source.id))continue;
   const hits=source.events.flatMap(e=>{
    const rule=e.calendarRule||source.calendarRule;
-   return rule==='egyptian-fixed'?festivalHits(day,years,[e]):hitGregorian(day,e,rule)||[];
+   return rule==='egyptian-fixed'?festivalHits(day,[e]):hitGregorian(day,e,rule)||[];
   });
   for(const hit of hits)results.push({...hit,sourceId:source.id,
    sourceName:source.name,category:source.category,calendarRule:hit.calendarRule||source.calendarRule});

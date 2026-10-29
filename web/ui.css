@@ -104,7 +104,7 @@ body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
 .event-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
 .event-copy strong{font-size:14px;overflow-wrap:anywhere}
 .event-copy small{font-size:12px;color:var(--muted)}
-.reminder-box{margin-inline-start:auto;color:var(--green)}
+.reminder-box{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--green);cursor:pointer}
 .reminder-box svg{width:18px;height:18px}
 
 /* Year: precisely twelve month tiles plus a separate epagomenal entry. */
@@ -139,7 +139,7 @@ body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
 .ux-panel{position:fixed;z-index:26;inset:auto 0 0;display:flex;flex-direction:column;width:min(100%,600px);max-height:min(70dvh,650px);margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;box-shadow:0 -8px 30px #0002;overflow:hidden}
 .ux-panel-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;min-height:58px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line)}
 .ux-panel-head strong{font-size:17px}
-.ux-panel-head button{min-width:43px;min-height:43px;padding:0;border:0;background:transparent;color:var(--green);font-size:30px}
+.ux-panel-head button{min-width:44px;min-height:44px;padding:0;border:0;background:transparent;color:var(--green);font-size:30px}
 .ux-panel-body{flex:1;min-height:0;overflow:auto}
 .page{padding:18px 19px 28px}
 .ux-panel .page h1{display:none}
@@ -161,7 +161,7 @@ body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
 .sheet-overlay{position:fixed;inset:0;z-index:50;display:flex;justify-content:center;align-items:flex-end;background:#12231b70}
 .sheet{display:flex;flex-direction:column;width:100%;max-width:600px;max-height:95dvh;padding:0 0 env(safe-area-inset-bottom);overflow:hidden;border-radius:20px 20px 0 0;background:var(--bg)}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;min-height:57px;padding:0 15px;border-bottom:1px solid var(--line);background:#fff}
-.sheet-head button{border:0;background:transparent;color:var(--green);padding:10px}
+.sheet-head button{border:0;background:transparent;color:var(--green);min-width:44px;min-height:44px;padding:10px;display:inline-flex;align-items:center;justify-content:center}
 .sheet-head .save-button{font-weight:720}
 .sheet-body{display:flex;flex-direction:column;gap:13px;overflow:auto;padding:16px}
 .sheet-body>label{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:14px}
@@ -408,8 +408,8 @@ body[data-language=cop] .year-mini-day{font-family:Coptic,system-ui,sans-serif;f
 body[data-language=ar] .year-mini-day{font-family:CairoRenpet,system-ui,sans-serif;font-size:13px}
 body[data-language=ar] .year-month-name{font-family:CairoRenpet,system-ui,sans-serif}
 html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,minmax(0,1fr))}
-/* No Close X in settings: the existing backdrop is the dismiss control. */
-.ux-panel-head{justify-content:flex-start}
+/* Settings, calendars and festivals share one explicit dismissal control. */
+.ux-panel-head{justify-content:space-between}
 
 /* Calendar interaction: immediate, accessible feedback when an appointment cannot be saved. */
 .event-error{margin:0;padding:10px 16px;border-bottom:1px solid var(--rubric);background:var(--rubric-soft);color:var(--rubric);font-weight:700;line-height:1.45}

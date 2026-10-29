@@ -2,7 +2,7 @@
 
 Precache uses canonical URLs. Runtime requests may carry ?v= for PWA
 cache-busting; Cache.match(ignoreSearch=True) resolves those while offline.
-Keep at most one previous complete cache during atomic SW upgrades.
+Only the current release cache is retained.
 """
 from __future__ import annotations
 
@@ -37,10 +37,15 @@ stamp = hashlib.sha256(b"".join(
 )).hexdigest()[:12]
 # Lexicons install independently. Lazy-cache nonessential numeral SVG images.
 # The initial offline release needs only day numerals and today's Egyptian year.
-from datetime import date, timedelta
-calendar_years = json.loads((web/'data.json').read_text(encoding='utf-8'))['years']
-current_egy_year = next((y['year'] for y in calendar_years
- if date.fromisoformat(y['start']) <= date.today() < date.fromisoformat(y['start'])+timedelta(days=y['days'])), 6282)
+from datetime import date
+days_since_epoch = (date.today() - date(2026, 9, 11)).days
+def egyptian_start_offset(year):
+    return 365 * (year - 6268) + (year - 1) // 4 - (6268 - 1) // 4
+current_egy_year = 6268 + days_since_epoch // 365
+while egyptian_start_offset(current_egy_year) > days_since_epoch:
+    current_egy_year -= 1
+while egyptian_start_offset(current_egy_year + 1) <= days_since_epoch:
+    current_egy_year += 1
 core_numerals = {str(n) for n in range(1,32)} | {str(current_egy_year+i) for i in (-1,0,1)}
 precache = [p for p in files if p not in {'./lexicon/lexicon.json', './coptic-lexicon/lexicon.json'}
  and (not p.startswith('./assets/numerals/') or Path(p).stem in core_numerals)]
@@ -59,10 +64,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
  event.waitUntil((async () => {
   const existing = (await caches.keys()).filter(k => k.startsWith(OLD_PREFIX));
-  // Retain one previous complete release while already-open clients finish.
-  const older = existing.filter(k => k !== CACHE);
-  const keep = new Set([CACHE, ...older.slice(-1)]);
-  await Promise.all(existing.filter(k => !keep.has(k)).map(k => caches.delete(k)));
+  await Promise.all(existing.filter(key => key !== CACHE).map(key => caches.delete(key)));
   await self.clients.claim();
  })());
 });
@@ -96,22 +98,6 @@ self.addEventListener('fetch', event => {
   canonical.hash = '';
   const cached = await cache.match(canonical.href) ||
     await cache.match(event.request, {ignoreSearch: true});
-  // The source registry can be removed or amended between PWA releases.
-  // Cache-first previously kept six obsolete festival choices visible even
-  // after production contained only four. Prefer the network when online,
-  // but keep the installed snapshot for genuinely offline use.
-  if (url.pathname.endsWith('/festival-sources.json') ||
-      url.pathname.includes('/festival-packs/')) {
-    try {
-      const fresh = await fetch(event.request, {cache: 'no-store'});
-      if (fresh.ok) {
-        event.waitUntil(cache.put(canonical.href, fresh.clone()).catch(() => {}));
-        return fresh;
-      }
-    } catch {}
-    return cached ||
-      new Response('Festival catalog unavailable offline', {status: 503});
-  }
   // Executable resources must belong to this cached release, never a prior one.
   const executable=/\.(?:js|mjs|css)$/.test(url.pathname);
   if (executable) {
@@ -124,8 +110,7 @@ self.addEventListener('fetch', event => {
    if (response.ok) event.waitUntil(cache.put(event.request, response.clone()).catch(() => {}));
    return response;
   } catch {
-   const older = executable ? null : await caches.match(event.request, {ignoreSearch: true});
-   return older || new Response('Renpet offline asset unavailable', {status: 503, headers: {'Content-Type': 'text/plain'}});
+   return new Response('Renpet offline asset unavailable', {status: 503, headers: {'Content-Type': 'text/plain'}});
   }
  })());
 });

@@ -1,161 +1,115 @@
-import { createBackup, parseBackup, restoreBackup } from './backup-core.mjs';
+import {createBackup,parseBackup} from './backup-core.mjs';
+import {readRecord,writeRecords,writeRecord} from './storage.js';
+import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,ensureSavedItemVisible,occursOn} from './scheduler.js';
+import {exportICS,eventUID} from './ics-core.mjs';
+import {parseICS} from './ics-import.mjs';
+import {dayNumber} from './calendar.js';
 import {syncModalFocus} from './dialog-focus.mjs';
-import { exportICS, eventUID } from './ics-core.mjs';
-import { parseICS } from './ics-import.mjs';
-import { dayNumber } from './calendar.js';
-import { occursOn, loadScheduler, saveScheduler, createItem, upsertItem, removeItem, ensureSavedItemVisible, schedulerRecoveryStatus, restoreSchedulerSnapshot, CORRUPT_RECORD_STORE } from './scheduler.js';
 
-// Backup and restore work entirely on the user's device. No account or upload.
-const words = {
-  ar: { trigger:'النسخ الاحتياطي', title:'بيانات رنبت', info:'احتفظ بنسخة من مواعيدك وتقاويمك وإعداداتك على جهازك. لا تُرسل أي بيانات إلى الإنترنت.', export:'تصدير نسخة', ics:'تصدير إلى Apple / Google Calendar', importICS:'استيراد ملف ICS', import:'استعادة نسخة', close:'إغلاق', confirm:'استعادة النسخة ستستبدل البيانات الموجودة من نفس النوع. هل تريد المتابعة؟', done:'تمت استعادة البيانات. سيُعاد تحميل رنبت.', empty:'لا توجد بيانات محفوظة للتصدير.', recover:'استعادة آخر نسخة تلقائية للمواعيد' },
-  cop: { trigger:'Ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ', title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ', info:'Ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ ⲉ̀ⲡⲉⲕⲥⲱⲙⲁ. Ⲙ̀ⲙⲟⲛ ⲟⲩⲱⲣⲡ ⲉ̀ⲡⲓⲓⲛⲧⲉⲣⲛⲉⲧ.', export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ', ics:'ICS · Apple / Google Calendar', importICS:'ICS ↑', import:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ', close:'Ϣⲧⲁⲙ', confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?', done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.', empty:'Ⲙ̀ⲙⲟⲛ ⲇⲉⲇⲟⲙⲉⲛⲁ.', recover:'Ⲧⲁϩⲟ ⲙ̀ⲙⲉⲧⲥⲱⲛϩ' },
-  egy: { trigger:'𓏞 𓂋𓏤', title:'𓆳𓏏𓏤 · 𓏞', info:'𓏞 · 𓂋𓏤𓈖𓆎𓏏𓊖', export:'𓏞 ↓', ics:'ICS ↓', importICS:'ICS ↑', import:'𓏞 ↑', close:'𓐍𓏏𓅓', confirm:'𓏞 ↑ ?', done:'𓏞 ✓', empty:'𓏞 —', recover:'𓏞 ↺' }
+const WORDS={
+ ar:{title:'بيانات رنبت',info:'كل المواعيد والإعدادات محفوظة على جهازك فقط.',export:'تصدير نسخة محلية',restore:'استعادة نسخة',ics:'تصدير تقويم ICS',importICS:'استيراد ICS',close:'إغلاق',confirm:'استعادة النسخة ستستبدل المواعيد والإعدادات الحالية. هل تريد المتابعة؟',done:'تم حفظ البيانات. سيعاد تشغيل رنبت.'},
+ cop:{title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ',info:'Ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ ϧⲉⲛ ⲡⲉⲕⲥⲱⲙⲁ.',export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',restore:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',ics:'ICS ↓',importICS:'ICS ↑',close:'Ϣⲧⲁⲙ',confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?',done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.'},
+ egy:{title:'𓆳𓏏𓏤 · 𓏞',info:'𓏞 𓆳𓏏 𓉐𓏤',export:'𓏞 ↓',restore:'𓏞 ↑',ics:'ICS ↓',importICS:'ICS ↑',close:'𓐍𓏏𓅓',confirm:'𓏞 ↑ ?',done:'𓏞 ✓'}
 };
-const lang = () => words[document.body.dataset.language] ? document.body.dataset.language : 'ar';
-const tr = () => words[lang()];
-let dialog = null;
-let lastFocus = null;
-function close() {
-  if (!dialog) return;
-  dialog.remove();
-  dialog = null;
-  if (lastFocus?.isConnected) lastFocus.focus();
-  syncModalFocus();
+let overlay=null,previousFocus=null;
+const language=()=>WORDS[document.body.dataset.language]||WORDS.ar;
+const stamp=()=>new Date().toISOString().slice(0,10);
+function download(text,filename,mime='application/json;charset=utf-8'){
+ const url=URL.createObjectURL(new Blob([text],{type:mime}));
+ const a=document.createElement('a');a.href=url;a.download=filename;
+ document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
-function download(text, filename, mime='application/json;charset=utf-8') {
-  const url = URL.createObjectURL(new Blob([text], { type:mime }));
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+function close(){
+ if(!overlay)return;
+ overlay.remove();overlay=null;
+ if(previousFocus?.isConnected)previousFocus.focus();
+ syncModalFocus();
 }
-function exportData() {
-  try {
-    const stamp = new Date().toISOString().slice(0, 10);
-    download(createBackup(localStorage), 'renpet-backup-' + stamp + '.json');
-  } catch (error) { window.alert(error.message || tr().empty); }
+async function records(){
+ const [scheduler,preferences]=await Promise.all([readRecord('scheduler'),readRecord('preferences')]);
+ return {scheduler:scheduler??emptyState(),preferences:preferences??{language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false}};
 }
-async function exportCalendar() {
-  try {
-    const response=await fetch('./data.json');
-    if(!response.ok)throw Error('Calendar data unavailable');
-    const data=await response.json();
-    const {text,count}=exportICS(loadScheduler(localStorage),data.years,occursOn,{
-      today:Math.floor(Date.now()/86400000)
-    });
-    if(!count){window.alert(tr().empty);return;}
-    download(text,'renpet-calendar-'+new Date().toISOString().slice(0,10)+'.ics','text/calendar;charset=utf-8');
-  } catch(error){window.alert(error.message||'ICS export failed');}
+async function backup(){
+ download(createBackup(await records()),'renpet-'+stamp()+'.json');
 }
-async function importCalendarICS(){
+async function restore(){
+ const picker=document.createElement('input');picker.type='file';picker.accept='.json,application/json';
+ picker.addEventListener('change',async()=>{
+  const file=picker.files?.[0];if(!file)return;
+  try{
+   if(file.size>5*1024*1024)throw Error('File is too large');
+   const parsed=parseBackup(await file.text());
+   if(!confirm(language().confirm))return;
+   await writeRecords(parsed);
+   alert(language().done);location.reload();
+  }catch(error){alert(error.message);}
+ },{once:true});
+ picker.click();
+}
+async function exportCalendar(){
+ const state=(await records()).scheduler;
+ const result=exportICS(state,occursOn);
+ if(!result.count)throw Error('No events to export');
+ download(result.text,'renpet-'+stamp()+'.ics','text/calendar;charset=utf-8');
+}
+async function importCalendar(){
  const picker=document.createElement('input');picker.type='file';picker.accept='.ics,text/calendar';
  picker.addEventListener('change',async()=>{
   const file=picker.files?.[0];if(!file)return;
   try{
-   if(file.size>5*1024*1024)throw Error('ICS file is too large');
-   const result=await fetch('./data.json');if(!result.ok)throw Error('Calendar data unavailable');
-   const calendar=await result.json(),sched=loadScheduler();
-   const parsed=parseICS(await file.text(),{
-    minDay:dayNumber(calendar.min_date),maxDay:dayNumber(calendar.max_date),
-    knownUIDs:sched.items.flatMap(i=>[i.importUID,eventUID(i)]).filter(Boolean),
-    knownSeriesIds:sched.items.map(i=>i.id)
+   if(file.size>5*1024*1024)throw Error('File is too large');
+   const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar boundaries unavailable');
+   const limits=await r.json(),state=(await records()).scheduler;
+   const result=parseICS(await file.text(),{
+    minDay:dayNumber(limits.min_date),maxDay:dayNumber(limits.max_date),
+    knownUIDs:state.items.flatMap(item=>[item.importUID,eventUID(item)]).filter(Boolean),
+    knownSeriesIds:state.items.map(item=>item.id)
    });
-   const eligibleCancellations=parsed.cancellations.filter(uid=>sched.items.some(item=>item.importUID===uid));
-   const counts=''+parsed.imported+' '+(lang()==='ar'?'موعد صالح · ':'events ready · ')+
-    parsed.unsupported+' '+(lang()==='ar'?'تكرارات/مناطق زمنية غير مدعومة · ':'unsupported · ')+
-    parsed.invalid+' '+(lang()==='ar'?'غير صالح · ':'invalid · ')+parsed.duplicate+' '+(lang()==='ar'?'مكرر · ':'already imported · ')+
-    eligibleCancellations.length+' '+(lang()==='ar'?'إلغاء لمواعيد مستوردة':'confirmed cancellations');
-   if(!parsed.imported&&!eligibleCancellations.length){window.alert(counts);return;}
-   if(!window.confirm((lang()==='ar'?'استيراد هذه المواعيد إلى رنبت؟':'Import these events into Renpet?')+'\n'+counts))return;
-   try{download(createBackup(localStorage),'renpet-before-ics-import-'+new Date().toISOString().slice(0,10)+'.json');}catch{}
-   for(const uid of eligibleCancellations){
-    for(const matching of sched.items.filter(item=>item.importUID===uid))removeItem(sched,matching.id);
+   const cancellations=result.cancellations.filter(uid=>state.items.some(item=>item.importUID===uid));
+   if(!result.imported&&!cancellations.length){alert('No supported events found');return;}
+   if(!confirm(language().confirm))return;
+   for(const uid of cancellations)for(const item of state.items.filter(item=>item.importUID===uid))removeItem(state,item.id);
+   for(const source of result.items){
+    const item={...createItem({...source,kind:'event',calendarId:'personal'}),importUID:source.importUID,excludedDays:source.excludedDays??[]};
+    ensureSavedItemVisible(state,item);upsertItem(state,item);
    }
-   for(const imported of parsed.items){
-    const event={...createItem({...imported,kind:'event',calendarId:'personal'}),importUID:imported.importUID,
-     excludedDays:imported.excludedDays};
-    ensureSavedItemVisible(sched,event);upsertItem(sched,event);
-   }
-   if(!saveScheduler(sched))throw Error('Cannot save imported appointments on this device');
-   window.alert((lang()==='ar'?'تم الاستيراد. ':'Imported. ')+counts);
-   window.location.reload();
-  }catch(e){window.alert(e.message||'ICS import failed');}
+   if(!validateSchedulerData(state))throw Error('Calendar import includes unsupported events');
+   await writeRecord('scheduler',state);
+   alert(language().done);location.reload();
+  }catch(error){alert(error.message);}
  },{once:true});
  picker.click();
 }
-
-async function importData() {
-  const picker = document.createElement('input');
-  picker.type = 'file'; picker.accept = '.json,application/json';
-  picker.addEventListener('change', async () => {
-    const file = picker.files?.[0];
-    if (!file) return;
-    try {
-      if (file.size > 5 * 1024 * 1024) throw new Error('Backup file is too large');
-      const parsed = parseBackup(await file.text());
-      if (!window.confirm(tr().confirm)) return;
-      // Save the existing state first, so replacing it can be reversed.
-      try { download(createBackup(localStorage), 'renpet-before-restore-' + new Date().toISOString().slice(0,10) + '.json'); }
-      catch { /* A new installation may not yet have anything to preserve. */ }
-      restoreBackup(localStorage, parsed);
-      window.alert(tr().done);
-      window.location.reload();
-    } catch (error) { window.alert(error.message || 'Backup restore failed'); }
-  }, { once:true });
-  picker.click();
+export function openBackup(){
+ if(overlay)return;
+ previousFocus=document.activeElement;
+ const t=language();
+ overlay=document.createElement('div');overlay.className='renpet-backup-overlay';overlay.dir=document.documentElement.dir;
+ overlay.innerHTML='<section class="renpet-backup-panel" role="dialog" aria-modal="true" aria-labelledby="renpet-backup-heading">'+
+ '<div class="renpet-backup-head"><h2 id="renpet-backup-heading"></h2><button type="button" class="renpet-backup-close" data-backup="close">×</button></div>'+
+ '<p class="renpet-backup-info"></p>'+
+ '<button type="button" class="renpet-backup-action" data-backup="export"></button>'+
+ '<button type="button" class="renpet-backup-action secondary" data-backup="ics"></button>'+
+ '<button type="button" class="renpet-backup-action secondary" data-backup="import-ics"></button>'+
+ '<button type="button" class="renpet-backup-action secondary" data-backup="import"></button></section>';
+ overlay.querySelector('h2').textContent=t.title;
+ overlay.querySelector('.renpet-backup-info').textContent=t.info;
+ for(const [id,key] of [['close','close'],['export','export'],['ics','ics'],['import-ics','importICS'],['import','restore']])
+  overlay.querySelector('[data-backup="'+id+'"]').textContent=id==='close'?'×':t[key];
+ overlay.querySelector('[data-backup="close"]').setAttribute('aria-label',t.close);
+ overlay.addEventListener('click',async event=>{
+  if(event.target===overlay){close();return;}
+  const action=event.target.closest('[data-backup]')?.dataset.backup;
+  if(action==='close'){close();return;}
+  try{
+   if(action==='export')await backup();
+   if(action==='import')await restore();
+   if(action==='ics')await exportCalendar();
+   if(action==='import-ics')await importCalendar();
+  }catch(error){alert(error.message);}
+ });
+ document.body.append(overlay);
+ syncModalFocus();
 }
-function open() {
-  if (dialog) return;
-  lastFocus = document.activeElement;
-  const t = tr();
-  dialog = document.createElement('div');
-  dialog.className = 'renpet-backup-overlay';
-  dialog.innerHTML = `<section class="renpet-backup-panel" role="dialog" aria-modal="true" aria-labelledby="renpet-backup-heading">
-    <div class="renpet-backup-head"><h2 id="renpet-backup-heading"></h2><button type="button" class="renpet-backup-close" data-backup="close" aria-label="Close">×</button></div>
-    <p class="renpet-backup-info"></p>
-    <button type="button" data-backup="export" class="renpet-backup-action"></button>
-    <button type="button" data-backup="ics" class="renpet-backup-action secondary"></button>
-    <button type="button" data-backup="import-ics" class="renpet-backup-action secondary"></button>
-    <button type="button" data-backup="import" class="renpet-backup-action secondary"></button>
-    <button type="button" data-backup="recover" class="renpet-backup-action secondary" hidden></button>
-    <button type="button" data-backup="damaged" class="renpet-backup-action secondary" hidden></button>
-  </section>`;
-  dialog.querySelector('h2').textContent = t.title;
-   dialog.querySelector('.renpet-backup-close').setAttribute('aria-label',t.close);
-  dialog.querySelector('.renpet-backup-info').textContent = t.info;
-  dialog.querySelector('[data-backup="export"]').textContent = t.export;
-  dialog.querySelector('[data-backup="import"]').textContent = t.import;
-  dialog.querySelector('[data-backup="ics"]').textContent = t.ics;
-  dialog.querySelector('[data-backup="import-ics"]').textContent = t.importICS;
-  const recoveryButton=dialog.querySelector('[data-backup="recover"]');
-  recoveryButton.textContent=t.recover;
-  const recoveryState=schedulerRecoveryStatus(localStorage);
-  recoveryButton.hidden=!recoveryState.recoveryAvailable;
-  const rawButton=dialog.querySelector('[data-backup="damaged"]');
-  rawButton.textContent=lang()==='ar'?'تصدير البيانات التالفة الأصلية':'Export original damaged records';
-  rawButton.hidden=recoveryState.primaryValid&&!localStorage.getItem(CORRUPT_RECORD_STORE);
-  dialog.dir = lang() === 'ar' ? 'rtl' : 'ltr';
-  dialog.addEventListener('click', event => {
-    const action = event.target.closest('[data-backup]')?.dataset.backup;
-    if (event.target === dialog) close();
-    else if (action === 'close') close();
-     else if (action === 'export') exportData();
-    else if (action === 'import') importData();
-    else if (action === 'ics') exportCalendar();
-    else if (action === 'import-ics') importCalendarICS();
-    else if (action === 'damaged') {
-      const raw=localStorage.getItem(CORRUPT_RECORD_STORE)||
-       (!schedulerRecoveryStatus(localStorage).primaryValid?localStorage.getItem('renpet.scheduler.v1'):null);
-      if(raw!==null)download(raw,'renpet-original-damaged-calendar.json','application/octet-stream');
-    }
-    else if (action === 'recover' && window.confirm(t.confirm)) {
-      const outcome=restoreSchedulerSnapshot(localStorage);
-      if(outcome.restored)window.location.reload();
-      else window.alert(lang()==='ar'?'لم يتم العثور على نسخة صالحة':'No valid recovery snapshot');
-    }
-  });
-  document.body.append(dialog);
-  syncModalFocus();
-}
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && dialog) close(); });
-export function openBackup(){open();}
+document.addEventListener('keydown',event=>{if(event.key==='Escape')close();});

@@ -1,5 +1,5 @@
 // RFC 5545 export for Apple Calendar, Google Calendar and other calendar apps.
-// No network calls: the caller passes its local Renpet data and Egyptian-year table.
+// All recurrence expansion is local and uses the native Egyptian calendar engine.
 const DAY_MS = 86400000;
 const stamp = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
 const ymd = day => new Date(day*DAY_MS).toISOString().slice(0,10).replace(/-/g,'');
@@ -19,19 +19,16 @@ const validDay = n => Number.isInteger(n) && n >= -25567 && n <= 100000;
 const ALARMS={atTime:'PT0S','5min':'-PT5M','15min':'-PT15M','1hour':'-PT1H','1day':'-P1D'};
 // Shared identity keeps an exported local event from being duplicated on re-import.
 export const eventUID=(item,start=item.startDay)=>String(item.id||'renpet').replace(/[^a-zA-Z0-9_-]/g,'-')+'-'+start+'@renpet.local';
-function calendarEvents(state,years,occursOn,today,maxOccurrences=100000){
+function calendarEvents(state,occursOn,today,maxOccurrences=100000){
   if(!Array.isArray(state?.items))throw Error('No calendar items');
-  if(!Array.isArray(years)||!years.length)throw Error('Calendar years missing');
   const calendars=new Map((state.calendars||[]).map(c=>[c.id,c]));
-  const endOfYears=Math.floor(Date.parse(years.at(-1).start+'T00:00:00Z')/DAY_MS)+years.at(-1).days-1;
-  const startOfYears=Math.floor(Date.parse(years[0].start+'T00:00:00Z')/DAY_MS);
   const out=[];
   for(const item of state.items){
     if(!item || !validDay(item.startDay)||!validDay(item.endDay))continue;
     const span=Math.max(0,item.endDay-item.startDay);
     const repeat=item.repeat||'none';
     let starts=[];
-    // Genuine Gregorian-interval recurrences should survive beyond two years.
+    // Standard iCalendar interval recurrence rules are exported directly.
     // Egyptian month/year recurrence dates are expanded separately.
     const rule=repeat==='daily'?'FREQ=DAILY':repeat==='weekly'?'FREQ=WEEKLY':
       repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':
@@ -39,13 +36,13 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=100000){
     if(repeat==='none'||rule){starts=[item.startDay];}
     else {
       // Expand the complete remaining supported Egyptian calendar range.
-      // Never silently truncate a lifelong monthly/yearly schedule at two years.
-      const first=Math.max(item.startDay,startOfYears);
-      const last=endOfYears;
+      // Expand Egyptian month/year rules over a declared ten-year export horizon.
+      const first=Math.max(item.startDay,today-366);
+      const last=today+366*10;
       // Test only the recurrence start, not the trailing days of a multi-day event.
       const anchor={...item,endDay:item.startDay};
       for(let day=first;day<=last;day++){
-        if(occursOn(anchor,day,years))starts.push(day);
+        if(occursOn(anchor,day))starts.push(day);
         if(out.length+starts.length>maxOccurrences)throw Error('Too many occurrences for ICS export');
       }
     }
@@ -78,9 +75,9 @@ function calendarEvents(state,years,occursOn,today,maxOccurrences=100000){
   }
   return out.sort((a,b)=>a.start-b.start||a.startMinutes-b.startMinutes);
 }
-export function exportICS(state,years,occursOn,{today=Math.floor(Date.now()/DAY_MS),now=new Date(),maxOccurrences=100000}={}){
+export function exportICS(state,occursOn,{today=Math.floor(Date.now()/DAY_MS),now=new Date(),maxOccurrences=100000}={}){
   if(typeof occursOn!=='function')throw Error('Recurrence resolver required');
-  const entries=calendarEvents(state,years,occursOn,today,maxOccurrences);
+  const entries=calendarEvents(state,occursOn,today,maxOccurrences);
   const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Renpet//Egyptian Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Renpet'];
   for(const e of entries){
     lines.push('BEGIN:VEVENT','UID:'+e.uid,'DTSTAMP:'+stamp(now),'SUMMARY:'+escape(e.summary));
