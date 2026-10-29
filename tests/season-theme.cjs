@@ -112,7 +112,7 @@ async function main(){
     await page.locator('.save-confirmation').waitFor();
     assert.equal(await page.locator('.timeline-event:has-text("Seasonal design appointment")').count(),1);
     await page.locator('[data-primary-view="today"]').click();
-    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('renpet.scheduler.v1')).items);
+    const saved=await page.evaluate(async()=>(await(await import('./storage.js')).readRecord('scheduler')).items);
     assert.equal(saved.filter(i=>i.title==='Seasonal design appointment').length,1);
     // All three scripts share the artwork and existing controls; the season
     // caption must no longer repeat the Coptic month name.
