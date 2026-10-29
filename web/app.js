@@ -464,7 +464,14 @@ async function submitEvent(form){
 
 function discardEditor(){
  const form=root.querySelector('#event-editor');
- if(form&&editorInitialState!==null&&JSON.stringify([...new FormData(form)])!==editorInitialState){
+ const picker=form?.querySelector('.time-picker-host:not([hidden])');
+ const field=picker?.dataset.field;
+ const minutes=picker?Number(picker.dataset.hour)*60+Number(picker.dataset.minute):NaN;
+ const selected=Number.isInteger(minutes)?
+  String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0'):null;
+ const pending=field&&selected!==form.elements.namedItem(field)?.value;
+ if(form&&editorInitialState!==null&&
+  (JSON.stringify([...new FormData(form)])!==editorInitialState||pending)){
   const message=lang()==='ar'?'تجاهل التغييرات غير المحفوظة؟':lang()==='cop'?'Ⲭⲱ ⲛ̀ⲥⲁ ⲛⲓϣⲓⲃϯ ⲉⲧⲉⲙⲡⲟⲩⲥⲱⲛϩ?':'𓏞 𓏥 𓐍𓏏 ?';
   if(!confirm(message))return;
  }
