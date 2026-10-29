@@ -1,4 +1,4 @@
-import {toEgyptian,toGregorian} from './calendar.js';
+import {toEgyptian,toGregorian,monthLength} from './calendar.js';
 
 export const SCHEDULER_STORE='renpet.scheduler.v1';
 export const CORRUPT_RECORD_STORE='renpet.scheduler.corrupt.v1';
@@ -161,9 +161,9 @@ export function revealSavedCalendars(state){
  for(const item of state.items)if(!ids.has(item.calendarId))item.calendarId=fallback.id;
  return state;
 }
-export function hiddenItemsForDay(state,day,years){
+export function hiddenItemsForDay(state,day){
  const visible=visibleCalendars(state);
- return instancesForDay(state,day,years,item=>!visible.has(item.calendarId));
+ return instancesForDay(state,day,item=>!visible.has(item.calendarId));
 }
 export function calendarFor(state,id){return state.calendars.find(c=>c.id===id)||state.calendars[0];}
 export function visibleCalendars(state){return new Set(state.calendars.filter(c=>c.visible!==false).map(c=>c.id));}
@@ -197,7 +197,7 @@ export function toggleCompleted(item,day){
 }
 
 function monthSerial(e){return e.year*13+(e.month-1);}
-function isStartOccurrence(item,day,years){
+function isStartOccurrence(item,day){
  if(day<item.startDay||(item.excludedDays||[]).includes(day))return false;
  const delta=day-item.startDay;
  if(item.repeat==='none')return day===item.startDay;
@@ -211,7 +211,7 @@ function isStartOccurrence(item,day,years){
   return current.getUTCFullYear()>=origin.getUTCFullYear()&&
    current.getUTCMonth()===origin.getUTCMonth()&&current.getUTCDate()===origin.getUTCDate();
  }
- const base=toEgyptian(item.startDay,years),candidate=toEgyptian(day,years);
+ const base=toEgyptian(item.startDay),candidate=toEgyptian(day);
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;
  return false;
@@ -222,16 +222,16 @@ function isStartOccurrence(item,day,years){
  * A long event repeating daily may have multiple independent live instances.
  * Exclusions apply to the anchor, not all trailing dates of that instance.
  */
-export function occurrenceStartsForDay(item,day,years){
+export function occurrenceStartsForDay(item,day){
  if(!Number.isInteger(day)||day<item.startDay)return [];
  const duration=Math.max(0,(item.endDay??item.startDay)-item.startDay);
  const starts=[];
  for(let start=Math.max(item.startDay,day-duration);start<=day;start++)
-  if(isStartOccurrence(item,start,years))starts.push(start);
+  if(isStartOccurrence(item,start))starts.push(start);
  return starts;
 }
-export function occurrenceStartForDay(item,day,years){
- const starts=occurrenceStartsForDay(item,day,years);
+export function occurrenceStartForDay(item,day){
+ const starts=occurrenceStartsForDay(item,day);
  // Prefer the occurrence beginning on the selected date, if one exists.
  return starts.at(-1)??null;
 }
@@ -241,34 +241,34 @@ export function excludeOccurrence(item,start){
  item.updatedAt=new Date().toISOString();
  return true;
 }
-export function occursOn(item,day,years){
+export function occursOn(item,day){
  if(day<item.startDay)return false;
- return occurrenceStartForDay(item,day,years)!==null;
+ return occurrenceStartForDay(item,day)!==null;
 }
 
-function instancesForDay(state,day,years,include){
+function instancesForDay(state,day,include){
  return state.items.flatMap(item=>{
   if(!include(item))return [];
-  const starts=occurrenceStartsForDay(item,day,years);
+  const starts=occurrenceStartsForDay(item,day);
   return item.repeat==='none'?(starts.length?[item]:[]):
    starts.map(start=>({...item,_occurrenceStart:start}));
  }).sort((a,b)=>Number(b.allDay)-Number(a.allDay)||
   a.startMinutes-b.startMinutes||a.title.localeCompare(b.title)||
   (a._occurrenceStart??a.startDay)-(b._occurrenceStart??b.startDay));
 }
-export function itemsForDay(state,day,years){
+export function itemsForDay(state,day){
  const visible=visibleCalendars(state);
- return instancesForDay(state,day,years,item=>visible.has(item.calendarId));
+ return instancesForDay(state,day,item=>visible.has(item.calendarId));
 }
 
-export function itemsInRange(state,start,endExclusive,years){
+export function itemsInRange(state,start,endExclusive){
  const out=[];
- for(let day=start;day<endExclusive;day++)for(const item of itemsForDay(state,day,years))out.push({day,item});
+ for(let day=start;day<endExclusive;day++)for(const item of itemsForDay(state,day))out.push({day,item});
  return out;
 }
 
-export function nextOccurrence(item,fromDay,years,maxDays=370){
- for(let d=Math.max(fromDay,item.startDay);d<Math.max(fromDay,item.startDay)+maxDays;d++)if(isStartOccurrence(item,d,years))return d;
+export function nextOccurrence(item,fromDay,maxDays=370){
+ for(let d=Math.max(fromDay,item.startDay);d<Math.max(fromDay,item.startDay)+maxDays;d++)if(isStartOccurrence(item,d))return d;
  return null;
 }
 
@@ -277,9 +277,9 @@ export function searchItems(state,query){
  return state.items.filter(item=>[item.title,item.location,item.notes].some(v=>String(v||'').toLocaleLowerCase().includes(q)));
 }
 
-export function egyptianDateOptions(day,years){
- const e=toEgyptian(day,years),y=years.find(v=>v.year===e.year);
- return {year:e.year,month:e.month,day:e.day,daysInMonth:e.month===13?y.days-360:30};
+export function egyptianDateOptions(day){
+ const e=toEgyptian(day);
+ return {year:e.year,month:e.month,day:e.day,daysInMonth:monthLength(e.year,e.month)};
 }
 
-export function dayFromEgyptian(year,month,day,years){return toGregorian({year:Number(year),month:Number(month),day:Number(day)},years);}
+export function dayFromEgyptian(year,month,day){return toGregorian({year:Number(year),month:Number(month),day:Number(day)});}
