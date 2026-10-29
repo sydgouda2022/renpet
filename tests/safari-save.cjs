@@ -25,6 +25,13 @@ async function main(){
      await form.locator('[name=title]').fill(title+' picker');
      await form.locator('[data-time-open=start]').click();
      await form.locator('.time-picker-host:not([hidden])').waitFor();
+     if(lang!=='ar'){
+      const labels=await form.locator('.time-picker-host [aria-label]').evaluateAll(elements=>
+       elements.map(el=>el.getAttribute('aria-label')).join(' '));
+      assert.doesNotMatch(labels,/[A-Za-z]/,'Time picker must not expose English controls in '+lang);
+     }
+     const saveRect=await form.locator('.save-button').boundingBox();
+     assert.ok(saveRect&&saveRect.width>=44&&saveRect.height>=44,'Save control must be touch-accessible');
      await form.locator('.save-button').click();
      await page.locator('.save-confirmation').waitFor();
      assert.ok((await record(page,'scheduler')).items.some(i=>i.title===title+' picker'),'Save with picker open failed');
