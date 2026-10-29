@@ -1,4 +1,4 @@
-import {DAY,dayNumber,toEgyptian,toGregorian,monthGrid,nativeNumber} from './calendar.js';
+import {DAY,dayNumber,toEgyptian,toGregorian,monthGrid,nativeNumber,monthLength,yearStart} from './calendar.js';
 import {layoutForViewport,isKeyboardDrivenResize} from './responsive-layout.js';
 import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
@@ -49,23 +49,23 @@ const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
 const spoken=key=>lang()==='egy'?WORDS.ar[key]:T()[key];
 const week=()=>[7,10].includes(prefs.weeks[lang()])?prefs.weeks[lang()]:(lang()==='ar'?7:10);
 const min=()=>dayNumber(data.min_date),max=()=>dayNumber(data.max_date),clamp=d=>Math.min(max(),Math.max(min(),d));
+const supportedYear=y=>Number.isInteger(y)&&y>=toEgyptian(min()).year&&y<=toEgyptian(max()).year;
 const savePrefs=()=>{try{localStorage.setItem(SETTINGS,JSON.stringify(prefs));}catch{}};
 const selectedFestivalIds=()=>enabledSourceIds(prefs.festivalSources,festivalCatalog);
 const itemCache=new Map(),festivalCache=new Map();
-const festivalsOn=day=>{if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,data.years,festivalCatalog,prefs.festivalSources));return festivalCache.get(day);};
+const festivalsOn=day=>{if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,festivalCatalog,prefs.festivalSources));return festivalCache.get(day);};
 
-const egy=d=>toEgyptian(d,data.years);
+const egy=d=>toEgyptian(d);
 const monthName=m=>m===13?LOCALES[lang()].epagomenal:lang()==='egy'?('𓇹 '+N(m)):data.months[lang()][m-1];
 // Use full-size native signs for short calendar numbers; numeral SVG assets
 // compose large years and longer numbers into readable grouped signs.
-const numHtml=n=>lang()==='egy'&&n>30&&(n<=333||(data?.years?.some(y=>y.year===n)))?'<img class="glyph" src="assets/numerals/'+n+'.svg" alt="'+safe(N(n))+'">':safe(N(n));
+const numHtml=n=>lang()==='egy'&&n>30&&n<=333?'<img class="glyph" src="assets/numerals/'+n+'.svg" alt="'+safe(N(n))+'">':safe(N(n));
 const greg=(d,opts={day:'numeric',month:'short'})=>gregorianText(d,lang(),opts);
-const monthDays=e=>e.month===13?data.years.find(y=>y.year===e.year).days-360:30;
-const monthStart=e=>toGregorian({year:e.year,month:e.month,day:1},data.years);
-const yearStart=y=>dayNumber(data.years.find(v=>v.year===y).start);
-const adjacent=(e,delta)=>{let m=e.month+delta,y=e.year;while(m>13){m-=13;y++;}while(m<1){m+=13;y--;}return data.years.some(v=>v.year===y)?{year:y,month:m,day:1}:null;};
+const monthDays=e=>monthLength(e.year,e.month);
+const monthStart=e=>toGregorian({year:e.year,month:e.month,day:1});
+const adjacent=(e,delta)=>{let m=e.month+delta,y=e.year;while(m>13){m-=13;y++;}while(m<1){m+=13;y--;}return supportedYear(y)?{year:y,month:m,day:1}:null;};
 const calName=c=>c.name?.[lang()]||c.name?.ar||c.id;
-const items=d=>{if(!itemCache.has(d))itemCache.set(d,itemsForDay(schedule,d,data.years));return itemCache.get(d);};
+const items=d=>{if(!itemCache.has(d))itemCache.set(d,itemsForDay(schedule,d));return itemCache.get(d);};
 const icon=name=>{const p={back:'<path d="m15 5-7 7 7 7"/>',search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',plus:'<path d="M12 4v16M4 12h16"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',settings:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',star:'<path d="m12 2 3 7 7 .5-5.5 5 1.5 7L12 18l-6 3.5 1.5-7L2 9.5 9 9Z"/>',check:'<path d="m4 12 5 5L20 6"/>'};return '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p[name]+'</svg>';};
 function quickDeleteButton(item,extraClass=''){
  return '<button type="button" class="event-delete-action '+extraClass+'" data-quick-delete="'+safe(item.id)+'" aria-label="'+safe(T().delete)+' · '+safe(item.title)+'" title="'+safe(T().delete)+'">'+
@@ -79,7 +79,7 @@ function eventRow(i,day=state.focus){
 // Existing appointments in hidden calendars are never silently represented
 // as "no events". Offer one action to show them all without losing data.
 function hiddenCalendarNotice(day){
- const hidden=hiddenItemsForDay(schedule,day,data.years);
+ const hidden=hiddenItemsForDay(schedule,day);
  if(!hidden.length)return '';
  const prefix=lang()==='ar'?'مواعيد محفوظة في تقاويم مخفية':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏞';
  return '<div class="hidden-calendar-notice" role="status"><span>'+safe(prefix)+' · '+safe(N(hidden.length))+'</span><button type="button" data-show-all-calendars>'+safe(T().manage)+'</button></div>';
@@ -119,7 +119,7 @@ function festivalDetails(){
 function agenda(d){
  const a=items(d),festivals=festivalsOn(d);
  const festivalCards=festivalMarkup(festivals,d);
- return '<section class="agenda"><div class="agenda-heading"><h3>'+numHtml(egy(d).day)+' '+safe(monthName(egy(d).month))+'</h3>'+(prefs.gregorian?'<span class="subtle">'+safe(greg(d,{weekday:'short',day:'numeric',month:'short'}))+'</span>':'')+'</div>'+hiddenCalendarNotice(d)+festivalCards+(a.length?a.map(i=>eventRow(i,d)).join(''):festivals.length?'':hiddenItemsForDay(schedule,d,data.years).length?'':'<div class="agenda-empty"><p>'+safe(T().noEvents)+'</p>'+'</div>')+'</section>';
+ return '<section class="agenda"><div class="agenda-heading"><h3>'+numHtml(egy(d).day)+' '+safe(monthName(egy(d).month))+'</h3>'+(prefs.gregorian?'<span class="subtle">'+safe(greg(d,{weekday:'short',day:'numeric',month:'short'}))+'</span>':'')+'</div>'+hiddenCalendarNotice(d)+festivalCards+(a.length?a.map(i=>eventRow(i,d)).join(''):festivals.length?'':hiddenItemsForDay(schedule,d).length?'':'<div class="agenda-empty"><p>'+safe(T().noEvents)+'</p>'+'</div>')+'</section>';
 }
 // A compact, genuine hieroglyphic date group: ten-signs above units arranged
 // in at most three columns, never a wrapped string or Latin replacement.
@@ -155,7 +155,7 @@ function monthSection(e){
   }).join('');
   return '<section class="month-section ten-day" data-week="10">'+secondary+'<div class="decades week-bands">'+bands+'</div></section>';
  }
- const cells=monthGrid(e.year,e.month,7,data.years);
+ const cells=monthGrid(e.year,e.month,7);
  const headers=Array.from({length:7},(_,i)=>LOCALES[lang()].shortWeekdays?.[i]||N(i+1));
  const bands=Array.from({length:cells.length/7},(_,i)=>'<div class="week-band" data-band="'+(i+1)+'"><div class="week-days" style="--cols:7">'+cells.slice(i*7,i*7+7).map(dateButton).join('')+'</div></div>').join('');
  return '<section class="month-section seven-day" data-week="7">'+secondary+'<div class="week-headers">'+headers.map(h=>'<span>'+safe(h)+'</span>').join('')+'</div><div class="week-bands">'+bands+'</div></section>';
@@ -170,7 +170,7 @@ function yearView(){
  const currentDate=egy(current),currentSeason=seasonForMonth(currentDate.month);
  const monthCard=m=>{
   const start=monthStart({year:yr,month:m});
-  const cells=monthGrid(yr,m,w,data.years);
+  const cells=monthGrid(yr,m,w);
   const body=cells.map(c=>{
    if(!c)return '<span class="year-mini-blank" aria-hidden="true"></span>';
    const isToday=c.gregorian===current,isSelected=c.gregorian===state.focus;
@@ -233,7 +233,7 @@ function dayView(){
 function listView(){
  const groups=[];
  for(let d=state.focus;d<=Math.min(max(),state.focus+59);d++)
-  if(items(d).length||festivalsOn(d).length||hiddenItemsForDay(schedule,d,data.years).length)
+  if(items(d).length||festivalsOn(d).length||hiddenItemsForDay(schedule,d).length)
    groups.push(agenda(d));
  return '<div class="list-page">'+(groups.length?groups.join(''):
   '<div class="schedule-empty"><div class="empty-art" aria-hidden="true">▤</div><h2>'+
@@ -279,9 +279,9 @@ function searchResults(){return searchItems(schedule,state.query).slice(0,60).ma
 function dateFields(d,prefix=''){
  const e=egy(d);
  const names=prefix?{year:'endEgyYear',month:'endEgyMonth',day:'endEgyDay'}:{year:'egyYear',month:'egyMonth',day:'egyDay'};
- const permitted=y=>{const start=dayNumber(y.start);return start<=max()&&start+y.days-1>=min();};
+ const first=toEgyptian(min()).year,last=toEgyptian(max()).year;
  return '<div class="date-fields" data-date-prefix="'+prefix+'"><select name="'+names.year+'" aria-label="'+safe(LOCALES[lang()].year)+'" required>'+
- data.years.filter(permitted).map(y=>'<option value="'+y.year+'" '+(y.year===e.year?'selected':'')+'>'+safe(N(y.year))+'</option>').join('')+
+ Array.from({length:last-first+1},(_,i)=>first+i).map(y=>'<option value="'+y+'" '+(y===e.year?'selected':'')+'>'+safe(N(y))+'</option>').join('')+
  '</select><select name="'+names.month+'">'+Array.from({length:13},(_,i)=>'<option value="'+(i+1)+'" '+(e.month===i+1?'selected':'')+'>'+safe(monthName(i+1))+'</option>').join('')+
  '</select><select name="'+names.day+'">'+Array.from({length:monthDays(e)},(_,i)=>'<option value="'+(i+1)+'" '+(e.day===i+1?'selected':'')+'>'+safe(N(i+1))+'</option>').join('')+
  '</select></div><small class="date-preview" data-date-prefix="'+prefix+'">'+safe(greg(d,{day:'numeric',month:'long',year:'numeric'}))+'</small>';
@@ -397,7 +397,7 @@ function render(){
 }
 
 function navigate(step){
- if(state.view==='year'){const y=egy(state.focus).year+step;if(data.years.some(v=>v.year===y))state.focus=yearStart(y);}
+ if(state.view==='year'){const y=egy(state.focus).year+step;if(supportedYear(y))state.focus=yearStart(y);}
  else if(state.view==='day')state.focus+=step;
  else if(state.view==='list')state.focus+=step*30;
  else{const e=egy(state.focus),next=adjacent(e,step);if(next)state.focus=monthStart(next)+Math.min(e.day,monthDays(next))-1;}
@@ -410,13 +410,13 @@ function showEditorError(form,message){
 }
 function submitEvent(form){
  const f=new FormData(form),y=Number(f.get('egyYear')),m=Number(f.get('egyMonth')),d=Number(f.get('egyDay'));
- if(!data.years.some(x=>x.year===y)||m<1||m>13||d<1||d>monthDays({year:y,month:m})){showEditorError(form,lang()==='ar'?'التاريخ غير صحيح':lang()==='cop'?'Ⲡⲓⲉϩⲟⲟⲩ':'𓆳');return;}
- const startDay=toGregorian({year:y,month:m,day:d},data.years);
+ if(!supportedYear(y)||m<1||m>13||d<1||d>monthDays({year:y,month:m})){showEditorError(form,lang()==='ar'?'التاريخ غير صحيح':lang()==='cop'?'Ⲡⲓⲉϩⲟⲟⲩ':'𓆳');return;}
+ const startDay=toGregorian({year:y,month:m,day:d});
  const ey=Number(f.get('endEgyYear')),em=Number(f.get('endEgyMonth')),ed=Number(f.get('endEgyDay'));
- if(!data.years.some(x=>x.year===ey)||em<1||em>13||ed<1||ed>monthDays({year:ey,month:em})){
+ if(!supportedYear(ey)||em<1||em>13||ed<1||ed>monthDays({year:ey,month:em})){
   showEditorError(form,lang()==='ar'?'تاريخ النهاية غير صحيح':lang()==='cop'?'Ⲑⲁⲏ':'𓆳');return;
  }
- const endDay=toGregorian({year:ey,month:em,day:ed},data.years);
+ const endDay=toGregorian({year:ey,month:em,day:ed});
  if(startDay<min()||endDay>max()||endDay<startDay){
   showEditorError(form,lang()==='ar'?'تاريخ النهاية يجب ألا يسبق البداية، ويجب أن يكون داخل نطاق التقويم':'Invalid end date');return;
  }
@@ -432,7 +432,7 @@ function submitEvent(form){
  const sched=loadScheduler(),existing=state.dialog?.id?sched.items.find(i=>i.id===state.dialog.id):null;
  let item;
  if(existing&&existing.repeat!=='none'&&f.get('repeatScope')==='one'){
-  const occurrence=occurrenceStartForDay(existing,state.dialog?.occurrenceDay??existing.startDay,data.years);
+  const occurrence=occurrenceStartForDay(existing,state.dialog?.occurrenceDay??existing.startDay);
   if(occurrence===null){showEditorError(form,'Occurrence is outside the series');return;}
   excludeOccurrence(existing,occurrence);
   item=createItem({...vals,repeat:'none'});
@@ -445,7 +445,7 @@ function submitEvent(form){
  // Read-after-write verification prevents false success on storage failures,
  // Safari private/ephemeral storage, or malformed preexisting data.
  const saved=loadScheduler();
- if(!saved.items.some(v=>v.id===item.id&&v.title===item.title) || !itemsForDay(saved,startDay,data.years).some(v=>v.id===item.id)){
+ if(!saved.items.some(v=>v.id===item.id&&v.title===item.title) || !itemsForDay(saved,startDay).some(v=>v.id===item.id)){
   showEditorError(form,lang()==='ar'?'لم يتم تأكيد تخزين الموعد':lang()==='cop'?'Ⲥⲱⲛϩ: !':'𓏞: !');return;
  }
  closeKeyboard();state.dialog=null;state.focus=clamp(startDay);
@@ -534,7 +534,7 @@ root.addEventListener('click',ev=>{
   if(!confirm(one?(lang()==='ar'?'حذف هذا التكرار فقط؟':'Delete this occurrence only?'):(item.repeat!=='none'?
    (lang()==='ar'?'حذف سلسلة المواعيد المتكررة كاملة؟':'Delete the entire recurring series?'):
    T().confirm)))return;
-  if(one){const anchor=occurrenceStartForDay(item,state.dialog?.occurrenceDay??item.startDay,data.years);
+  if(one){const anchor=occurrenceStartForDay(item,state.dialog?.occurrenceDay??item.startDay);
    if(anchor===null)return;excludeOccurrence(item,anchor);
   }else removeItem(v,item.id);
   if(!saveScheduler(v)){alert(lang()==='ar'?'تعذر حذف الموعد':'Could not delete appointment');return;}
@@ -589,7 +589,7 @@ root.addEventListener('change',ev=>{
  if(el.name==='repeatScope'&&state.dialog?.id){
   const form=el.form,item=schedule.items.find(i=>i.id===state.dialog.id);
   if(item&&item.repeat!=='none'){
-   const occurrence=occurrenceStartForDay(item,state.dialog?.occurrenceDay??item.startDay,data.years)??item.startDay;
+   const occurrence=occurrenceStartForDay(item,state.dialog?.occurrenceDay??item.startDay)??item.startDay;
    const anchor=el.value==='one'?occurrence:item.startDay;
    fillEditorDate(form,'',anchor);
    fillEditorDate(form,'end',anchor+Math.max(0,item.endDay-item.startDay));
@@ -613,7 +613,7 @@ root.addEventListener('change',ev=>{
   const form=el.form,ending=el.name.startsWith('endEgy'),prefix=ending?'end':'';
   const ys=ending?'endEgyYear':'egyYear',ms=ending?'endEgyMonth':'egyMonth',ds=ending?'endEgyDay':'egyDay';
   const y=Number(form.elements.namedItem(ys).value),m=Number(form.elements.namedItem(ms).value),d=Number(form.elements.namedItem(ds).value);
-  if(data.years.some(x=>x.year===y)&&m>=1&&m<=13&&el.name!==ds){
+  if(supportedYear(y)&&m>=1&&m<=13&&el.name!==ds){
    const count=monthDays({year:y,month:m}),dayField=form.elements.namedItem(ds);
    const chosen=Math.min(Math.max(1,d),count);
    dayField.innerHTML=Array.from({length:count},(_,i)=>'<option value="'+(i+1)+'">'+safe(N(i+1))+'</option>').join('');
@@ -621,7 +621,7 @@ root.addEventListener('change',ev=>{
   }
   const preview=form.querySelector('.date-preview[data-date-prefix="'+prefix+'"]');
   if(preview){
-   try{const day=Number(form.elements.namedItem(ds).value),value=toGregorian({year:y,month:m,day},data.years);
+   try{const day=Number(form.elements.namedItem(ds).value),value=toGregorian({year:y,month:m,day});
     preview.textContent=value>=min()&&value<=max()?greg(value,{day:'numeric',month:'long',year:'numeric'}):'—';
    }catch{preview.textContent='—';}
   }
@@ -630,7 +630,7 @@ root.addEventListener('change',ev=>{
    // Default end date follows the chosen start, preserving an existing span
    // unless the user independently chooses an end date.
    try{
-    const start=toGregorian({year:y,month:m,day:Number(form.elements.namedItem(ds).value)},data.years);
+    const start=toGregorian({year:y,month:m,day:Number(form.elements.namedItem(ds).value)});
     const duration=Math.max(0,Number(form.dataset.originalEnd)-Number(form.dataset.originalStart));
     const next=egy(clamp(start+duration));
     const endYear=form.elements.namedItem('endEgyYear'),endMonth=form.elements.namedItem('endEgyMonth');
