@@ -41,6 +41,15 @@ async function main(){
     }
     const preferences=await record(page,'preferences');
     assert.equal(preferences.reminders,false);
+    await page.locator('header [data-open-panel=settings]').click();
+    await page.locator('[data-close-panel]').click();
+    assert.equal(await page.locator('.ux-panel').count(),0,'Panel close button must close the overlay');
+    await page.locator('header [data-open-panel=settings]').click();
+    await page.locator('[name=gregorian]').uncheck();
+    await page.locator('[data-close-panel]').click();
+    await page.locator('header [data-new]').click();
+    assert.equal(await page.locator('#event-editor .date-preview').count(),0,'Hidden Gregorian date must not appear in the editor');
+    await page.locator('[data-close]').click();
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
