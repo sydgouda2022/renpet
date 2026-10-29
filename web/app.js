@@ -780,7 +780,7 @@ async function init(){
  if(Array.isArray(previousFestivalSources)&&
     (previousFestivalSources.length!==prefs.festivalSources.length||
      previousFestivalSources.some((id,i)=>id!==prefs.festivalSources[i])))savePrefs();
- state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>data?.years);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
+ state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
