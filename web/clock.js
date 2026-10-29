@@ -9,7 +9,7 @@ const numeric=(n,language)=>{
  return n===0?ZERO:nativeNumber(n,language);
 };
 const parts=total=>({hour:Math.floor(total/60),minute:total%60});
-const hiero=n=>n===0?'<span class="clock-zero" aria-label="zero">'+ZERO+'</span>':'<img class="clock-glyph" src="assets/numerals/'+n+'.svg" alt="'+nativeNumber(n,'egy')+'">';
+const hiero=n=>n===0?'<span class="clock-zero">'+ZERO+'</span>':'<img class="clock-glyph" src="assets/numerals/'+n+'.svg" alt="'+nativeNumber(n,'egy')+'">';
 
 // Reuse the same numeral rendering for both the Day timeline and time editor.
 export function clockPartHtml(n,language){
