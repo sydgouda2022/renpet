@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from '../web/calendar-presentation.mjs';
-import {toGregorian,toEgyptian,dayNumber} from '../web/calendar.js';
+import {toGregorian,toEgyptian,dayNumber,isLeapYear,yearStart,monthLength} from '../web/calendar.js';
 
 const data=JSON.parse(await readFile(new URL('../web/data.json',import.meta.url),'utf8'));
 // Verify each boundary using actual dates, including the sixth year-end day
 // and the following new year. No independent calendar/leap arithmetic here.
-const year=data.years.find(y=>y.year===6268);
-assert.equal(year.days,366);
+assert.equal(isLeapYear(6268),true);
+assert.equal(monthLength(6268,13),6);
+assert.equal(yearStart(6268),dayNumber('2026-09-11'));
+assert.equal(yearStart(6269),dayNumber('2027-09-12'));
 for(const [month,id] of [[1,'akhet'],[4,'akhet'],[5,'peret'],[8,'peret'],[9,'shemu'],[12,'shemu'],[13,'shemu']]){
  assert.equal(seasonForMonth(month).id,id);
- assert.doesNotThrow(()=>toGregorian({year:6268,month,day:month===13?6:30},data.years));
+ assert.doesNotThrow(()=>toGregorian({year:6268,month,day:month===13?6:30}));
 }
 assert.equal(seasonForMonth(1).id,'akhet','A new year returns to Akhet');
 for(const month of [0,14,1.5,NaN])assert.throws(()=>seasonForMonth(month),RangeError);
