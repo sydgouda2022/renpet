@@ -59,7 +59,7 @@ const egy=d=>toEgyptian(d);
 const monthName=m=>m===13?LOCALES[lang()].epagomenal:lang()==='egy'?('𓇹 '+N(m)):data.months[lang()][m-1];
 // Use full-size native signs for short calendar numbers; numeral SVG assets
 // compose large years and longer numbers into readable grouped signs.
-const numHtml=n=>lang()==='egy'&&n>30&&n<=333?'<img class="glyph" src="assets/numerals/'+n+'.svg" alt="'+safe(N(n))+'">':safe(N(n));
+const numHtml=n=>lang()==='egy'&&n>30&&(n<=333||(n>=6141&&n<=6442))?'<img class="glyph" src="assets/numerals/'+n+'.svg" alt="'+safe(N(n))+'">':safe(N(n));
 const greg=(d,opts={day:'numeric',month:'short'})=>gregorianText(d,lang(),opts);
 const monthDays=e=>monthLength(e.year,e.month);
 const monthStart=e=>toGregorian({year:e.year,month:e.month,day:1});
