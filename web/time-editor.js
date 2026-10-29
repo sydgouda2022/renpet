@@ -2,6 +2,7 @@
 // the device locale (often English/AM-PM), so use explicit Unicode/SVG labels
 // and retain ISO-compatible HH:MM in hidden form controls.
 import {inputClock,timeHtml,timeText,clockPartHtml} from './clock.js';
+import {WORDS} from './ui-words.js';
 
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -33,11 +34,12 @@ export function openTimeEditor(form,which,language,startLabel,endLabel){
  host.dataset.hour=hour;
  host.dataset.minute=minute;
  const name=which==='start'?startLabel:endLabel;
- host.innerHTML='<div class="time-picker-top"><button type="button" data-time-dismiss aria-label="Close">×</button>'+
+ const ui=WORDS[language];
+ host.innerHTML='<div class="time-picker-top"><button type="button" data-time-dismiss aria-label="'+safe(ui.cancel)+'">×</button>'+
   '<strong>'+safe(name)+'</strong><span class="time-picker-preview">'+timeHtml(hour*60+minute,language)+'</span></div>'+
-  '<div class="time-picker-columns" dir="ltr"><div class="time-picker-column" data-time-hours role="group" aria-label="Hours">'+makeChoices('hour',which==='end'?25:24,hour,language)+'</div>'+
-  '<div class="time-picker-column" data-time-minutes role="group" aria-label="Minutes">'+makeChoices('minute',60,minute,language)+'</div></div>'+
-  '<div class="time-picker-foot"><button type="button" data-time-confirm aria-label="Confirm time">✓</button></div>';
+  '<div class="time-picker-columns" dir="ltr"><div class="time-picker-column" data-time-hours role="group" aria-label="'+safe(ui.hours)+'">'+makeChoices('hour',which==='end'?25:24,hour,language)+'</div>'+
+  '<div class="time-picker-column" data-time-minutes role="group" aria-label="'+safe(ui.minutes)+'">'+makeChoices('minute',60,minute,language)+'</div></div>'+
+  '<div class="time-picker-foot"><button type="button" data-time-confirm aria-label="'+safe(ui.confirmTime)+'">✓</button></div>';
  host.hidden=false;
  requestAnimationFrame(()=>{
   if(host.hidden)return;
