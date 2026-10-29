@@ -30,9 +30,9 @@ function calendarEvents(state,occursOn,today,maxOccurrences=100000){
     let starts=[];
     // Standard iCalendar interval recurrence rules are exported directly.
     // Egyptian month/year recurrence dates are expanded separately.
-    const rule=repeat==='daily'?'FREQ=DAILY':repeat==='weekly'?'FREQ=WEEKLY':
-      repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':
-      repeat==='gregMonthly'?'FREQ=MONTHLY':repeat==='gregYearly'?'FREQ=YEARLY':null;
+    const rule=repeat==='daily'?'FREQ=DAILY':repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':
+      repeat==='custom'&&['day','decan'].includes(item.repeatUnit)?
+       'FREQ=DAILY;INTERVAL='+(item.repeatEvery*(item.repeatUnit==='decan'?10:1)):null;
     if(repeat==='none'||rule){starts=[item.startDay];}
     else {
       // Expand the complete remaining supported Egyptian calendar range.
