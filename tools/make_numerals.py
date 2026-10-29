@@ -34,6 +34,6 @@ def svg(n):
 if __name__=='__main__':
     out=ROOT/'web/assets/numerals'; out.mkdir(parents=True,exist_ok=True)
     for old in out.glob('*.svg'): old.unlink()
-    for n in [*range(1,60),*range(6155,6458)]:
+    for n in [*range(1,60),*range(6141,6443)]:
         (out/f'{n}.svg').write_text(svg(n),encoding='utf-8')
     print('Created',len(list(out.glob('*.svg'))),'Egyptian numeral SVG assets.')
