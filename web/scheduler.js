@@ -1,125 +1,32 @@
 import {toEgyptian,toGregorian,monthLength} from './calendar.js';
 
-export const SCHEDULER_STORE='renpet.scheduler.v1';
-export const CORRUPT_RECORD_STORE='renpet.scheduler.corrupt.v1';
-const MIN_DAY=-25567,MAX_DAY=84370,MAX_SPAN=3660;
 export const DEFAULT_CALENDARS=[
  {id:'personal',name:{ar:'شخصي',cop:'ⲛⲟⲩⲓ',egy:'𓀀'},color:'#187568',visible:true},
  {id:'work',name:{ar:'العمل',cop:'ⲃⲱⲕ',egy:'𓂋𓐍𓏏'},color:'#C8A24A',visible:true},
  {id:'home',name:{ar:'المنزل',cop:'ⲏⲓ',egy:'𓉐'},color:'#2C8C7E',visible:true},
 ];
 
-const copy=value=>JSON.parse(JSON.stringify(value));
-const uid=()=>globalThis.crypto?.randomUUID?.()||`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-const nameObject=value=>typeof value==='object'&&value?value:{ar:String(value||''),cop:String(value||''),egy:String(value||'')};
-
-export function emptyState(){return {version:1,calendars:copy(DEFAULT_CALENDARS),items:[]};}
-
-export function normalizeState(value){
- const base=emptyState();
- if(!value||typeof value!=='object')return base;
- if(Array.isArray(value.calendars)){
-  const valid=value.calendars.filter(c=>c&&typeof c.id==='string'&&typeof c.color==='string');
-  if(valid.length)base.calendars=valid.map(c=>({...c,visible:c.visible!==false,name:nameObject(c.name||c.id)}));
- }
- if(Array.isArray(value.items))base.items=value.items.filter(i=>i&&typeof i.id==='string'&&['event','reminder'].includes(i.kind)&&Number.isInteger(i.startDay));
- return base;
-}
-
-// Personal calendar records have a recoverable primary copy and two rotating
-// snapshots, independent of dictionary IndexedDB caches. Never call clear().
-export const SCHEDULER_RECOVERY_KEYS=Object.freeze(['renpet.scheduler.recovery.1','renpet.scheduler.recovery.2']);
-/** Strict validation for app saves, recovery snapshots and imported backups. */
+const copy=value=>structuredClone(value);
+const uid=()=>crypto.randomUUID();
+export function emptyState(){return {calendars:copy(DEFAULT_CALENDARS),items:[]};}
+export const REPEAT_RULES=Object.freeze(['none','daily','egy10','egyMonthly','egyYearly']);
 export function validateSchedulerData(state){
- if(!state||typeof state!=='object'||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
- const calendars=new Set(),items=new Set(),repeat=new Set(['none','daily','weekly','egy10','egyMonthly','egyYearly','gregMonthly','gregYearly']);
+ if(!state||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
+ const calendars=new Set(),ids=new Set();
  for(const c of state.calendars){
-  if(!c||typeof c.id!=='string'||!c.id||calendars.has(c.id)||typeof c.color!=='string')return false;
+  if(!c||typeof c.id!=='string'||!c.id||calendars.has(c.id)||!/^#[0-9a-f]{6}$/i.test(c.color)||!c.name||typeof c.name!=='object')return false;
   calendars.add(c.id);
  }
  for(const i of state.items){
-  if(!i||typeof i.id!=='string'||!i.id||items.has(i.id)||!['event','reminder'].includes(i.kind)||typeof i.title!=='string'||i.title.length>200||!Number.isInteger(i.startDay)||i.startDay<MIN_DAY||i.startDay>MAX_DAY)return false;
-  const end=i.endDay??i.startDay;
-  if(!Number.isInteger(end)||end<i.startDay||end>MAX_DAY||end-i.startDay>MAX_SPAN)return false;
-  if(i.startMinutes!=null&&(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440))return false;
-  if(i.endMinutes!=null&&(!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440))return false;
-  if(i.repeat!=null&&!repeat.has(i.repeat))return false;
-  if(i.excludedDays!=null&&(!Array.isArray(i.excludedDays)||i.excludedDays.length>50000||i.excludedDays.some(d=>!Number.isInteger(d)||d<i.startDay||d>MAX_DAY)))return false;
-  if(i.completedDays!=null&&(!Array.isArray(i.completedDays)||i.completedDays.length>50000||i.completedDays.some(d=>!Number.isInteger(d)||d<i.startDay||d>MAX_DAY)))return false;
-  if(i.alert!=null&&!['none','atTime','5min','15min','1hour','1day'].includes(i.alert))return false;
-  if(i.location!=null&&(typeof i.location!=='string'||i.location.length>300))return false;
-  if(i.notes!=null&&(typeof i.notes!=='string'||i.notes.length>4000))return false;
-  items.add(i.id);
+  if(!i||typeof i.id!=='string'||!i.id||ids.has(i.id)||!calendars.has(i.calendarId)||!['event','reminder'].includes(i.kind)||typeof i.title!=='string'||!i.title.trim()||i.title.length>200)return false;
+  if(!Number.isInteger(i.startDay)||!Number.isInteger(i.endDay)||i.endDay<i.startDay||i.endDay-i.startDay>3660)return false;
+  if(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440||!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440)return false;
+  if(!REPEAT_RULES.includes(i.repeat)||!['none','atTime','5min','15min','1hour','1day'].includes(i.alert))return false;
+  if(typeof i.location!=='string'||i.location.length>300||typeof i.notes!=='string'||i.notes.length>4000)return false;
+  if(!Array.isArray(i.excludedDays||[])||!Array.isArray(i.completedDays||[]))return false;
+  ids.add(i.id);
  }
  return true;
-}
-const parseStored=text=>{
- if(typeof text!=='string')return null;
- try{
-  const state=JSON.parse(text);
-  if(!validateSchedulerData(state))return null;
-  return normalizeState(state);
- }catch{return null;}
-};
-export function schedulerRecoveryStatus(storage=globalThis.localStorage){
- try{
-  const primary=storage?.getItem(SCHEDULER_STORE);
-  const recovered=SCHEDULER_RECOVERY_KEYS.find(key=>parseStored(storage?.getItem(key))!==null);
-  return {primaryValid:primary===null||parseStored(primary)!==null,
-   primaryMissing:primary===null,recoveryAvailable:!!recovered,recoveredFrom:primary!==null&&!parseStored(primary)?recovered:null};
- }catch{return {primaryValid:false,primaryMissing:false,recoveryAvailable:false,recoveredFrom:null};}
-}
-export function loadScheduler(storage=globalThis.localStorage){
- try{
-  const primary=storage?.getItem(SCHEDULER_STORE);
-  if(primary!==null){const valid=parseStored(primary);if(valid)return valid;}
-  for(const key of SCHEDULER_RECOVERY_KEYS){
-   const snapshot=parseStored(storage?.getItem(key));if(snapshot)return snapshot;
-  }
- }catch{}
- return emptyState();
-}
-export function saveScheduler(state,storage=globalThis.localStorage){
- try{
-  if(!storage)return false;
-  const current=storage.getItem(SCHEDULER_STORE);
-  // An invalid primary without a usable snapshot must not be overwritten by
-  // the empty fallback: that would permanently erase the only salvageable copy.
-  // Never silently replace a corrupt primary with an older recovered snapshot.
-  // Require explicit user-initiated restoration; preserve forensic raw bytes.
-  if(current!==null&&!parseStored(current))return false;
-  const value=JSON.stringify(state);
-  if(!parseStored(value))return false;
-  // Verify primary before changing the optional rotating recovery copies.
-  storage.setItem(SCHEDULER_STORE,value);
-  if(storage.getItem(SCHEDULER_STORE)!==value)return false;
-  if(current&&parseStored(current)&&current!==value){
-   const prior=storage.getItem(SCHEDULER_RECOVERY_KEYS[0]);
-   try{
-    if(prior&&parseStored(prior))storage.setItem(SCHEDULER_RECOVERY_KEYS[1],prior);
-    storage.setItem(SCHEDULER_RECOVERY_KEYS[0],current);
-   }catch{/* Snapshot quota cannot invalidate a successful primary write. */}
-  }
-  return true;
- }catch{return false;}
-}
-export function restoreSchedulerSnapshot(storage=globalThis.localStorage){
- try{
-  const existing=storage.getItem(SCHEDULER_STORE);
-  // Keep the original damaged string before overwriting it with a snapshot.
-  if(existing!==null&&!parseStored(existing)){
-   storage.setItem(CORRUPT_RECORD_STORE,existing);
-   if(storage.getItem(CORRUPT_RECORD_STORE)!==existing)throw Error('Could not preserve damaged calendar record');
-  }
-  for(const key of SCHEDULER_RECOVERY_KEYS){
-   const raw=storage.getItem(key);
-   if(!parseStored(raw))continue;
-   storage.setItem(SCHEDULER_STORE,raw);
-   if(storage.getItem(SCHEDULER_STORE)!==raw)throw Error('Failed to restore calendar records');
-   return {restored:true,hadCorruptPrimary:existing!==null&&!parseStored(existing)};
-  }
- }catch{}
- return {restored:false};
 }
 export function createItem(values){
  const now=new Date().toISOString();
@@ -151,14 +58,8 @@ export function ensureSavedItemVisible(state,item){
  calendar.visible=true;
  return item;
 }
-// Show saved appointments from historical app versions whose calendar was
-// hidden or later deleted. Preserve appointment records and identifiers.
 export function revealSavedCalendars(state){
- if(!state.calendars.length)state.calendars.push(copy(DEFAULT_CALENDARS[0]));
- const fallback=state.calendars.find(c=>c.id==='personal')||state.calendars[0];
- const ids=new Set(state.calendars.map(c=>c.id));
  for(const cal of state.calendars)cal.visible=true;
- for(const item of state.items)if(!ids.has(item.calendarId))item.calendarId=fallback.id;
  return state;
 }
 export function hiddenItemsForDay(state,day){
@@ -202,15 +103,7 @@ function isStartOccurrence(item,day){
  const delta=day-item.startDay;
  if(item.repeat==='none')return day===item.startDay;
  if(item.repeat==='daily')return true;
- if(item.repeat==='weekly')return delta%7===0;
  if(item.repeat==='egy10')return delta%10===0;
- if(item.repeat==='gregMonthly'||item.repeat==='gregYearly'){
-  const origin=new Date(item.startDay*86400000),current=new Date(day*86400000);
-  if(item.repeat==='gregMonthly')return current.getUTCDate()===origin.getUTCDate()&&
-   current.getUTCFullYear()*12+current.getUTCMonth()>=origin.getUTCFullYear()*12+origin.getUTCMonth();
-  return current.getUTCFullYear()>=origin.getUTCFullYear()&&
-   current.getUTCMonth()===origin.getUTCMonth()&&current.getUTCDate()===origin.getUTCDate();
- }
  const base=toEgyptian(item.startDay),candidate=toEgyptian(day);
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;
