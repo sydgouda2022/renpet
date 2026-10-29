@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {dayNumber} from '../web/calendar.js';
 import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,occurrenceStartsForDay,nextOccurrence,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
-const years=[{year:6282,start:'2026-09-11',days:366},{year:6283,start:'2027-09-12',days:365}];
+const years=[{year:6268,start:'2026-09-11',days:366},{year:6269,start:'2027-09-12',days:365}];
 const day=dayNumber('2026-10-14');
 const state=emptyState();
 assert.equal(state.calendars.length,3);
