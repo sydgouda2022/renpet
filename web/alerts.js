@@ -9,16 +9,14 @@ const FIRED='renpet.alerts.fired.v1';
 const LAST_CHECK='renpet.alerts.last-check.v1';
 const MAX_CATCHUP=12*60*60*1000;
 let interval=null;
-export function dueAlerts(state,years,now=new Date(),lookbackMs=90000){
- if(!state||!Array.isArray(state.items)||!Array.isArray(years)||!years.length)return [];
+export function dueAlerts(state,now=new Date(),lookbackMs=90000){
+ if(!state||!Array.isArray(state.items))return [];
  const today=dayNumber([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'));
  const results=[];
  for(const item of state.items){
   if(!Object.hasOwn(OFFSET,item.alert)||!Number.isInteger(item.startMinutes))continue;
   for(let day=today-1;day<=today+2;day++){
-   const start=day>=item.startDay&&dayNumber(years[0].start)<=day&&
-    day<=dayNumber(years.at(-1).start)+years.at(-1).days-1?
-    occurrenceStartForDay(item,day,years):null;
+   const start=day>=item.startDay?occurrenceStartForDay(item,day):null;
    if(start!==day||isCompleted(item,day))continue;
    const [y,m,d]=isoDate(day).split('-').map(Number);
    const timestamp=new Date(y,m-1,d,0,item.allDay?540:item.startMinutes).getTime()-OFFSET[item.alert]*60000;
@@ -28,18 +26,17 @@ export function dueAlerts(state,years,now=new Date(),lookbackMs=90000){
  }
  return results;
 }
-export function startForegroundAlerts(getState,getYears){
+export function startForegroundAlerts(getState){
  if(typeof window==='undefined'||interval!==null)return;
  const check=async()=>{
   if(document.hidden)return;
-  const years=getYears();if(!years?.length)return;
   let history={};
   try{history=JSON.parse(localStorage.getItem(FIRED)||'{}')||{};}catch{}
   if(typeof history!=='object'||Array.isArray(history))history={};
   const now=new Date();
   let previous=0;try{previous=Number(localStorage.getItem(LAST_CHECK)||0);}catch{}
   const elapsed=previous>0&&previous<=now.getTime()?now.getTime()-previous:90000;
-  const possible=dueAlerts(getState(),years,now,Math.min(MAX_CATCHUP,Math.max(90000,elapsed+60000)));
+  const possible=dueAlerts(getState(),now,Math.min(MAX_CATCHUP,Math.max(90000,elapsed+60000)));
   for(const alert of possible){
    if(history[alert.key])continue;
    history[alert.key]=now.getTime();
