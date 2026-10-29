@@ -11,7 +11,7 @@ async function main(){
   await page.locator('header [data-new]').click();
   const form=page.locator('#event-editor');
   await form.locator('[name=title]').fill('Three-day preservation test');
-  await form.locator('[name=egyYear]').selectOption('6282');
+  await form.locator('[name=egyYear]').selectOption('6268');
   await form.locator('[name=egyMonth]').selectOption('2');
   await form.locator('[name=egyDay]').selectOption('26');
   assert.equal(await form.locator('[name=endEgyDay]').inputValue(),'26','End date should follow start automatically');
@@ -42,7 +42,7 @@ async function main(){
   await page.locator('header [data-new]').click();
   const weekly=page.locator('#event-editor');
   await weekly.locator('[name=title]').fill('Weekly original');
-  await weekly.locator('[name=egyYear]').selectOption('6282');
+  await weekly.locator('[name=egyYear]').selectOption('6268');
   await weekly.locator('[name=egyMonth]').selectOption('2');
   await weekly.locator('[name=egyDay]').selectOption('26');
   await weekly.locator('.advanced-fields summary').click();
