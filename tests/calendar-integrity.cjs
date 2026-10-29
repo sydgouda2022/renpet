@@ -81,6 +81,23 @@ async function main(){
   assert.equal(await page.locator('#event-editor').count(),0);
   assert.equal(prompts,3,'Cancel, backdrop and Escape must each request confirmation');
   assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved Egyptian event'));
+  // Reminder completion is its own accessible button, not a span inside Edit.
+  await page.locator('header [data-new]').click();
+  const reminderForm=page.locator('#event-editor');
+  await reminderForm.locator('[name=title]').fill('Independent reminder control');
+  await reminderForm.locator('[name=kind][value=reminder]').check();
+  await reminderForm.locator('.save-button').click();
+  await page.locator('.save-confirmation').waitFor();
+  const reminder=(await record(page,'scheduler')).items.find(i=>i.title==='Independent reminder control');
+  assert.ok(reminder);
+  await page.locator('[data-back]').click();
+  const done=page.locator('.reminder-box[data-complete="'+reminder.id+'"]');
+  await done.waitFor();
+  assert.equal(await done.getAttribute('aria-pressed'),'false');
+  await done.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('.reminder-box[data-complete="'+reminder.id+'"]').getAttribute('aria-pressed'),'true');
+  assert.equal((await record(page,'scheduler')).items.find(i=>i.id===reminder.id).completed,true);
   await context.close();
   console.log('Renpet date editor, persistence, recurrence and reload passed');
  }finally{await browser.close();}
