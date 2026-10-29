@@ -83,7 +83,9 @@ function quickDeleteButton(item,extraClass='',occurrence=item._occurrenceStart??
 function eventRow(i,day=state.focus){
  const cal=schedule.calendars.find(c=>c.id===i.calendarId),color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
  const clock=i.allDay?safe(T().allDay):timeHtml(i.startMinutes,lang());
- return '<div class="event-row-shell"><button class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+(i._occurrenceStart??day)+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span>'+(i.kind==='reminder'?'<span class="reminder-box'+(isCompleted(i,i._occurrenceStart??day)?' is-complete':'')+'" data-complete="'+safe(i.id)+'" data-complete-occurrence="'+(i._occurrenceStart??day)+'" aria-label="'+safe(T().reminder)+'">'+icon('check')+'</span>':'')+'</button>'+quickDeleteButton(i)+'</div>';
+ return '<div class="event-row-shell"><button type="button" class="event-row" data-edit="'+safe(i.id)+'" data-occurrence="'+(i._occurrenceStart??day)+'" style="--event:'+color+'"><span class="event-clock">'+clock+'</span><span class="event-copy"><strong>'+safe(i.title)+'</strong>'+(i.location?'<small>'+safe(i.location)+'</small>':'')+'</span></button>'+
+ (i.kind==='reminder'?'<button type="button" class="reminder-box'+(isCompleted(i,i._occurrenceStart??day)?' is-complete':'')+'" data-complete="'+safe(i.id)+'" data-complete-occurrence="'+(i._occurrenceStart??day)+'" aria-pressed="'+isCompleted(i,i._occurrenceStart??day)+'" aria-label="'+safe(T().reminder)+' · '+safe(i.title)+'">'+icon('check')+'</button>':'')+
+ quickDeleteButton(i)+'</div>';
 }
 // Existing appointments in hidden calendars are never silently represented
 // as "no events". Offer one action to show them all without losing data.
