@@ -2,6 +2,8 @@
 import {isoDate,dayNumber} from './calendar.js';
 import {occurrenceStartForDay,isCompleted} from './scheduler.js';
 import {readRecord,writeRecord} from './storage.js';
+import {WORDS} from './ui-words.js';
+import {LOCALES} from './locales.js';
 
 const OFFSET={atTime:0,'5min':5,'15min':15,'1hour':60,'1day':1440};
 let started=false;
@@ -21,10 +23,10 @@ export function dueAlerts(state,now=new Date(),lookbackMs=90000){
  }
  return matches;
 }
-function toast(message){
+function toast(message,language){
  const element=document.createElement('div');element.className='renpet-reminder-toast';element.setAttribute('role','alert');
  const label=document.createElement('span');label.textContent='⏰ '+message;
- const button=document.createElement('button');button.type='button';button.textContent='×';button.setAttribute('aria-label','Dismiss reminder');
+ const button=document.createElement('button');button.type='button';button.textContent='×';button.setAttribute('aria-label',WORDS[language].cancel);
  button.addEventListener('click',()=>element.remove());element.append(label,button);document.body.append(element);
  setTimeout(()=>element.remove(),15000);
 }
@@ -37,6 +39,8 @@ export function startForegroundAlerts(getState,enabled){
   checking=true;
   try{
    const now=new Date();
+   const language=(await readRecord('preferences'))?.language??'ar';
+   const locale=WORDS[language]?language:'ar';
    const history=await readRecord('alerts')??{lastCheck:0,fired:{}};
    const elapsed=Math.min(12*3600000,Math.max(90000,now.getTime()-(history.lastCheck||now.getTime()-90000)));
    const due=dueAlerts(getState(),now,elapsed);
@@ -47,10 +51,10 @@ export function startForegroundAlerts(getState,enabled){
     if('Notification'in window&&Notification.permission==='granted'){
      try{
       const registration=await navigator.serviceWorker?.getRegistration?.();
-      if(registration?.showNotification){await registration.showNotification('Renpet',{body:entry.title,tag:entry.key});delivered=true;}
+      if(registration?.showNotification){await registration.showNotification(LOCALES[locale].brand,{body:entry.title,tag:entry.key});delivered=true;}
      }catch(error){console.warn('Renpet notification failed',error);}
     }
-    if(!delivered)toast(entry.title);
+    if(!delivered)toast(entry.title,locale);
     fired[entry.key]=now.getTime();
    }
    for(const [key,time] of Object.entries(fired))if(time<now.getTime()-14*86400000)delete fired[key];
