@@ -12,7 +12,7 @@ test('empty local calendar state is valid',()=>{
  assert.equal(state.calendars.length,3);
  assert.equal(state.items.length,0);
  assert.equal(validateSchedulerData(state),true);
- assert.deepEqual(REPEAT_RULES,['none','daily','egy10','egyMonthly','egyYearly']);
+ assert.deepEqual(REPEAT_RULES,['none','daily','egy10','egyMonthly','egyYearly','custom']);
 });
 test('appointments and calendars are edited without persistence side effects',()=>{
  const s=emptyState(),a=createItem({title:'Egyptian appointment',startDay:day,calendarId:'personal'});
@@ -57,4 +57,35 @@ test('reminder completion and invalid data',()=>{
  assert.equal(validateSchedulerData(s),true);
  e.repeat='gregYearly';
  assert.equal(validateSchedulerData(s),false);
+});
+
+test('custom every 6 days crosses the Egyptian month and year boundary',()=>{
+ const start=toGregorian({year:6268,month:12,day:28});
+ const event=createItem({title:'Buy food for the shift',startDay:start,repeat:'custom',repeatEvery:6,repeatUnit:'day'});
+ assert.equal(validateSchedulerData({...emptyState(),items:[event]}),true);
+ assert.equal(nextOccurrence(event,start+1),start+6);
+ assert.equal(nextOccurrence(event,start+7),start+12);
+ for(let i=1;i<=3;i++)assert.equal(occurrenceStartForDay(event,start+6*i),start+6*i);
+ assert.equal(occurrenceStartForDay(event,start+5),null);
+ excludeOccurrence(event,start+6);
+ assert.equal(occurrenceStartForDay(event,start+6),null);
+ assert.equal(occurrenceStartForDay(event,start+12),start+12);
+});
+test('custom intervals work across Egyptian decades, months, years and short epagomenal months',()=>{
+ const start=toGregorian({year:6268,month:12,day:6});
+ const decan=createItem({title:'Rotation',startDay:start,repeat:'custom',repeatEvery:2,repeatUnit:'decan'});
+ assert.equal(nextOccurrence(decan,start+1),start+20);
+ const monthly=createItem({title:'Household',startDay:start,repeat:'custom',repeatEvery:2,repeatUnit:'month'});
+ assert.equal(nextOccurrence(monthly,start+1,200),toGregorian({year:6269,month:1,day:6}));
+ const years=createItem({title:'Review',startDay:start,repeat:'custom',repeatEvery:2,repeatUnit:'year'});
+ assert.equal(nextOccurrence(years,start+1,900),toGregorian({year:6270,month:12,day:6}));
+ const epagomenal=toGregorian({year:6268,month:13,day:6});
+ const leapDay=createItem({title:'Leap day',startDay:epagomenal,repeat:'custom',repeatEvery:2,repeatUnit:'year'});
+ assert.equal(nextOccurrence(leapDay,epagomenal+1,5*366),toGregorian({year:6272,month:13,day:6}));
+});
+test('invalid custom intervals are rejected without silently changing the schedule',()=>{
+ for(const [repeatEvery,repeatUnit] of [[0,'day'],[366,'month'],[1.5,'day'],[6,'gregorianWeek'],[null,'day']]){
+  const item=createItem({title:'Invalid',startDay:day,repeat:'custom',repeatEvery,repeatUnit});
+  assert.equal(validateSchedulerData({...emptyState(),items:[item]}),false);
+ }
 });
