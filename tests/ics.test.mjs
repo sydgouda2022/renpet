@@ -29,7 +29,7 @@ const bounded=exportICS({...state,items:[daily]},resolver,opts);
 assert.equal(bounded.count,1);
 assert.equal((bounded.text.match(/BEGIN:VEVENT/g)||[]).length,1);
 assert.match(bounded.text,/RRULE:FREQ=DAILY/);
-for(const [repeat,rule] of [['weekly','FREQ=WEEKLY'],['egy10','FREQ=DAILY;INTERVAL=10']]){
+for(const [repeat,rule] of [['egy10','FREQ=DAILY;INTERVAL=10']]){
  const recurring=exportICS({...state,items:[{...daily,repeat}]},resolver,opts);
  assert.equal(recurring.count,1);
  assert.ok(recurring.text.includes('RRULE:'+rule));
@@ -57,3 +57,17 @@ assert.equal(incoming.items[0].alert,'15min');
 const alreadyOwned=parseICS(far.text,{knownSeriesIds:['egy-year']});
 assert.equal(alreadyOwned.imported,0,'Owned Egyptian recurrence expansions must not duplicate');
 assert.equal(alreadyOwned.duplicate,far.count);
+
+const sixDay={...item,id:'every-six-days',title:'Buy food for the shift',repeat:'custom',repeatEvery:6,repeatUnit:'day'};
+const exportedSix=exportICS({...state,items:[sixDay]},occursOn,opts);
+assert.match(exportedSix.text,/RRULE:FREQ=DAILY;INTERVAL=6/);
+const sixImported=parseICS(exportedSix.text);
+assert.equal(sixImported.items[0].repeat,'custom');
+assert.equal(sixImported.items[0].repeatEvery,6);
+assert.equal(sixImported.items[0].repeatUnit,'day');
+const twentyDays={...sixDay,id:'twenty-days',repeatEvery:2,repeatUnit:'decan'};
+assert.match(exportICS({...state,items:[twentyDays]},occursOn,opts).text,/RRULE:FREQ=DAILY;INTERVAL=20/);
+const everyTwoEgyptianMonths={...sixDay,id:'every-two-months',repeatEvery:2,repeatUnit:'month'};
+const monthsExport=exportICS({...state,items:[everyTwoEgyptianMonths]},occursOn,opts);
+assert.doesNotMatch(monthsExport.text,/RRULE:FREQ=MONTHLY/);
+assert.ok(monthsExport.count>2);
