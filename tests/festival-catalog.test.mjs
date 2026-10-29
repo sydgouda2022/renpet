@@ -87,13 +87,13 @@ assert.deepEqual(enabledSourceIds([],catalog),[],'Explicitly disabled source per
 assert.deepEqual(enabledSourceIds([AMUN_SOURCE,AMUN_SOURCE,'nonexistent'],catalog),[AMUN_SOURCE]);
 
 const festival=data.festivals.find(x=>x.month===1&&x.day===1);
-const newYear=toGregorian({year:6282,month:1,day:1},data.years);
+const newYear=toGregorian({year:6268,month:1,day:1},data.years);
 assert.equal(catalog.sources.find(s=>s.id==='national-egypt').events.length,7);
 assert.equal(catalog.sources.find(s=>s.id==='esna-khnum').events.length,3);
 assert.equal(catalog.sources.find(s=>s.id==='isis-philae').events.length,1);
-assert.ok(festivalHitsForDay(toGregorian({year:6282,month:11,day:13},data.years),data.years,catalog,['esna-khnum']).some(f=>f.id==='esna-neith-visit'));
-assert.ok(festivalHitsForDay(toGregorian({year:6282,month:13,day:4},data.years),data.years,catalog,['isis-philae']).some(f=>f.id==='isis-epagomenal-birthday'));
-assert.equal(festivalHitsForDay(toGregorian({year:6282,month:13,day:4},data.years),data.years,catalog,[]).length,0,'No historical catalog on opt-out');
+assert.ok(festivalHitsForDay(toGregorian({year:6268,month:11,day:13},data.years),data.years,catalog,['esna-khnum']).some(f=>f.id==='esna-neith-visit'));
+assert.ok(festivalHitsForDay(toGregorian({year:6268,month:13,day:4},data.years),data.years,catalog,['isis-philae']).some(f=>f.id==='isis-epagomenal-birthday'));
+assert.equal(festivalHitsForDay(toGregorian({year:6268,month:13,day:4},data.years),data.years,catalog,[]).length,0,'No historical catalog on opt-out');
 assert.ok(festivalHitsForDay(dayNumber('2026-04-13'),data.years,catalog,['national-egypt']).some(f=>f.id==='sham-el-nessim'));
 const october6=dayNumber('2026-10-06');
 assert.ok(festivalHitsForDay(october6,data.years,catalog,['national-egypt']).some(f=>f.id==='armed-forces'),
@@ -137,7 +137,7 @@ const future=await loadFestivalCatalog(data,async url=>({ok:!!(url==='./festival
 assert.equal(future.sources.length,3,'Independent nonreligious and historical catalogs supported');
 assert.deepEqual(enabledSourceIds(null,future),[AMUN_SOURCE],'Additional catalogs require opt-in');
 const dec25=dayNumber('2026-12-25');
-const ancientStart=toGregorian({year:6282,month:4,day:16},data.years);
+const ancientStart=toGregorian({year:6268,month:4,day:16},data.years);
 assert.deepEqual(festivalHitsForDay(dec25,data.years,future,['national-test']).map(x=>x.id),['nat-1']);
 assert.deepEqual(festivalHitsForDay(ancientStart,data.years,future,['ancient-test']).map(x=>x.id),['anc-1']);
 assert.deepEqual(festivalHitsForDay(ancientStart+1,data.years,future,['ancient-test']).map(x=>x.id),['anc-1']);
