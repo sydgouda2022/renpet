@@ -9,7 +9,9 @@ export const DEFAULT_CALENDARS=[
 const copy=value=>structuredClone(value);
 const uid=()=>crypto.randomUUID();
 export function emptyState(){return {calendars:copy(DEFAULT_CALENDARS),items:[]};}
-export const REPEAT_RULES=Object.freeze(['none','daily','egy10','egyMonthly','egyYearly']);
+export const REPEAT_RULES=Object.freeze(['none','daily','egy10','egyMonthly','egyYearly','custom']);
+export const CUSTOM_UNITS=Object.freeze(['day','decan','month','year']);
+export const MAX_REPEAT_INTERVAL=365;
 export function validateSchedulerData(state){
  if(!state||!Array.isArray(state.calendars)||!state.calendars.length||!Array.isArray(state.items))return false;
  const calendars=new Set(),ids=new Set();
@@ -22,6 +24,7 @@ export function validateSchedulerData(state){
   if(!Number.isInteger(i.startDay)||!Number.isInteger(i.endDay)||i.endDay<i.startDay||i.endDay-i.startDay>3660)return false;
   if(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440||!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440)return false;
   if(!REPEAT_RULES.includes(i.repeat)||!['none','atTime','5min','15min','1hour','1day'].includes(i.alert))return false;
+  if(i.repeat==='custom'&&(!Number.isInteger(i.repeatEvery)||i.repeatEvery<1||i.repeatEvery>MAX_REPEAT_INTERVAL||!CUSTOM_UNITS.includes(i.repeatUnit)))return false;
   if(typeof i.location!=='string'||i.location.length>300||typeof i.notes!=='string'||i.notes.length>4000)return false;
   if(!Array.isArray(i.excludedDays||[])||!Array.isArray(i.completedDays||[]))return false;
   ids.add(i.id);
@@ -37,6 +40,7 @@ export function createItem(values){
   endMinutes:Number.isInteger(values.endMinutes)?values.endMinutes:600,
   allDay:Boolean(values.allDay),location:String(values.location||'').trim(),notes:String(values.notes||'').trim(),
   calendarId:String(values.calendarId||'personal'),alert:String(values.alert||'none'),repeat:String(values.repeat||'none'),
+  ...(values.repeat==='custom'?{repeatEvery:Number(values.repeatEvery),repeatUnit:String(values.repeatUnit)}:{}),
   completed:Boolean(values.completed),completedDays:Array.isArray(values.completedDays)?values.completedDays:[],createdAt:now,updatedAt:now
  };
 }
@@ -104,7 +108,17 @@ function isStartOccurrence(item,day){
  if(item.repeat==='none')return day===item.startDay;
  if(item.repeat==='daily')return true;
  if(item.repeat==='egy10')return delta%10===0;
+ if(item.repeat==='custom'){
+  const every=item.repeatEvery;
+  if(!Number.isInteger(every)||every<1||every>MAX_REPEAT_INTERVAL||!CUSTOM_UNITS.includes(item.repeatUnit))return false;
+  if(item.repeatUnit==='day')return delta%every===0;
+  if(item.repeatUnit==='decan')return delta%(every*10)===0;
+ }
  const base=toEgyptian(item.startDay),candidate=toEgyptian(day);
+ if(item.repeat==='custom'){
+  if(item.repeatUnit==='month')return candidate.day===base.day&&(monthSerial(candidate)-monthSerial(base))%item.repeatEvery===0;
+  if(item.repeatUnit==='year')return candidate.month===base.month&&candidate.day===base.day&&(candidate.year-base.year)%item.repeatEvery===0;
+ }
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;
  return false;
