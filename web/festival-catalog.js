@@ -108,14 +108,14 @@ function hitGregorian(day,event,rule){
  return starts.filter(start=>day>=start&&day<start+event.duration)
   .map(start=>({...event,start,end:start+event.duration}));
 }
-export function festivalHitsForDay(day,years,catalog,selection){
+export function festivalHitsForDay(day,catalog,selection){
  const allowed=new Set(enabledSourceIds(selection,catalog));
  const results=[];
  for(const source of catalog?.sources||[]){
   if(!allowed.has(source.id))continue;
   const hits=source.events.flatMap(e=>{
    const rule=e.calendarRule||source.calendarRule;
-   return rule==='egyptian-fixed'?festivalHits(day,years,[e]):hitGregorian(day,e,rule)||[];
+   return rule==='egyptian-fixed'?festivalHits(day,[e]):hitGregorian(day,e,rule)||[];
   });
   for(const hit of hits)results.push({...hit,sourceId:source.id,
    sourceName:source.name,category:source.category,calendarRule:hit.calendarRule||source.calendarRule});
