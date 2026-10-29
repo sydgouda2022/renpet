@@ -81,6 +81,23 @@ async function main(){
   assert.equal(await page.locator('#event-editor').count(),0);
   assert.equal(prompts,3,'Cancel, backdrop and Escape must each request confirmation');
   assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved Egyptian event'));
+  // An adjusted but unconfirmed time-picker value also counts as an unsaved edit.
+  await page.locator('header [data-new]').click();
+  const timeDraft=page.locator('#event-editor');
+  const initialTime=await timeDraft.locator('[name=start]').inputValue();
+  await timeDraft.locator('[data-time-open=start]').click();
+  await timeDraft.locator('[data-time-minute="'+(initialTime.endsWith(':00')?15:0)+'"]').click();
+  page.removeAllListeners('dialog');
+  let timePrompts=0;
+  page.on('dialog',d=>{timePrompts++;d.dismiss();});
+  await timeDraft.locator('[data-close]').click();
+  assert.equal(await page.locator('#event-editor').count(),1,'Unconfirmed changed time must request discard consent');
+  assert.equal(timePrompts,1);
+  await timeDraft.locator('[data-time-dismiss]').click();
+  await timeDraft.locator('[data-close]').click();
+  assert.equal(await page.locator('#event-editor').count(),0,'Unmodified editor closes without extra confirmation');
+  page.removeAllListeners('dialog');
+  page.on('dialog',d=>d.accept());
   // Reminder completion is its own accessible button, not a span inside Edit.
   await page.locator('header [data-new]').click();
   const reminderForm=page.locator('#event-editor');
