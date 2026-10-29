@@ -37,10 +37,15 @@ stamp = hashlib.sha256(b"".join(
 )).hexdigest()[:12]
 # Lexicons install independently. Lazy-cache nonessential numeral SVG images.
 # The initial offline release needs only day numerals and today's Egyptian year.
-from datetime import date, timedelta
-calendar_years = json.loads((web/'data.json').read_text(encoding='utf-8'))['years']
-current_egy_year = next((y['year'] for y in calendar_years
- if date.fromisoformat(y['start']) <= date.today() < date.fromisoformat(y['start'])+timedelta(days=y['days'])), 6282)
+from datetime import date
+days_since_epoch = (date.today() - date(2026, 9, 11)).days
+def egyptian_start_offset(year):
+    return 365 * (year - 6268) + (year - 1) // 4 - (6268 - 1) // 4
+current_egy_year = 6268 + days_since_epoch // 365
+while egyptian_start_offset(current_egy_year) > days_since_epoch:
+    current_egy_year -= 1
+while egyptian_start_offset(current_egy_year + 1) <= days_since_epoch:
+    current_egy_year += 1
 core_numerals = {str(n) for n in range(1,32)} | {str(current_egy_year+i) for i in (-1,0,1)}
 precache = [p for p in files if p not in {'./lexicon/lexicon.json', './coptic-lexicon/lexicon.json'}
  and (not p.startswith('./assets/numerals/') or Path(p).stem in core_numerals)]
