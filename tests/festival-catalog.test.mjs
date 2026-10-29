@@ -68,6 +68,8 @@ for(const source of catalog.sources){
   assert.ok(!arabic.test(source.name[locale]+source.description[locale]),'Arabic leaked into native source '+source.id);
  }
  for(const festival of source.events){
+  assert.ok(!Object.values(festival).some(value=>typeof value==='string'&&/\$\{[A-Z]+\}/.test(value)),
+   'No unresolved festival text placeholders: '+festival.id);
   for(const locale of ['cop','egy']){
    const expression=locale==='cop'?coptic:glyph;
    const description=festival['description_'+locale];
