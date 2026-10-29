@@ -725,23 +725,6 @@ async function finishDrag(ev,cancel=false){
  if(!drag.moved||cancel){if(drag.moved)render();return;}
  suppressEditUntil=Date.now()+550;
  if(!drag.next){render();return;}
- // The final captured pointer coordinates have precedence when intermediate
- // WebKit move events were canceled by an equal-and-opposite scroll change.
- // A substantial finger movement must not save a visually unchanged event.
- // Only use this fallback when the normal timeline calculation is a no-op;
- // otherwise preserve its scroll-aware 15-minute snap.
- if(drag.next.start===drag.start&&drag.next.end===drag.end){
-  const rawDelta=snap((ev.clientY-drag.y)/64*60);
-  if(Math.abs(ev.clientY-drag.y)>12&&rawDelta!==0){
-   const duration=Math.max(15,drag.end-drag.start);
-   if(drag.mode==='resize')
-    drag.next={start:drag.start,end:Math.max(drag.start+15,Math.min(1440,drag.end+rawDelta))};
-   else{
-    const start=Math.max(0,Math.min(1440-duration,drag.start+rawDelta));
-    drag.next={start,end:start+duration};
-   }
-  }
- }
  const sched=loadScheduler(),item=sched.items.find(i=>i.id===drag.id);
  if(item){
   const previous={start:item.startMinutes,end:item.endMinutes};
