@@ -1,106 +1,60 @@
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayNumber} from '../web/calendar.js';
-import {emptyState,createItem,upsertItem,removeItem,itemsForDay,saveScheduler,loadScheduler,ensureSavedItemVisible,hiddenItemsForDay,revealSavedCalendars,createCalendar,updateCalendar,removeCalendar,toggleCompleted,occurrenceStartForDay,occurrenceStartsForDay,nextOccurrence,excludeOccurrence,schedulerRecoveryStatus,restoreSchedulerSnapshot} from '../web/scheduler.js';
+import {dayNumber,toGregorian} from '../web/calendar.js';
+import {
+ emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,
+ createCalendar,updateCalendar,removeCalendar,ensureSavedItemVisible,
+ toggleCompleted,isCompleted,excludeOccurrence,occurrenceStartForDay,nextOccurrence,REPEAT_RULES
+} from '../web/scheduler.js';
 const day=dayNumber('2026-10-14');
-const state=emptyState();
-assert.equal(state.calendars.length,3);
-const event=createItem({title:'Amun festival',startDay:day,endDay:day,startMinutes:540,endMinutes:600,calendarId:'personal'});
-upsertItem(state,event);
-assert.equal(itemsForDay(state,day).length,1);
-assert.equal(itemsForDay(state,day+1).length,0);
-const daily=createItem({title:'Daily',startDay:day,endDay:day,repeat:'daily',calendarId:'personal'});
-upsertItem(state,daily);
-assert.equal(itemsForDay(state,day+3).length,1);
-const reminder=createItem({kind:'reminder',title:'Reminder',startDay:day,calendarId:'personal'});
-upsertItem(state,reminder);
-toggleCompleted(reminder,day);
-assert.equal(reminder.completed,true);
-const custom=createCalendar(state,'Family','#187568');
-assert.ok(custom);
-updateCalendar(state,custom.id,{visible:false});
-assert.equal(state.calendars.find(c=>c.id===custom.id).visible,false);
-assert.ok(removeCalendar(state,custom.id));
-removeItem(state,event.id);
-assert.equal(state.items.some(i=>i.id===event.id),false);
-const memory=new Map();
-const storage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)};
-assert.ok(saveScheduler(state,storage));
-assert.equal(loadScheduler(storage).items.length,state.items.length);
-// Regression: previously hidden calendars accepted appointments which were
-// stored in localStorage yet disappeared from Month, Day and upcoming List.
-const historical=emptyState();
-historical.calendars.find(c=>c.id==='personal').visible=false;
-const nov5=dayNumber('2026-11-05');
-const missing=createItem({kind:'event',title:'ميعاد السعادة',startDay:nov5,endDay:nov5,startMinutes:540,endMinutes:600,calendarId:'personal'});
-upsertItem(historical,missing);
-assert.equal(itemsForDay(historical,nov5).length,0,'Replicate stored-but-hidden event');
-assert.equal(hiddenItemsForDay(historical,nov5).length,1,'Detect the hidden event');
-ensureSavedItemVisible(historical,missing);
-assert.equal(itemsForDay(historical,nov5)[0].id,missing.id,'Saving unhides its calendar so the appointment appears');
-assert.equal(historical.calendars.find(c=>c.id==='personal').visible,true);
-const orphan=createItem({title:'Old calendar',startDay:nov5,calendarId:'deleted-id'});
-ensureSavedItemVisible(historical,orphan);
-assert.equal(orphan.calendarId,'personal','Orphaned calendar IDs are moved to an existing visible calendar');
-const legacy=emptyState();
-for(const c of legacy.calendars)c.visible=false;
-const oldOrphan=createItem({title:'Legacy Nov 5',startDay:nov5,calendarId:'removed-calendar'});
-upsertItem(legacy,oldOrphan);
-assert.equal(itemsForDay(legacy,nov5).length,0);
-revealSavedCalendars(legacy);
-assert.equal(itemsForDay(legacy,nov5).length,1,'Show All recovers orphaned legacy appointment');
-assert.equal(legacy.items[0].id,oldOrphan.id,'Recovery does not delete or rewrite the appointment ID');
-const repeating=createItem({title:'Weekly series',startDay:day,endDay:day,repeat:'weekly',calendarId:'personal'});
-const repeatingState=emptyState();upsertItem(repeatingState,repeating);
-assert.equal(occurrenceStartForDay(repeating,day+7),day+7);
-assert.equal(itemsForDay(repeatingState,day+7).length,1);
-assert.ok(excludeOccurrence(repeating,day+7));
-assert.equal(itemsForDay(repeatingState,day+7).length,0,'Single occurrence excluded');
-assert.equal(itemsForDay(repeatingState,day+14).length,1,'Other recurring days remain');
-const detached=createItem({title:'One modified occurrence',startDay:day+7,endDay:day+7,calendarId:'personal'});
-upsertItem(repeatingState,detached);
-assert.equal(itemsForDay(repeatingState,day+7)[0].id,detached.id);
-const recovery=new Map();
-const saved={getItem:k=>recovery.get(k)??null,setItem:(k,v)=>recovery.set(k,v),removeItem:k=>recovery.delete(k)};
-const savedState=emptyState();
-upsertItem(savedState,createItem({title:'first',startDay:day,calendarId:'personal'}));
-assert.equal(saveScheduler(savedState,saved),true);
-upsertItem(savedState,createItem({title:'second',startDay:day,calendarId:'personal'}));
-assert.equal(saveScheduler(savedState,saved),true);
-assert.ok(recovery.has('renpet.scheduler.recovery.1'));
-saved.setItem('renpet.scheduler.v1','{corrupt');
-assert.equal(schedulerRecoveryStatus(saved).recoveryAvailable,true);
-assert.equal(schedulerRecoveryStatus(saved).primaryValid,false);
-assert.equal(loadScheduler(saved).items.length,1,'Recovered last verified scheduler snapshot');
-assert.equal(saveScheduler(loadScheduler(saved),saved),false,'Corrupt primary cannot be silently overwritten');
-const restored=restoreSchedulerSnapshot(saved);
-assert.equal(restored.restored,true);
-assert.equal(saved.getItem('renpet.scheduler.corrupt.v1'),'{corrupt','Original damaged bytes are preserved');
-assert.equal(loadScheduler(saved).items.length,1);
-const noRecovery={getItem:k=>k==='renpet.scheduler.v1'?'{broken':null,setItem:()=>{throw Error('Should not overwrite damaged scheduler')}};
-assert.equal(saveScheduler(emptyState(),noRecovery),false,'Never overwrite sole damaged primary');
-// A three-day event starting every day produces three distinct occurrences on day 3.
-const overlap=createItem({title:'Long daily',startDay:day,endDay:day+2,repeat:'daily',calendarId:'personal'});
-const overlapState=emptyState();upsertItem(overlapState,overlap);
-assert.deepEqual(occurrenceStartsForDay(overlap,day+2),[day,day+1,day+2]);
-assert.equal(nextOccurrence(overlap,day+1),day+1);
-const weeklyLong=createItem({title:'Long weekly',startDay:day,endDay:day+4,repeat:'weekly',calendarId:'personal'});
-assert.equal(nextOccurrence(weeklyLong,day+2),day+7,'Next occurrence returns a start, not continuation date');
-const live=itemsForDay(overlapState,day+2);
-assert.equal(live.length,3,'Overlapping recurring events are not collapsed');
-assert.deepEqual(live.map(i=>i._occurrenceStart),[day,day+1,day+2]);
-assert.equal(occurrenceStartForDay(overlap,day+2),day+2,'Direct occurrence has precedence');
-excludeOccurrence(overlap,day+1);
-assert.deepEqual(itemsForDay(overlapState,day+2).map(i=>i._occurrenceStart),[day,day+2]);
-assert.equal(itemsForDay(overlapState,day+3).length,2,'Excluding one occurrence keeps neighbors');
-toggleCompleted(overlap,day+2); // non-reminders do not acquire completion.
-const reminderMulti=createItem({title:'Long reminder',kind:'reminder',startDay:day,endDay:day+2,repeat:'daily',calendarId:'personal'});
-const multiState=emptyState();upsertItem(multiState,reminderMulti);
-toggleCompleted(reminderMulti,day+1);
-assert.equal(reminderMulti.completedDays.includes(day+1),true);
-assert.deepEqual(itemsForDay(multiState,day+2).map(i=>i._occurrenceStart),[day,day+1,day+2]);
-const gregMonthly=createItem({title:'Gregorian monthly',startDay:dayNumber('2026-10-31'),repeat:'gregMonthly',calendarId:'personal'});
-assert.equal(itemsForDay({...emptyState(),items:[gregMonthly]},dayNumber('2026-11-30')).length,0,'No invented 31st day');
-assert.equal(itemsForDay({...emptyState(),items:[gregMonthly]},dayNumber('2026-12-31')).length,1);
-const gregYearly=createItem({title:'Gregorian yearly',startDay:dayNumber('2026-10-25'),repeat:'gregYearly',calendarId:'personal'});
-assert.equal(itemsForDay({...emptyState(),items:[gregYearly]},dayNumber('2027-10-25')).length,1);
-console.log('Scheduler compatibility, Gregorian recurrences, overlapping instances and CRUD OK');
+test('empty local calendar state is valid',()=>{
+ const state=emptyState();
+ assert.equal(state.calendars.length,3);
+ assert.equal(state.items.length,0);
+ assert.equal(validateSchedulerData(state),true);
+ assert.deepEqual(REPEAT_RULES,['none','daily','egy10','egyMonthly','egyYearly']);
+});
+test('appointments and calendars are edited without persistence side effects',()=>{
+ const s=emptyState(),a=createItem({title:'Egyptian appointment',startDay:day,calendarId:'personal'});
+ upsertItem(s,a);
+ assert.equal(itemsForDay(s,day).length,1);
+ assert.equal(validateSchedulerData(s),true);
+ const c=createCalendar(s,'Family','#123456');
+ a.calendarId=c.id;
+ updateCalendar(s,c.id,{visible:false});
+ assert.equal(itemsForDay(s,day).length,0);
+ ensureSavedItemVisible(s,a);
+ assert.equal(itemsForDay(s,day).length,1);
+ assert.ok(removeCalendar(s,c.id,'personal'));
+ assert.equal(a.calendarId,'personal');
+ removeItem(s,a.id);
+ assert.equal(s.items.length,0);
+});
+test('all recurrences follow Egyptian days, months or years',()=>{
+ const original=toGregorian({year:6268,month:2,day:26});
+ for(const [repeat,expected] of [
+  ['daily',original+1],
+  ['egy10',original+10],
+  ['egyMonthly',toGregorian({year:6268,month:3,day:26})],
+  ['egyYearly',toGregorian({year:6269,month:2,day:26})]
+ ]){
+  const e=createItem({title:repeat,repeat,startDay:original});
+  assert.equal(nextOccurrence(e,original+1),expected,repeat);
+  excludeOccurrence(e,expected);
+  assert.equal(occurrenceStartForDay(e,expected),null);
+ }
+});
+test('sixth epagomenal day is never fabricated in common years',()=>{
+ const day6=toGregorian({year:6268,month:13,day:6});
+ const event=createItem({title:'Sixth day',startDay:day6,repeat:'egyYearly'});
+ assert.equal(nextOccurrence(event,day6+1,365*5),toGregorian({year:6272,month:13,day:6}));
+});
+test('reminder completion and invalid data',()=>{
+ const s=emptyState(),e=createItem({kind:'reminder',title:'Reminder',startDay:day,repeat:'egy10'});
+ upsertItem(s,e);toggleCompleted(e,day);
+ assert.equal(isCompleted(e,day),true);
+ assert.equal(isCompleted(e,day+10),false);
+ assert.equal(validateSchedulerData(s),true);
+ e.repeat='gregYearly';
+ assert.equal(validateSchedulerData(s),false);
+});
