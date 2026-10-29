@@ -2,7 +2,7 @@
 
 Precache uses canonical URLs. Runtime requests may carry ?v= for PWA
 cache-busting; Cache.match(ignoreSearch=True) resolves those while offline.
-Keep at most one previous complete cache during atomic SW upgrades.
+Only the current release cache is retained.
 """
 from __future__ import annotations
 
@@ -64,10 +64,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
  event.waitUntil((async () => {
   const existing = (await caches.keys()).filter(k => k.startsWith(OLD_PREFIX));
-  // Retain one previous complete release while already-open clients finish.
-  const older = existing.filter(k => k !== CACHE);
-  const keep = new Set([CACHE, ...older.slice(-1)]);
-  await Promise.all(existing.filter(k => !keep.has(k)).map(k => caches.delete(k)));
+  await Promise.all(existing.filter(key => key !== CACHE).map(key => caches.delete(key)));
   await self.clients.claim();
  })());
 });
@@ -101,22 +98,6 @@ self.addEventListener('fetch', event => {
   canonical.hash = '';
   const cached = await cache.match(canonical.href) ||
     await cache.match(event.request, {ignoreSearch: true});
-  // The source registry can be removed or amended between PWA releases.
-  // Cache-first previously kept six obsolete festival choices visible even
-  // after production contained only four. Prefer the network when online,
-  // but keep the installed snapshot for genuinely offline use.
-  if (url.pathname.endsWith('/festival-sources.json') ||
-      url.pathname.includes('/festival-packs/')) {
-    try {
-      const fresh = await fetch(event.request, {cache: 'no-store'});
-      if (fresh.ok) {
-        event.waitUntil(cache.put(canonical.href, fresh.clone()).catch(() => {}));
-        return fresh;
-      }
-    } catch {}
-    return cached ||
-      new Response('Festival catalog unavailable offline', {status: 503});
-  }
   // Executable resources must belong to this cached release, never a prior one.
   const executable=/\.(?:js|mjs|css)$/.test(url.pathname);
   if (executable) {
@@ -129,8 +110,7 @@ self.addEventListener('fetch', event => {
    if (response.ok) event.waitUntil(cache.put(event.request, response.clone()).catch(() => {}));
    return response;
   } catch {
-   const older = executable ? null : await caches.match(event.request, {ignoreSearch: true});
-   return older || new Response('Renpet offline asset unavailable', {status: 503, headers: {'Content-Type': 'text/plain'}});
+   return new Response('Renpet offline asset unavailable', {status: 503, headers: {'Content-Type': 'text/plain'}});
   }
  })());
 });
