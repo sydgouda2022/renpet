@@ -154,7 +154,6 @@ body[data-language=egy] .date-fields select[name=endEgyDay]{font-size:27px!impor
 .festival-detail-sheet{width:min(100%,580px);max-height:min(86dvh,850px);overflow:auto;background:var(--paper,#fff);color:var(--ink,#143b33);border-radius:20px;padding:22px;box-shadow:0 12px 45px #0003}
 .festival-detail-sheet header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .festival-detail-sheet h2{font-size:23px;line-height:1.5;margin:0}
-.festival-detail-sheet header button{min-width:44px;min-height:44px;border:0;background:transparent;font-size:28px;cursor:pointer}
 .festival-detail-sheet .festival-type{font-weight:700;color:#176c59}
 .festival-detail-sheet .festival-when{color:var(--muted,#527064)}
 .festival-detail-sheet .festival-evidence{white-space:pre-line;line-height:1.8;font-size:15px}
