@@ -143,7 +143,7 @@ async function main(){
   assert.equal(await customForm.locator('[name=repeatEvery]').inputValue(),'6');
   await customForm.locator('[name=repeatEvery]').selectOption('12');
   assert.equal(await customForm.locator('[data-repeat-preset="6"]').getAttribute('aria-pressed'),'false');
-  assert.ok((await customForm.locator('.repeat-preview').innerText()).includes('12'));
+  assert.ok((await customForm.locator('.repeat-preview').innerText()).includes(await customForm.locator('[name=repeatEvery] option:checked').innerText()),'Preview uses the selected script numerals');
   await customForm.locator('[name=repeatEvery]').selectOption('6');
   await customForm.locator('[name=repeatUnit]').selectOption('day');
   await customForm.locator('.save-button').click();
