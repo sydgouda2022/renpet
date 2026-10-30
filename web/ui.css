@@ -489,13 +489,26 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 .reminder-box.is-complete{background:var(--green);color:#fff;border-radius:7px}
 
 /* Custom Egyptian repetition stays inside the native touch-friendly editor. */
-.custom-repeat{display:grid;grid-template-columns:minmax(72px,0.7fr) minmax(0,2fr);gap:10px;align-items:end;margin:8px 0 14px}
+/* Repeat is a first-class event field. Presets support frequent patterns
+   without scrolling through hundreds of interval options. */
+.repeat-editor{display:flex;flex-direction:column;gap:9px;flex-shrink:0}
+.repeat-editor>label{display:flex;flex-direction:column;gap:7px;font-size:14px;color:var(--muted)}
+.repeat-editor select{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-size:16px}
+.custom-repeat{display:flex;flex-direction:column;gap:12px;margin:2px 0 9px;min-width:0}
 .custom-repeat[hidden]{display:none!important}
-.custom-repeat>label{display:flex;flex-direction:column;gap:7px;min-width:0;color:var(--rubric);font-size:14px}
-.custom-repeat select{min-height:48px;width:100%}
-body[data-language=egy] .custom-repeat>label{font-size:23px}
-body[data-language=egy] .custom-repeat select{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:21px}
-body[data-language=cop] .custom-repeat select{font-family:Coptic,system-ui,sans-serif}
+.repeat-presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.repeat-preset{display:grid;place-items:center;min-width:0;min-height:45px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-size:18px;font-weight:650}
+.repeat-preset[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+.repeat-preset:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.repeat-inputs{display:grid;grid-template-columns:minmax(72px,0.75fr) minmax(0,2fr);gap:10px;align-items:end}
+.repeat-inputs>label{display:flex;flex-direction:column;gap:6px;min-width:0;color:var(--rubric);font-size:14px}
+.repeat-preview{margin:0;color:var(--green);font-weight:650;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+body[data-language=egy] .repeat-editor>label,body[data-language=egy] .repeat-inputs>label{font-size:22px}
+body[data-language=egy] .repeat-editor select,body[data-language=egy] .repeat-preview{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:22px;line-height:1.6}
+body[data-language=egy] .repeat-preset{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:25px;line-height:1.2}
+body[data-language=cop] .repeat-editor select,body[data-language=cop] .repeat-preview{font-family:Coptic,system-ui,sans-serif}
+.timeline-event[data-drag-preview="true"]{outline:2px dashed var(--green);outline-offset:-2px;box-shadow:0 3px 14px #113b2e44}
+
 
 /* Single-day appointments expose one date by default; extending to a
    different Egyptian day remains one obvious 48px summary action. */
