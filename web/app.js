@@ -810,14 +810,19 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
  }});
 let gesture=null;
 root.addEventListener('touchstart',ev=>{
- if(ev.touches.length!==1||state.dialog||state.panel)return;
- gesture={x:ev.touches[0].clientX,y:ev.touches[0].clientY};
+ gesture=null;
+ if(ev.touches.length!==1||state.dialog||state.panel||state.festivalDetail)return;
+ // Page-changing swipes belong to the calendar, not scrollable agendas,
+ // appointment cards, the navigation bar, or any editor control.
+ const region=ev.target.closest('.month-section,.year-overview,.timeline,.list-page');
+ if(!region||ev.target.closest('.timeline-event,.event-row-shell,.upcoming-day,input,select,textarea,[role="dialog"]'))return;
+ gesture={x:ev.touches[0].clientX,y:ev.touches[0].clientY,view:state.view};
 },{passive:true});
 root.addEventListener('touchend',ev=>{
  if(!gesture||!ev.changedTouches.length)return;
  const dx=ev.changedTouches[0].clientX-gesture.x,dy=ev.changedTouches[0].clientY-gesture.y;
- gesture=null;
- if(Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5){
+ const view=gesture.view;gesture=null;
+ if(state.view===view&&Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5){
   navigate((document.documentElement.dir==='rtl'?1:-1)*(dx>0?1:-1));
  }
 },{passive:true});
