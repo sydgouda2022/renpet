@@ -202,3 +202,18 @@ body[data-language=egy] .festival-detail-sheet .festival-sources-links a{font-si
  .month-section.ten-day .decade-days{grid-template-columns:repeat(5,minmax(0,1fr))}
  .month-section.ten-day .decade-days .date{min-height:64px}
 }
+
+/* Readable Egyptian numerals and discoverable, independent month scrolling.
+   The selected-day agenda stays visible while long 10-day grids scroll. */
+html[data-renpet-layout="phone"] .month-section{
+ scrollbar-width:thin;scrollbar-color:var(--gold) transparent;
+}
+html[data-renpet-layout="phone"] .month-section::-webkit-scrollbar{display:block;width:4px}
+html[data-renpet-layout="phone"] .month-section::-webkit-scrollbar-thumb{border-radius:5px;background:var(--gold)}
+html[data-renpet-layout="phone"] body[data-language=egy] .month-section.ten-day .decade-days .date{min-height:100px}
+html[data-renpet-layout="phone"] body[data-language=egy] .month-section.ten-day .decade-days .date .day-number{min-height:88px;height:88px}
+html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-tens{font-size:23px;line-height:1.16}
+html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-ones{
+ grid-template-columns:repeat(3,12px);font-size:20px;line-height:19px;
+}
+html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-ones>span{width:12px;height:19px;line-height:19px}
