@@ -495,3 +495,17 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 body[data-language=egy] .custom-repeat>label{font-size:23px}
 body[data-language=egy] .custom-repeat select{font-family:RenpetEgyptian,system-ui,sans-serif;font-size:21px}
 body[data-language=cop] .custom-repeat select{font-family:Coptic,system-ui,sans-serif}
+
+/* Single-day appointments expose one date by default; extending to a
+   different Egyptian day remains one obvious 48px summary action. */
+.end-date-details{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.end-date-details>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:11px 13px;color:var(--ink);font-weight:650;cursor:pointer}
+.end-date-details>summary::marker{content:''}
+.end-date-details>summary::-webkit-details-marker{display:none}
+.end-date-details>summary:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
+.end-date-hint{color:var(--green);font-size:13px;font-weight:550;text-align:end;overflow-wrap:anywhere}
+.end-date-details>label{display:flex;flex-direction:column;gap:8px;padding:0 13px 14px;color:var(--muted);font-size:14px}
+.end-date-details .date-preview{margin-block:5px 0}
+.sheet[data-all-day="true"] .local-time-fields{display:none}
+body[data-language=egy] .end-date-details>summary{font-size:23px;line-height:1.45}
+body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
