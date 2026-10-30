@@ -52,7 +52,11 @@ async function main(){
   await recurrenceBlock.waitFor();
   await recurrenceBlock.click();
   const editor=page.locator('#event-editor');
-  assert.equal(await editor.locator('[name=repeatScope]').inputValue(),'one');
+  assert.equal(await editor.locator('[name=repeatScope][value=one]').isChecked(),true,'One occurrence is the safe edit default');
+  assert.equal(await editor.locator('.repeat-scope-options label').count(),2,'Recurring edits offer two clear touch choices');
+  await editor.locator('[name=repeatScope][value=series]').check();
+  assert.equal(await editor.locator('[name=repeatScope][value=series]').isChecked(),true);
+  await editor.locator('[name=repeatScope][value=one]').check();
   const expectedDate=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),secondDay);
   assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),expectedDate.day);
   await editor.locator('[name=title]').fill('Only this Egyptian day');
@@ -66,7 +70,10 @@ async function main(){
   // Quick deletion removes only the selected occurrence, not its parent series.
   for(let step=0;step<10;step++)await page.locator('[data-next]').click();
   const thirdDay=item.startDay+20;
-  await page.locator('.timeline-event[data-edit="'+item.id+'"] [data-quick-delete]').click();
+  const recurringDelete=page.locator('.timeline-event[data-edit="'+item.id+'"] [data-quick-delete]');
+  const bounds=await recurringDelete.boundingBox();
+  assert.ok(bounds&&bounds.width>=44&&bounds.height>=44,'Timeline delete needs a full-size touch target');
+  await recurringDelete.click();
   state=await record(page,'scheduler');
   assert.ok(state.items.some(i=>i.id===item.id),'Quick delete must retain the recurring series');
   assert.ok(state.items.find(i=>i.id===item.id).excludedDays.includes(thirdDay));
