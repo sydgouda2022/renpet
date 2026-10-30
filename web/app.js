@@ -414,8 +414,9 @@ function render(){
   const events=[...root.querySelectorAll('.timeline-event')];
   const first=events.reduce((earliest,el)=>Math.min(earliest,parseFloat(el.style.top)||0),Infinity);
   const marker=state.focus===today()?root.querySelector('[data-now-line]'):null;
-  const target=Number.isFinite(first)?timeline.offsetTop+first:
-   marker?timeline.offsetTop+(parseFloat(marker.style.top)||0):timeline.offsetTop+8*64;
+  const timelineTop=timeline.getBoundingClientRect().top-main.getBoundingClientRect().top+main.scrollTop;
+  const target=timelineTop+(Number.isFinite(first)?first:
+   marker?(parseFloat(marker.style.top)||0):8*64);
   main.scrollTop=Math.max(0,target-Math.min(100,main.clientHeight*.2));
  }
  previousRenderKey=viewKey;
