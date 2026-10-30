@@ -133,6 +133,35 @@ async function main(){
     await page.locator('.sheet-overlay').click({position:{x:9,y:9}});
     assert.equal(await page.locator('#event-editor').count(),0);
     assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved reminder '+width));
+    // Dense, simultaneous appointments must not collapse into unreadable
+    // 30px columns. Open the full list, select one, or dismiss outside.
+    const crowded=await page.evaluate(async day=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js');
+      const sched=await storage.readRecord('scheduler'),ids=[];
+      for(let i=0;i<4;i++){
+       const item=domain.createItem({title:'Shift overlap '+i,startDay:day,startMinutes:600,endMinutes:660,calendarId:'personal'});
+       sched.items.push(item);ids.push(item.id);
+      }
+      await storage.writeRecord('scheduler',sched);return ids;
+    },future.start);
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+future.start+'"]').click();
+    const cluster=page.locator('.timeline-crowded');
+    await cluster.waitFor();
+    assert.equal(await cluster.count(),1,'Four simultaneous items must form one accessible group');
+    assert.equal(await page.locator('.timeline-event[data-edit="'+crowded[0]+'"]').count(),0);
+    const clusterBounds=await cluster.boundingBox();
+    assert.ok(clusterBounds&&clusterBounds.width>=150&&clusterBounds.height>=44,'Summary must be legible and tappable');
+    await cluster.click();
+    assert.equal(await page.locator('.crowded-choice').count(),4);
+    assert.equal(await page.locator('.crowded-choice').first().isVisible(),true);
+    await page.locator('.crowded-backdrop').click({position:{x:6,y:6}});
+    assert.equal(await page.locator('.crowded-sheet').count(),0,'Outside tap dismisses the group list');
+    await page.locator('.timeline-crowded').click();
+    await page.locator('.crowded-choice[data-crowded-edit="'+crowded[1]+'"]').click();
+    assert.equal(await page.locator('#event-editor [name=title]').inputValue(),'Shift overlap 1');
+    await page.locator('.sheet-overlay').click({position:{x:6,y:6}});
+    assert.equal((await record(page,'scheduler')).items.filter(i=>crowded.includes(i.id)).length,4,'Opening/closing group must not mutate appointments');
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
