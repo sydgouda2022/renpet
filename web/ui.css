@@ -162,7 +162,8 @@ body[data-language=egy] .decade-days .date .glyph{height:21px;max-width:95%}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;min-height:57px;padding:0 15px;border-bottom:1px solid var(--line);background:#fff}
 .sheet-head button{border:0;background:transparent;color:var(--green);min-width:44px;min-height:44px;padding:10px;display:inline-flex;align-items:center;justify-content:center}
 .sheet-head .save-button{font-weight:720}
-.sheet-body{display:flex;flex-direction:column;gap:13px;overflow:auto;padding:16px}
+.sheet-body{display:flex;flex-direction:column;gap:13px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px}
+.sheet-body>*{flex-shrink:0}
 .sheet-body>label{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:14px}
 .sheet-body input:not([type=checkbox]):not([type=radio]),.sheet-body select,.sheet-body textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:16px;color:var(--ink)}
 .sheet-body label.check-row{display:flex;flex-direction:row;justify-content:space-between;align-items:center;color:var(--ink)}
@@ -498,7 +499,7 @@ body[data-language=cop] .custom-repeat select{font-family:Coptic,system-ui,sans-
 
 /* Single-day appointments expose one date by default; extending to a
    different Egyptian day remains one obvious 48px summary action. */
-.end-date-details{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.end-date-details{flex:0 0 auto;min-height:50px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .end-date-details>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:11px 13px;color:var(--ink);font-weight:650;cursor:pointer}
 .end-date-details>summary::marker{content:''}
 .end-date-details>summary::-webkit-details-marker{display:none}
