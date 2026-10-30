@@ -39,6 +39,35 @@ async function main(){
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
     }
+    // One-day appointments keep an uncluttered editor in all three scripts.
+    await page.locator('header [data-new]').click();
+    const compact=page.locator('#event-editor');
+    assert.equal(await compact.locator('.end-date-details').getAttribute('open'),null);
+    assert.equal(await compact.locator('.end-date-details [name=endEgyDay]').isVisible(),false);
+    assert.equal(await compact.locator('.local-time-fields').isVisible(),true);
+    await compact.locator('[name=allDay]').check();
+    assert.equal(await compact.locator('.local-time-fields').isVisible(),false,'All-day hides time controls');
+    await compact.locator('[name=allDay]').uncheck();
+    assert.equal(await compact.locator('.local-time-fields').isVisible(),true);
+    await compact.locator('.end-date-details summary').click();
+    assert.equal(await compact.locator('[name=endEgyDay]').isVisible(),true);
+    await page.locator('.sheet-overlay').click({position:{x:7,y:7}});
+    assert.equal(await page.locator('#event-editor').count(),0);
+
+    // On phones the month has an intentional scroll region with readable
+    // hieroglyphic unit signs; the selected-day agenda remains visible.
+    if(width<700){
+     const metrics=await page.evaluate(()=>{
+      const grid=document.querySelector('.month-section');
+      const sign=grid?.querySelector('.egy-date-ones>span');
+      const agenda=document.querySelector('.month-agenda');
+      return {scrollable:grid?.scrollHeight>grid?.clientHeight,unit:sign?.getBoundingClientRect().width||0,
+       agendaVisible:!!agenda&&agenda.getBoundingClientRect().top<innerHeight};
+     });
+     assert.ok(metrics.scrollable,'Long Egyptian month can scroll at '+width);
+     assert.ok(metrics.unit>=11,'Egyptian date signs need legible width at '+width);
+     assert.ok(metrics.agendaVisible,'Month agenda must remain visible at '+width);
+    }
     // A future appointment appears in the iPad's preview pane, without
     // occupying the phone calendar or duplicating appointment records.
     const future=await page.evaluate(async()=>{
