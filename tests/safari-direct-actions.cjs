@@ -61,8 +61,58 @@ async function main(){
     await row.locator('[data-quick-delete="'+item.id+'"]').click();
     await page.waitForFunction(async id=>!(await(await import('./storage.js')).readRecord('scheduler'))?.items.some(x=>x.id===id),item.id);
     assert.ok(!(await record(page,'scheduler')).items.some(i=>i.id===item.id));
+    // A recurring appointment is still a series: dragging one occurrence
+    // must never mutate the parent until Save, and it must not affect future days.
+    const repeat=await page.evaluate(async title=>{
+     const domain=await import('./scheduler.js'),storage=await import('./storage.js');
+     const state=await storage.readRecord('scheduler');
+     const now=new Date(),day=Math.floor(Date.parse([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-')+'T00:00:00Z')/86400000);
+     const recurring=domain.createItem({title,startDay:day-10,startMinutes:600,endMinutes:660,calendarId:'personal',repeat:'egy10'});
+     state.items.push(recurring);await storage.writeRecord('scheduler',state);
+     return {id:recurring.id,day};
+    },lang+' recurring '+width);
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('[data-date="'+repeat.day+'"]').click();
+    const recurringBlock=page.locator('.timeline-event[data-edit="'+repeat.id+'"]');
+    await recurringBlock.waitFor();
+    const recurringGrip=recurringBlock.locator('.event-resize');
+    await recurringGrip.scrollIntoViewIfNeeded();
+    const rc=await recurringGrip.boundingBox();
+    assert.ok(rc&&rc.height>=20,'Recurring appointment exposes a resize handle');
+    const rx=rc.x+rc.width/2,ry=rc.y+rc.height/2;
+    await page.mouse.move(rx,ry);await page.mouse.down();await page.mouse.move(rx,ry+51,{steps:8});await page.mouse.up();
+    await page.locator('#event-editor').waitFor();
+    assert.equal(await page.locator('[name=repeatScope][value=one]').isChecked(),true);
+    assert.ok((await page.locator('#event-editor [name=end]').inputValue())>'11:00');
+    let unchanged=(await record(page,'scheduler')).items.find(i=>i.id===repeat.id);
+    assert.equal(unchanged.endMinutes,660,'Drag preview must not modify the parent recurrence');
+    assert.ok(!(unchanged.excludedDays||[]).includes(repeat.day));
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    unchanged=(await record(page,'scheduler')).items.find(i=>i.id===repeat.id);
+    assert.equal(unchanged.endMinutes,660,'Outside tap leaves the recurring series unchanged');
+    assert.ok(!(unchanged.excludedDays||[]).includes(repeat.day));
+    const restored=page.locator('.timeline-event[data-edit="'+repeat.id+'"] .event-resize');
+    await restored.scrollIntoViewIfNeeded();
+    const rb=await restored.boundingBox(),rxx=rb.x+rb.width/2,ryy=rb.y+rb.height/2;
+    await page.mouse.move(rxx,ryy);await page.mouse.down();await page.mouse.move(rxx,ryy+51,{steps:8});await page.mouse.up();
+    await page.locator('[name=repeatScope][value=one]').check();
+    await page.locator('#event-editor .save-button').click();
+    await page.locator('.save-confirmation').waitFor();
+    const persisted=await record(page,'scheduler');
+    const series=persisted.items.find(i=>i.id===repeat.id);
+    assert.ok(series,'Save must retain the parent recurring series');
+    assert.equal(series.endMinutes,660,'The parent repeat time remains unchanged');
+    assert.ok(series.excludedDays.includes(repeat.day),'Only the edited occurrence is excluded');
+    const exception=persisted.items.find(i=>i.id!==repeat.id&&i.repeat==='none'&&i.startDay===repeat.day&&i.title===series.title);
+    assert.ok(exception&&exception.endMinutes>660,'Save creates one updated single occurrence');
+    const nextOccurs=await page.evaluate(async({id,day})=>{
+     const domain=await import('./scheduler.js'),storage=await import('./storage.js');
+     const state=await storage.readRecord('scheduler'),item=state.items.find(i=>i.id===id);
+     return domain.occursOn(item,day+10);
+    },repeat);
+    assert.equal(nextOccurs,true,'Future repeats must remain scheduled');
     await page.screenshot({path:path.join(out,'webkit-'+width+'-'+lang+'-direct.png'),fullPage:true});
-    results.push({width,lang,resizePreview:true,outsideDiscard:true,explicitSave:true,delete:true});
+    results.push({width,lang,resizePreview:true,outsideDiscard:true,explicitSave:true,recurringOccurrenceResize:true,seriesPreserved:true,delete:true});
    }finally{await context.close();}
   }
  }finally{await browser.close();}
