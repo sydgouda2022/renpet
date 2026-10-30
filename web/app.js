@@ -49,7 +49,6 @@ async function saveScheduler(next){
  return true;
 }
 let previousRenderKey=null;
-let editorInitialState=null;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,revealItemId:null,saveNotice:false};
 
@@ -125,7 +124,7 @@ function festivalDetails(){
  const sources=[...new Set([f.sourceUrl,...(original.match(/https:\/\/[^\s|]+/g)||[])].filter(url=>{
   try{const u=new URL(url);return u.protocol==='https:'&&url.length<2048;}catch{return false;}
  }))].slice(0,8);
- return '<div class="festival-detail-overlay" data-close-festival-overlay><section class="festival-detail-sheet" role="dialog" aria-modal="true" aria-label="'+safe(ui.details)+'"><header><h2 lang="'+lang()+'">'+safe(title)+'</h2><button type="button" data-close-festival aria-label="'+safe(ui.close)+'">×</button></header><p class="festival-type" lang="'+lang()+'">'+safe(type)+'</p><p class="festival-when">'+safe(N(egy(day).day))+' '+safe(monthName(egy(day).month))+(prefs.gregorian?' · '+safe(greg(day,{day:'numeric',month:'long',year:'numeric'})):'')+'</p>'+(note?'<p class="festival-evidence" lang="'+lang()+'" dir="'+(lang()==='ar'?'rtl':'ltr')+'">'+safe(note)+'</p>':'<p>'+safe(ui.notice)+'</p>')+(ui.translation?'<p class="festival-translation-note" lang="'+lang()+'">'+safe(ui.translation)+'</p>':'')+'<h3 lang="'+lang()+'">'+safe(ui.sources)+' · '+safe(festivalSourceName(src||{name:f.sourceName},lang()))+'</h3>'+(sources.length?'<div class="festival-sources-links">'+sources.map((url,i)=>'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer" lang="'+lang()+'" aria-label="'+safe(ui.sources)+' '+N(i+1)+'">'+safe(ui.sources)+' '+safe(N(i+1))+' ↗</a>').join('')+'</div>':'<p>'+safe(ui.notice)+'</p>')+'</section></div>';
+ return '<div class="festival-detail-overlay" data-close-festival-overlay><section class="festival-detail-sheet" role="dialog" aria-modal="true" aria-label="'+safe(ui.details)+'"><header><h2 lang="'+lang()+'">'+safe(title)+'</h2></header><p class="festival-type" lang="'+lang()+'">'+safe(type)+'</p><p class="festival-when">'+safe(N(egy(day).day))+' '+safe(monthName(egy(day).month))+(prefs.gregorian?' · '+safe(greg(day,{day:'numeric',month:'long',year:'numeric'})):'')+'</p>'+(note?'<p class="festival-evidence" lang="'+lang()+'" dir="'+(lang()==='ar'?'rtl':'ltr')+'">'+safe(note)+'</p>':'<p>'+safe(ui.notice)+'</p>')+(ui.translation?'<p class="festival-translation-note" lang="'+lang()+'">'+safe(ui.translation)+'</p>':'')+'<h3 lang="'+lang()+'">'+safe(ui.sources)+' · '+safe(festivalSourceName(src||{name:f.sourceName},lang()))+'</h3>'+(sources.length?'<div class="festival-sources-links">'+sources.map((url,i)=>'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer" lang="'+lang()+'" aria-label="'+safe(ui.sources)+' '+N(i+1)+'">'+safe(ui.sources)+' '+safe(N(i+1))+' ↗</a>').join('')+'</div>':'<p>'+safe(ui.notice)+'</p>')+'</section></div>';
 }
 function agenda(d){
  const a=items(d),festivals=festivalsOn(d);
@@ -344,7 +343,7 @@ function editor(){
  const recommended=state.focus===today()?Math.min(1380,Math.ceil(nowMinutes/30)*30):540;
  const initialStart=item?.startMinutes??(state.dialog?.hour!==undefined?Number(state.dialog.hour)*60:recommended);
  const initialEnd=item?.endMinutes??Math.min(1440,initialStart+60);
- return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" novalidate><div class="sheet-head"><button type="button" data-close>'+safe(T().cancel)+'</button><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><label>'+safe(T().end)+' · '+safe(T().date)+dateFields(item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d,'end')+'</label><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeat">'+[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['custom',T().customRepeat]].map(([v,n])=>'<option value="'+v+'" '+((item?.repeat||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select></label><div class="custom-repeat" '+((item?.repeat||'none')==='custom'?'':'hidden')+'><label>'+safe(T().every)+'<select name="repeatEvery" aria-label="'+safe(T().every)+'">'+Array.from({length:365},(_,i)=>'<option value="'+(i+1)+'" '+((item?.repeatEvery??6)===i+1?'selected':'')+'>'+safe(N(i+1))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeatUnit" aria-label="'+safe(T().repeat)+'">'+[['day',T().repeatDays],['decan',T().repeatDecades],['month',T().repeatMonths],['year',T().repeatYears]].map(([unit,label])=>'<option value="'+unit+'" '+((item?.repeatUnit||'day')===unit?'selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label></div><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><label>'+safe(T().end)+' · '+safe(T().date)+dateFields(item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d,'end')+'</label><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeat">'+[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['custom',T().customRepeat]].map(([v,n])=>'<option value="'+v+'" '+((item?.repeat||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select></label><div class="custom-repeat" '+((item?.repeat||'none')==='custom'?'':'hidden')+'><label>'+safe(T().every)+'<select name="repeatEvery" aria-label="'+safe(T().every)+'">'+Array.from({length:365},(_,i)=>'<option value="'+(i+1)+'" '+((item?.repeatEvery??6)===i+1?'selected':'')+'>'+safe(N(i+1))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeatUnit" aria-label="'+safe(T().repeat)+'">'+[['day',T().repeatDays],['decan',T().repeatDecades],['month',T().repeatMonths],['year',T().repeatYears]].map(([unit,label])=>'<option value="'+unit+'" '+((item?.repeatUnit||'day')===unit?'selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label></div><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
 }
 
 function panelContent(){
@@ -353,7 +352,7 @@ function panelContent(){
  const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals};
  const body=panels[state.panel]?.();
  if(!body)return '';
- return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong><button type="button" data-close-panel aria-label="'+safe(T().cancel)+'">×</button></div><div class="ux-panel-body">'+body+'</div></section>';
+ return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
 }
 function render(){
  if(!data)return;
@@ -371,8 +370,6 @@ function render(){
  root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
    +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
    +panelContent()+(state.dialog?editor():'')+festivalDetails();
- const activeEditor=root.querySelector('#event-editor');
- editorInitialState=activeEditor?JSON.stringify([...new FormData(activeEditor)]):null;
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  }
@@ -472,30 +469,17 @@ async function submitEvent(form){
  state.view='day';state.revealItemId=item.id;state.saveNotice=true;render();
 }
 
-function discardEditor(){
- const form=root.querySelector('#event-editor');
- const picker=form?.querySelector('.time-picker-host:not([hidden])');
- const field=picker?.dataset.field;
- const minutes=picker?Number(picker.dataset.hour)*60+Number(picker.dataset.minute):NaN;
- const selected=Number.isInteger(minutes)?
-  String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0'):null;
- const pending=field&&selected!==form.elements.namedItem(field)?.value;
- if(form&&editorInitialState!==null&&
-  (JSON.stringify([...new FormData(form)])!==editorInitialState||pending)){
-  const message=lang()==='ar'?'تجاهل التغييرات غير المحفوظة؟':lang()==='cop'?'Ⲭⲱ ⲛ̀ⲥⲁ ⲛⲓϣⲓⲃϯ ⲉⲧⲉⲙⲡⲟⲩⲥⲱⲛϩ?':'𓏞 𓏥 𓐍𓏏 ?';
-  if(!confirm(message))return;
- }
+// Closing a pop-up discards its draft; only Save writes appointment data.
+function dismissEditor(){
  closeKeyboard();state.dialog=null;render();
 }
 root.addEventListener('click',async ev=>{
- if(ev.target.closest('[data-close-festival]')||ev.target.matches?.('[data-close-festival-overlay]')){state.festivalDetail=null;render();return;}
+ if(ev.target.matches?.('[data-close-festival-overlay]')){state.festivalDetail=null;render();return;}
  const festival=ev.target.closest('[data-festival-open]');
  if(festival){state.festivalDetail={id:festival.dataset.festivalOpen,day:Number(festival.dataset.festivalDay)};render();return;}
  if(ev.target.closest('[data-dismiss-panel]')){state.panel=null;render();return;}
  if(ev.target.classList?.contains('sheet-overlay')){
-  const picker=root.querySelector('.time-picker-host:not([hidden])');
-  if(picker){closeTimeEditor(root.querySelector('#event-editor'),false,lang());return;}
-  discardEditor();return;
+  dismissEditor();return;
  }
  // Save from the header is always a one-tap action, even if the time
  // picker is currently open. Commit its selected hour/minute first.
@@ -511,8 +495,6 @@ root.addEventListener('click',async ev=>{
   }
   return;
  }
- // Header Cancel always acts on the appointment, even with the time picker open.
- if(ev.target.closest('#event-editor [data-close]')){discardEditor();return;}
  // Time picker is an overlay within the event form. Touching its backdrop
  // cancels the picker and never accidentally commits a hidden selection.
  const openPicker=root.querySelector('.time-picker-host:not([hidden])');
@@ -561,8 +543,6 @@ root.addEventListener('click',async ev=>{
   closeTimeEditor(root.querySelector('#event-editor'),b.hasAttribute('data-time-confirm'),lang());
   return;
  }
- if(b.hasAttribute('data-close-panel')){state.panel=null;render();return;}
- if(b.hasAttribute('data-close')){discardEditor();return;}
  if(b.hasAttribute('data-hour')){state.saveNotice=false;state.dialog={kind:'event',hour:Number(b.dataset.hour)};render();return;}
  if(b.hasAttribute('data-new')){state.saveNotice=false;state.dialog={kind:'event'};render();root.querySelector('[name="title"]')?.focus();return;}
  if(b.hasAttribute('data-edit')){state.dialog={id:b.dataset.edit,occurrenceDay:Number(b.dataset.occurrence??state.focus)};render();return;}
@@ -786,7 +766,7 @@ document.addEventListener('click',ev=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCurrentTimeLine();});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
   if(state.festivalDetail){state.festivalDetail=null;render();}
-  else if(state.dialog)discardEditor();
+  else if(state.dialog)dismissEditor();
   else if(state.panel){state.panel=null;render();}
   else if(state.search){state.search=false;render();}
  }});
