@@ -442,7 +442,7 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 .timeline-event{overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 .timeline-event .event-drag{
  min-height:0;flex:1;cursor:grab;touch-action:none;
- padding:5px 38px 1px 7px;
+ padding:5px 48px 1px 7px;
 }
 .timeline-event .event-drag strong{font-size:13px;min-height:13px}
 .timeline-event .event-resize{
@@ -458,13 +458,12 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 }
 .timeline-event .event-delete-timeline{
  position:absolute;z-index:4;top:1px;inset-inline-end:1px;
- width:31px;height:31px;min-width:31px;border:0;border-radius:9px;
+ width:44px;height:44px;min-width:44px;border:0;border-radius:10px;
  background:rgba(255,255,255,.88);color:var(--rubric);
 }
 .timeline-event .event-delete-timeline svg{width:17px;height:17px}
 @media(max-width:390px){
- .timeline-event .event-drag{padding-inline-end:33px}
- .timeline-event .event-delete-timeline{width:30px;height:30px;min-width:30px}
+ .timeline-event .event-drag{padding-inline-end:48px}
 }
 
 
@@ -523,3 +522,8 @@ body[data-language=cop] .repeat-editor select,body[data-language=cop] .repeat-pr
 .sheet[data-all-day="true"] .local-time-fields{display:none}
 body[data-language=egy] .end-date-details>summary{font-size:23px;line-height:1.45}
 body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
+
+/* Short Day events have one large, clear Edit touch area; Delete is
+   available in their editor rather than squeezed into a tiny button. */
+.timeline-event[data-short="true"] .event-drag{padding-inline-end:7px}
+.timeline-event .event-delete-timeline:focus-visible{outline:3px solid var(--green);outline-offset:-3px}
