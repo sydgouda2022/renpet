@@ -135,6 +135,15 @@ async function main(){
   assert.equal(await customForm.locator('.custom-repeat').isVisible(),false);
   await customForm.locator('[name=repeat]').selectOption('custom');
   assert.equal(await customForm.locator('.custom-repeat').isVisible(),true);
+  assert.equal(await customForm.locator('.repeat-editor').isVisible(),true,'Repeat is not hidden behind More Options');
+  await customForm.locator('[data-repeat-preset="3"]').click();
+  assert.equal(await customForm.locator('[name=repeatEvery]').inputValue(),'3');
+  assert.equal(await customForm.locator('[data-repeat-preset="3"]').getAttribute('aria-pressed'),'true');
+  await customForm.locator('[data-repeat-preset="6"]').click();
+  assert.equal(await customForm.locator('[name=repeatEvery]').inputValue(),'6');
+  await customForm.locator('[name=repeatEvery]').selectOption('12');
+  assert.equal(await customForm.locator('[data-repeat-preset="6"]').getAttribute('aria-pressed'),'false');
+  assert.ok((await customForm.locator('.repeat-preview').innerText()).includes(await customForm.locator('[name=repeatEvery] option:checked').innerText()),'Preview uses the selected script numerals');
   await customForm.locator('[name=repeatEvery]').selectOption('6');
   await customForm.locator('[name=repeatUnit]').selectOption('day');
   await customForm.locator('.save-button').click();
