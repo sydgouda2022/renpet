@@ -112,6 +112,8 @@ async function main(){
     await page.locator('.save-confirmation').waitFor();
     assert.equal(await page.locator('.timeline-event:has-text("Seasonal design appointment")').count(),1);
     await page.locator('[data-primary-view="today"]').click();
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day','Today preserves Day view');
+    await page.locator('[data-back]').click();
     const saved=await page.evaluate(async()=>(await(await import('./storage.js')).readRecord('scheduler')).items);
     assert.equal(saved.filter(i=>i.title==='Seasonal design appointment').length,1);
     // All three scripts share the artwork and existing controls; the season

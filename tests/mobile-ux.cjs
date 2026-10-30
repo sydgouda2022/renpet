@@ -39,6 +39,35 @@ async function main(){
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
     }
+    // A future appointment appears in the iPad's preview pane, without
+    // occupying the phone calendar or duplicating appointment records.
+    const future=await page.evaluate(async()=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js'),cal=await import('./calendar.js');
+      const sched=await storage.readRecord('scheduler');
+      const now=new Date();
+      const start=cal.dayNumber([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'))+3;
+      const event=domain.createItem({title:'Upcoming tablet preview',startDay:start,startMinutes:720,endMinutes:780,calendarId:'personal'});
+      domain.upsertItem(sched,event);await storage.writeRecord('scheduler',sched);
+      return {id:event.id,start};
+    });
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    const upcoming=page.locator('.upcoming-section');
+    assert.equal(await upcoming.isVisible(),width>=1024&&height>=560,'Upcoming previews belong only in the tablet split layout');
+    if(width>=1024&&height>=560){
+      const next=upcoming.locator('.upcoming-day[data-date="'+future.start+'"]');
+      await next.waitFor();
+      assert.ok((await next.innerText()).includes('Upcoming tablet preview'));
+      await next.click();
+    }else{
+      await page.locator('.date[data-date="'+future.start+'"]').click();
+    }
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    const openedScroll=await page.locator('#main-content').evaluate(el=>el.scrollTop);
+    assert.ok(openedScroll>240,'Day should open near the first appointment rather than at midnight');
+    await page.locator('[data-primary-view=today]').click();
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day','Today preserves the current Day view');
+    await page.locator('[data-back]').click();
+    assert.equal(await page.locator('body').getAttribute('data-view'),'month');
     const preferences=await record(page,'preferences');
     assert.equal(preferences.reminders,false);
     // Outside-tap dismissal is the only close gesture for Settings and sub-panels.
