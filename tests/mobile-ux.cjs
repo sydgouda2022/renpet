@@ -44,7 +44,8 @@ async function main(){
     const future=await page.evaluate(async()=>{
       const storage=await import('./storage.js'),domain=await import('./scheduler.js'),cal=await import('./calendar.js');
       const sched=await storage.readRecord('scheduler');
-      const start=cal.today()+3;
+      const now=new Date();
+      const start=cal.dayNumber([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'))+3;
       const event=domain.createItem({title:'Upcoming tablet preview',startDay:start,startMinutes:720,endMinutes:780,calendarId:'personal'});
       domain.upsertItem(sched,event);await storage.writeRecord('scheduler',sched);
       return {id:event.id,start};
