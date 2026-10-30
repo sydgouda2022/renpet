@@ -387,8 +387,8 @@ function editor(){
  // afternoon appointment appear to vanish when Day auto-scrolled to now.
  const nowMinutes=localMinutes(new Date());
  const recommended=state.focus===today()?Math.min(1380,Math.ceil(nowMinutes/30)*30):540;
- const initialStart=item?.startMinutes??(state.dialog?.hour!==undefined?Number(state.dialog.hour)*60:recommended);
- const initialEnd=item?.endMinutes??Math.min(1440,initialStart+60);
+ const initialStart=state.dialog?.draftStart??item?.startMinutes??(state.dialog?.hour!==undefined?Number(state.dialog.hour)*60:recommended);
+ const initialEnd=state.dialog?.draftEnd??item?.endMinutes??Math.min(1440,initialStart+60);
  const finish=item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d;
  const spansDays=finish!==d;
  return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
@@ -787,26 +787,24 @@ root.addEventListener('pointermove',ev=>{
  drag.next={start,end};
  drag.block.style.top=(start/60*64)+'px';
  drag.block.style.height=Math.max(46,(end-start)/60*64-3)+'px';
+ drag.block.dataset.dragPreview='true';
  const label=drag.block.querySelector('.event-drag small');
  if(label)label.innerHTML=timeHtml(start,lang())+' – '+timeHtml(end,lang());
 });
-async function finishDrag(ev,cancel=false){
+function finishDrag(ev,cancel=false){
  const drag=activeDrag;if(!drag||ev.pointerId!==drag.pointerId)return;
  activeDrag=null;
- if(!drag.moved||cancel){if(drag.moved)render();return;}
+ if(!drag.moved||cancel||!drag.next){if(drag.moved)render();return;}
+ // Keep the block as a temporary visual preview, not a persisted change.
+ // Only the editor Save button writes the revised minutes to IndexedDB.
  suppressEditUntil=Date.now()+550;
- if(!drag.next){render();return;}
- const sched=loadScheduler(),item=sched.items.find(i=>i.id===drag.id);
- if(item){
-  const previous={start:item.startMinutes,end:item.endMinutes};
-  item.startMinutes=drag.next.start;item.endMinutes=drag.next.end;
-  item.updatedAt=new Date().toISOString();
-  if(!await saveScheduler(sched)){
-   item.startMinutes=previous.start;item.endMinutes=previous.end;
-   alert(lang()==='ar'?'تعذر تعديل مدة الموعد':lang()==='cop'?'Ⲑⲁⲏ: !':'𓏞: !');
-  }
- }
+ state.dialog={id:drag.id,occurrenceDay:state.focus,draftStart:drag.next.start,draftEnd:drag.next.end};
  render();
+ const editor=root.querySelector('#event-editor');
+ if(editor){
+  editor.querySelector('.sheet-head strong')?.setAttribute('aria-live','polite');
+  editor.querySelector('.save-button')?.focus();
+ }
 }
 root.addEventListener('pointerup',ev=>finishDrag(ev));
 root.addEventListener('pointercancel',ev=>finishDrag(ev,true));
@@ -817,6 +815,17 @@ root.addEventListener('click',ev=>{
  }
 },true);
 root.addEventListener('keydown',ev=>{
+ const resize=ev.target.closest('.event-resize');
+ if(resize&&(ev.key==='ArrowUp'||ev.key==='ArrowDown')){
+  ev.preventDefault();
+  const block=resize.closest('.timeline-event[data-edit]');
+  const item=schedule.items.find(i=>i.id===block.dataset.edit);
+  if(!item||item.repeat!=='none'||item.startDay!==item.endDay)return;
+  const nextEnd=Math.max(item.startMinutes+15,Math.min(1440,item.endMinutes+(ev.key==='ArrowDown'?15:-15)));
+  state.dialog={id:item.id,occurrenceDay:state.focus,draftStart:item.startMinutes,draftEnd:nextEnd};
+  render();root.querySelector('#event-editor .save-button')?.focus();
+  return;
+ }
  const edit=ev.target.closest('.event-drag[role=button]');
  if(edit&&(ev.key==='Enter'||ev.key===' ')){
   ev.preventDefault();state.dialog={id:edit.closest('[data-edit]').dataset.edit};render();
