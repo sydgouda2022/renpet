@@ -86,6 +86,17 @@ html[data-renpet-layout="tablet-stacked"] body[data-language=egy] .month-agenda{
  padding:8px 0 0;border-top:1px solid var(--line);border-inline-start:0
 }
 
+/* Give the large-screen agenda something useful beyond the selected day.
+   Future appointments are navigation previews, not duplicate event editors. */
+.upcoming-section{display:none}
+html[data-renpet-layout="tablet-split"] .upcoming-section{display:flex;flex-direction:column;gap:8px;margin-top:19px;padding-top:13px;border-top:1px solid var(--line)}
+.upcoming-section h3{margin:0 0 3px;padding-inline:3px;font-size:16px;color:var(--rubric)}
+.upcoming-day{display:flex;flex-direction:column;align-items:stretch;gap:5px;width:100%;min-height:56px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:start;color:var(--ink)}
+.upcoming-date{font-weight:700;font-size:13px;color:var(--green);overflow-wrap:anywhere}
+.upcoming-titles{display:flex;flex-direction:column;gap:3px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.upcoming-empty{padding:12px;border-radius:11px;background:var(--surface);color:var(--muted)}
+.upcoming-add{min-height:44px;width:100%;padding:10px 12px;border:1px solid var(--green);border-radius:12px;background:var(--mint);color:var(--deep-green);font-weight:650}
+body[data-language=egy] .upcoming-section h3,body[data-language=egy] .upcoming-date,body[data-language=egy] .upcoming-add{font-size:23px;line-height:1.5}
 /* iPad landscape and desktop: month plus permanent side agenda. */
 html[data-renpet-layout="tablet-split"] .month-scroll{
  display:grid;grid-template-columns:minmax(0,1.6fr) minmax(210px,.9fr);gap:24px;overflow:hidden
