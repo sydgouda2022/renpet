@@ -41,6 +41,7 @@ const root=document.querySelector('#app');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>{const d=new Date();return dayNumber([d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'));};
 let schedule=emptyState();
+let crowdedDayGroups=[];
 const loadScheduler=()=>structuredClone(schedule);
 async function saveScheduler(next){
  if(!validateSchedulerData(next))throw new Error('Invalid appointment data');
@@ -51,7 +52,7 @@ async function saveScheduler(next){
 let previousRenderKey=null;
 let previousRenderFocus=null;
 let currentTimeTicker=null;
-let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,revealItemId:null,saveNotice:false};
+let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
 const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
@@ -241,7 +242,25 @@ function dayView(){
   }
   for(const item of cluster)layout.get(item.id+':'+(item._occurrenceStart??item.startDay)).cols=ends.length;
  }
- const blocks=timed.map(i=>{
+ // When a simultaneous cluster would be too narrow to read, present one
+ // accessible summary instead; its full list opens in an outside-dismiss sheet.
+ crowdedDayGroups=[];
+ const crowdedKeys=new Set(),crowdedBlocks=[];
+ const maxVisibleColumns=window.matchMedia?.('(max-width:700px)').matches?2:3;
+ for(const cluster of clusters){
+  const columns=layout.get(cluster[0].id+':'+(cluster[0]._occurrenceStart??cluster[0].startDay))?.cols||1;
+  if(columns<=maxVisibleColumns)continue;
+  const index=crowdedDayGroups.length;
+  crowdedDayGroups.push(cluster);
+  for(const event of cluster)crowdedKeys.add(event.id+':'+(event._occurrenceStart??event.startDay));
+  const first=Math.min(...cluster.map(i=>i._dayStart)),last=Math.max(...cluster.map(i=>i._dayEnd));
+  const height=Math.min(94,Math.max(46,(last-first)/60*64-3));
+  crowdedBlocks.push('<button type="button" class="timeline-crowded" data-open-crowded="'+index+
+   '" style="top:'+(first/60*64)+'px;height:'+height+'px" aria-label="'+safe(N(cluster.length)+' '+T().event)+'">'+
+   '<strong>'+safe(N(cluster.length)+' '+T().event)+'</strong><span>'+
+   safe(cluster.slice(0,2).map(i=>i.title).join(' · '))+'</span></button>');
+ }
+ const blocks=timed.filter(i=>!crowdedKeys.has(i.id+':'+(i._occurrenceStart??i.startDay))).map(i=>{
   const start=Math.max(0,Math.min(1439,i._dayStart||0)),end=Math.max(start+15,Math.min(1440,i._dayEnd??start+60));
   const cal=schedule.calendars.find(c=>c.id===i.calendarId);
   const color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
@@ -251,7 +270,7 @@ function dayView(){
   return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
- return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
+ return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
 }
 
 function listView(){
@@ -379,6 +398,20 @@ function syncRepeatPreview(form){
  if(preview)preview.textContent=T().every+' '+N(count)+' '+label;
  form.querySelectorAll('[data-repeat-preset]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.repeatPreset)===count)));
 }
+function crowdedSheet(){
+ if(state.crowdedGroup===null||state.view!=='day')return '';
+ const entries=crowdedDayGroups[state.crowdedGroup];
+ if(!entries?.length)return '';
+ const date=egy(state.focus);
+ return '<div class="crowded-backdrop" data-dismiss-crowded></div>'+
+  '<section class="crowded-sheet" role="dialog" aria-modal="true" aria-label="'+safe(T().event)+'">'+
+  '<header><strong>'+safe(N(date.day)+' '+monthName(date.month))+'</strong><span>'+
+  safe(N(entries.length)+' '+T().event)+'</span></header><div class="crowded-list">'+
+  entries.map(i=>'<button type="button" class="crowded-choice" data-crowded-edit="'+safe(i.id)+
+   '" data-crowded-occurrence="'+(i._occurrenceStart??i.startDay)+'"><strong>'+safe(i.title)+
+   '</strong><small>'+timeHtml(i._dayStart,lang())+' – '+timeHtml(i._dayEnd,lang())+
+   '</small></button>').join('')+'</div></section>';
+}
 function editor(){
  const item=state.dialog?.id?schedule.items.find(i=>i.id===state.dialog.id):null;
  const occurrence=item?.repeat!=='none'&&Number.isInteger(state.dialog?.occurrenceDay)?occurrenceStartForDay(item,state.dialog.occurrenceDay):null;
@@ -418,7 +451,7 @@ function render(){
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
  root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
    +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
-   +panelContent()+(state.dialog?editor():'')+festivalDetails();
+   +panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  }
@@ -532,6 +565,15 @@ function dismissEditor(){
  closeKeyboard();state.dialog=null;render();
 }
 root.addEventListener('click',async ev=>{
+ if(ev.target.matches?.('[data-dismiss-crowded]')){state.crowdedGroup=null;render();return;}
+ const openCrowded=ev.target.closest('[data-open-crowded]');
+ if(openCrowded){state.crowdedGroup=Number(openCrowded.dataset.openCrowded);render();return;}
+ const crowdedEdit=ev.target.closest('[data-crowded-edit]');
+ if(crowdedEdit){
+  state.crowdedGroup=null;
+  state.dialog={id:crowdedEdit.dataset.crowdedEdit,occurrenceDay:Number(crowdedEdit.dataset.crowdedOccurrence)};
+  render();return;
+ }
  if(ev.target.matches?.('[data-close-festival-overlay]')){state.festivalDetail=null;render();return;}
  const festival=ev.target.closest('[data-festival-open]');
  if(festival){state.festivalDetail={id:festival.dataset.festivalOpen,day:Number(festival.dataset.festivalDay)};render();return;}
@@ -847,17 +889,18 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCurren
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
   if(state.festivalDetail){state.festivalDetail=null;render();}
   else if(state.dialog)dismissEditor();
+  else if(state.crowdedGroup!==null){state.crowdedGroup=null;render();}
   else if(state.panel){state.panel=null;render();}
   else if(state.search){state.search=false;render();}
  }});
 let gesture=null;
 root.addEventListener('touchstart',ev=>{
  gesture=null;
- if(ev.touches.length!==1||state.dialog||state.panel||state.festivalDetail)return;
+ if(ev.touches.length!==1||state.dialog||state.panel||state.festivalDetail||state.crowdedGroup!==null)return;
  // Page-changing swipes belong to the calendar, not scrollable agendas,
  // appointment cards, the navigation bar, or any editor control.
  const region=ev.target.closest('.month-section,.year-overview,.timeline,.list-page');
- if(!region||ev.target.closest('.timeline-event,.event-row-shell,.upcoming-day,input,select,textarea,[role="dialog"]'))return;
+ if(!region||ev.target.closest('.timeline-event,.timeline-crowded,.event-row-shell,.upcoming-day,input,select,textarea,[role="dialog"]'))return;
  gesture={x:ev.touches[0].clientX,y:ev.touches[0].clientY,view:state.view};
 },{passive:true});
 root.addEventListener('touchend',ev=>{
