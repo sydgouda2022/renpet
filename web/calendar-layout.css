@@ -225,3 +225,8 @@ html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-ones{
  grid-template-columns:repeat(3,12px);font-size:20px;line-height:19px;
 }
 html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-ones>span{width:12px;height:19px;line-height:19px}
+
+/* Recurrence edit scope describes which Egyptian date is being changed,
+   avoiding accidental edits to the original series anchor. */
+.repeat-scope-date{margin:0;padding:10px 12px;border-radius:11px;background:var(--mint);color:var(--deep-green);font-size:14px;line-height:1.5;font-weight:650;overflow-wrap:anywhere}
+body[data-language=egy] .repeat-scope-date{font-size:22px;line-height:1.5}
