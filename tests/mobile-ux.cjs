@@ -41,15 +41,40 @@ async function main(){
     }
     const preferences=await record(page,'preferences');
     assert.equal(preferences.reminders,false);
+    // Outside-tap dismissal is the only close gesture for Settings and sub-panels.
     await page.locator('header [data-open-panel=settings]').click();
-    await page.locator('[data-close-panel]').click();
-    assert.equal(await page.locator('.ux-panel').count(),0,'Panel close button must close the overlay');
+    assert.equal(await page.locator('[data-close-panel]').count(),0);
+    await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('.ux-panel').count(),0);
+    await page.locator('header [data-open-panel=settings]').click();
+    await page.locator('[data-open-panel=festivals]').click();
+    await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('.ux-panel').count(),0);
+    await page.locator('header [data-open-panel=settings]').click();
+    await page.locator('[data-open-panel=calendars]').click();
+    await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('.ux-panel').count(),0);
+    await page.locator('header [data-open-panel=settings]').click();
+    await page.locator('[data-backup]').click();
+    assert.equal(await page.locator('.renpet-backup-panel').count(),1);
+    assert.equal(await page.locator('[data-backup=close]').count(),0);
+    await page.locator('.renpet-backup-overlay').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('.renpet-backup-panel').count(),0);
     await page.locator('header [data-open-panel=settings]').click();
     await page.locator('[name=gregorian]').uncheck();
-    await page.locator('[data-close-panel]').click();
+    await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
     await page.locator('header [data-new]').click();
-    assert.equal(await page.locator('#event-editor .date-preview').count(),0,'Hidden Gregorian date must not appear in the editor');
-    await page.locator('[data-close]').click();
+    assert.equal(await page.locator('#event-editor .date-preview').count(),0,'Hidden Gregorian date must not appear');
+    await page.locator('#event-editor [name=title]').fill('Unsaved event '+width);
+    await page.locator('.sheet-overlay').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('#event-editor').count(),0);
+    assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved event '+width));
+    await page.locator('header [data-new]').click();
+    await page.locator('#event-editor [name=kind][value=reminder]').check();
+    await page.locator('#event-editor [name=title]').fill('Unsaved reminder '+width);
+    await page.locator('.sheet-overlay').click({position:{x:9,y:9}});
+    assert.equal(await page.locator('#event-editor').count(),0);
+    assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved reminder '+width));
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}

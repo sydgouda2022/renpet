@@ -87,7 +87,7 @@ export function openBackup(){
  const t=language();
  overlay=document.createElement('div');overlay.className='renpet-backup-overlay';overlay.dir=document.documentElement.dir;
  overlay.innerHTML='<section class="renpet-backup-panel" role="dialog" aria-modal="true" aria-labelledby="renpet-backup-heading">'+
- '<div class="renpet-backup-head"><h2 id="renpet-backup-heading"></h2><button type="button" class="renpet-backup-close" data-backup="close">×</button></div>'+
+ '<div class="renpet-backup-head"><h2 id="renpet-backup-heading"></h2></div>'+
  '<p class="renpet-backup-info"></p>'+
  '<button type="button" class="renpet-backup-action" data-backup="export"></button>'+
  '<button type="button" class="renpet-backup-action secondary" data-backup="ics"></button>'+
@@ -95,13 +95,11 @@ export function openBackup(){
  '<button type="button" class="renpet-backup-action secondary" data-backup="import"></button></section>';
  overlay.querySelector('h2').textContent=t.title;
  overlay.querySelector('.renpet-backup-info').textContent=t.info;
- for(const [id,key] of [['close','close'],['export','export'],['ics','ics'],['import-ics','importICS'],['import','restore']])
-  overlay.querySelector('[data-backup="'+id+'"]').textContent=id==='close'?'×':t[key];
- overlay.querySelector('[data-backup="close"]').setAttribute('aria-label',t.close);
+ for(const [id,key] of [['export','export'],['ics','ics'],['import-ics','importICS'],['import','restore']])
+  overlay.querySelector('[data-backup="'+id+'"]').textContent=t[key];
  overlay.addEventListener('click',async event=>{
   if(event.target===overlay){close();return;}
   const action=event.target.closest('[data-backup]')?.dataset.backup;
-  if(action==='close'){close();return;}
   try{
    if(action==='export')await backup();
    if(action==='import')await restore();

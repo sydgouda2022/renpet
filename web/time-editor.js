@@ -35,7 +35,7 @@ export function openTimeEditor(form,which,language,startLabel,endLabel){
  host.dataset.minute=minute;
  const name=which==='start'?startLabel:endLabel;
  const ui=WORDS[language];
- host.innerHTML='<div class="time-picker-top"><button type="button" data-time-dismiss aria-label="'+safe(ui.cancel)+'">×</button>'+
+ host.innerHTML='<div class="time-picker-top">'+
   '<strong>'+safe(name)+'</strong><span class="time-picker-preview">'+timeHtml(hour*60+minute,language)+'</span></div>'+
   '<div class="time-picker-columns" dir="ltr"><div class="time-picker-column" data-time-hours role="group" aria-label="'+safe(ui.hours)+'">'+makeChoices('hour',which==='end'?25:24,hour,language)+'</div>'+
   '<div class="time-picker-column" data-time-minutes role="group" aria-label="'+safe(ui.minutes)+'">'+makeChoices('minute',60,minute,language)+'</div></div>'+
