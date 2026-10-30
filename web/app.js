@@ -356,6 +356,28 @@ function maintainCurrentTimeLine(){
   currentTimeTicker=setInterval(syncCurrentTimeLine,10000);
  }
 }
+function repeatEditor(item){
+ const repeat=item?.repeat||'none',every=item?.repeatEvery??6,unit=item?.repeatUnit||'day';
+ const unitOptions=[['day',T().repeatDays],['decan',T().repeatDecades],['month',T().repeatMonths],['year',T().repeatYears]];
+ const options=[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['custom',T().customRepeat]];
+ const presets=[1,2,3,6,10];
+ return '<section class="repeat-editor"><label>'+safe(T().repeat)+
+ '<select name="repeat">'+options.map(([v,n])=>'<option value="'+v+'" '+(repeat===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select></label>'+
+ '<div class="custom-repeat" '+(repeat==='custom'?'':'hidden')+'><div class="repeat-presets" role="group" aria-label="'+safe(T().every)+'">'+
+ presets.map(n=>'<button type="button" class="repeat-preset" data-repeat-preset="'+n+'" aria-pressed="'+(every===n)+'">'+safe(N(n))+'</button>').join('')+'</div>'+
+ '<div class="repeat-inputs"><label>'+safe(T().every)+'<select name="repeatEvery" aria-label="'+safe(T().every)+'">'+
+ Array.from({length:365},(_,i)=>'<option value="'+(i+1)+'" '+(every===i+1?'selected':'')+'>'+safe(N(i+1))+'</option>').join('')+'</select></label>'+
+ '<label>'+safe(T().repeat)+'<select name="repeatUnit" aria-label="'+safe(T().repeat)+'">'+
+ unitOptions.map(([v,label])=>'<option value="'+v+'" '+(unit===v?'selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label></div>'+
+ '<p class="repeat-preview" aria-live="polite">'+safe(T().every)+' '+safe(N(every))+' '+safe(unitOptions.find(([v])=>v===unit)?.[1]||T().repeatDays)+'</p></div></section>';
+}
+function syncRepeatPreview(form){
+ const count=Number(form.elements.namedItem('repeatEvery')?.value??6),unit=form.elements.namedItem('repeatUnit')?.value||'day';
+ const label={day:T().repeatDays,decan:T().repeatDecades,month:T().repeatMonths,year:T().repeatYears}[unit]||T().repeatDays;
+ const preview=form.querySelector('.repeat-preview');
+ if(preview)preview.textContent=T().every+' '+N(count)+' '+label;
+ form.querySelectorAll('[data-repeat-preset]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.repeatPreset)===count)));
+}
 function editor(){
  const item=state.dialog?.id?schedule.items.find(i=>i.id===state.dialog.id):null;
  const occurrence=item?.repeat!=='none'&&Number.isInteger(state.dialog?.occurrenceDay)?occurrenceStartForDay(item,state.dialog.occurrenceDay):null;
@@ -369,7 +391,7 @@ function editor(){
  const initialEnd=item?.endMinutes??Math.min(1440,initialStart+60);
  const finish=item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d;
  const spansDays=finish!==d;
- return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeat">'+[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['custom',T().customRepeat]].map(([v,n])=>'<option value="'+v+'" '+((item?.repeat||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select></label><div class="custom-repeat" '+((item?.repeat||'none')==='custom'?'':'hidden')+'><label>'+safe(T().every)+'<select name="repeatEvery" aria-label="'+safe(T().every)+'">'+Array.from({length:365},(_,i)=>'<option value="'+(i+1)+'" '+((item?.repeatEvery??6)===i+1?'selected':'')+'>'+safe(N(i+1))+'</option>').join('')+'</select></label><label>'+safe(T().repeat)+'<select name="repeatUnit" aria-label="'+safe(T().repeat)+'">'+[['day',T().repeatDays],['decan',T().repeatDecades],['month',T().repeatMonths],['year',T().repeatYears]].map(([unit,label])=>'<option value="'+unit+'" '+((item?.repeatUnit||'day')===unit?'selected':'')+'>'+safe(label)+'</option>').join('')+'</select></label></div><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
 }
 
 function panelContent(){
@@ -564,6 +586,11 @@ root.addEventListener('click',async ev=>{
   render();return;
  }
  const b=ev.target.closest('button');if(!b||b.disabled)return;
+ if(b.hasAttribute('data-repeat-preset')){
+  const form=b.closest('#event-editor'),select=form?.elements.namedItem('repeatEvery');
+  if(select){select.value=b.dataset.repeatPreset;syncRepeatPreview(form);}
+  return;
+ }
  if(b.hasAttribute('data-time-open')){
   closeKeyboard();
   openTimeEditor(root.querySelector('#event-editor'),b.dataset.timeOpen,lang(),T().start,T().end);
@@ -657,8 +684,9 @@ root.addEventListener('change',async ev=>{
  if(el.name==='allDay'&&el.closest('#event-editor')){el.form.dataset.allDay=String(el.checked);return;}
  if(el.name==='repeat'&&el.closest('#event-editor')){
   const custom=el.form.querySelector('.custom-repeat');if(custom)custom.hidden=el.value!=='custom';
-  return;
+  syncRepeatPreview(el.form);return;
  }
+ if(['repeatEvery','repeatUnit'].includes(el.name)&&el.closest('#event-editor')){syncRepeatPreview(el.form);return;}
  if(el.name==='language'&&LOCALES[el.value])prefs.language=el.value;
  else if(el.name==='gregorian')prefs.gregorian=el.checked;
  else if(el.name==='reminders'){prefs.reminders=el.checked;if(prefs.reminders)await requestAlertPermission();}
