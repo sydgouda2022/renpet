@@ -49,6 +49,7 @@ async function saveScheduler(next){
  return true;
 }
 let previousRenderKey=null;
+let previousRenderFocus=null;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,revealItemId:null,saveNotice:false};
 
@@ -74,7 +75,7 @@ const monthStart=e=>toGregorian({year:e.year,month:e.month,day:1});
 const adjacent=(e,delta)=>{let m=e.month+delta,y=e.year;while(m>13){m-=13;y++;}while(m<1){m+=13;y--;}return supportedYear(y)?{year:y,month:m,day:1}:null;};
 const calName=c=>c.name?.[lang()]||c.name?.ar||c.id;
 const items=d=>{if(!itemCache.has(d))itemCache.set(d,itemsForDay(schedule,d));return itemCache.get(d);};
-const icon=name=>{const p={back:'<path d="m15 5-7 7 7 7"/>',search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',plus:'<path d="M12 4v16M4 12h16"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',settings:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',star:'<path d="m12 2 3 7 7 .5-5.5 5 1.5 7L12 18l-6 3.5 1.5-7L2 9.5 9 9Z"/>',check:'<path d="m4 12 5 5L20 6"/>'};return '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p[name]+'</svg>';};
+const icon=name=>{const p={back:'<path d="m15 5-7 7 7 7"/>',search:'<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',plus:'<path d="M12 4v16M4 12h16"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',settings:'<path d="M12 2.5v2m0 15v2m9.5-9.5h-2m-15 0h-2m16.2-6.7-1.4 1.4M7.2 16.8l-1.4 1.4m12.4 0-1.4-1.4M7.2 7.2 5.8 5.8"/><circle cx="12" cy="12" r="4.2"/>',star:'<path d="m12 2 3 7 7 .5-5.5 5 1.5 7L12 18l-6 3.5 1.5-7L2 9.5 9 9Z"/>',check:'<path d="m4 12 5 5L20 6"/>'};return '<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p[name]+'</svg>';};
 function quickDeleteButton(item,extraClass='',occurrence=item._occurrenceStart??state.focus){
  return '<button type="button" class="event-delete-action '+extraClass+'" data-quick-delete="'+safe(item.id)+'" data-quick-occurrence="'+occurrence+'" aria-label="'+safe(T().delete)+' · '+safe(item.title)+'" title="'+safe(T().delete)+'">'+
  '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v6m4-6v6"/></svg></button>';
@@ -170,9 +171,21 @@ function monthSection(e){
  const bands=Array.from({length:cells.length/7},(_,i)=>'<div class="week-band" data-band="'+(i+1)+'"><div class="week-days" style="--cols:7">'+cells.slice(i*7,i*7+7).map(dateButton).join('')+'</div></div>').join('');
  return '<section class="month-section seven-day" data-week="7">'+secondary+'<div class="week-headers">'+headers.map(h=>'<span>'+safe(h)+'</span>').join('')+'</div><div class="week-bands">'+bands+'</div></section>';
 }
+function upcomingAgenda(d){
+ const upcoming=[];
+ for(let day=d+1;day<=Math.min(max(),d+30)&&upcoming.length<3;day++){
+  const events=items(day);
+  if(events.length)upcoming.push({day,events:events.slice(0,2)});
+ }
+ return '<section class="upcoming-section" aria-label="'+safe(T().upcoming)+'">'+
+  '<h3>'+safe(T().upcoming)+'</h3>'+
+  (upcoming.length?upcoming.map(({day,events})=>'<button type="button" class="upcoming-day" data-date="'+day+'" aria-label="'+safe(N(egy(day).day)+' '+monthName(egy(day).month))+'"><span class="upcoming-date">'+safe(N(egy(day).day)+' '+monthName(egy(day).month))+'</span><span class="upcoming-titles">'+events.map(item=>'<span>'+safe(item.title)+'</span>').join('')+'</span></button>').join(''):
+    '<div class="upcoming-empty">'+safe(T().noUpcoming)+'</div><button class="upcoming-add" type="button" data-new>'+safe(T().addFirst)+'</button>')+
+  '</section>';
+}
 function monthView(){
  const e=egy(state.focus);
- return '<div class="month-scroll">'+monthSection(e)+'<div class="month-agenda">'+agenda(state.focus)+'</div></div>';
+ return '<div class="month-scroll">'+monthSection(e)+'<div class="month-agenda">'+agenda(state.focus)+upcomingAgenda(state.focus)+'</div></div>';
 }
 
 function yearView(){
@@ -374,7 +387,7 @@ function render(){
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  }
  const main=root.querySelector('#main-content');
- if(main&&keepScroll)main.scrollTop=keepScroll;
+ if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
  if(state.view==='month'&&lang()==='egy'){
   const region=root.querySelector('.month-section'),selected=region?.querySelector('.date.chosen');
   if(region&&selected){
@@ -394,11 +407,19 @@ function render(){
    main.scrollTop+=itemBounds.top-mainBounds.top-Math.min(90,main.clientHeight*.2);
   }
   state.revealItemId=null;
- }else if(main&&viewKey!==previousRenderKey&&state.view==='day'&&state.focus===today()){
-  const marker=root.querySelector('[data-now-line]');
-  if(marker){const relativeY=marker.getBoundingClientRect().top-main.getBoundingClientRect().top;main.scrollTop+=Math.max(0,relativeY-main.clientHeight*.35);}
+ }else if(main&&state.view==='day'&&(viewKey!==previousRenderKey||state.focus!==previousRenderFocus)){
+  // Enter near the first actual appointment, or near work hours on empty days.
+  // Today still opens near the current-time marker if no later event needs attention.
+  const timeline=root.querySelector('.timeline');
+  const events=[...root.querySelectorAll('.timeline-event')];
+  const first=events.reduce((earliest,el)=>Math.min(earliest,parseFloat(el.style.top)||0),Infinity);
+  const marker=state.focus===today()?root.querySelector('[data-now-line]'):null;
+  const target=Number.isFinite(first)?timeline.offsetTop+first:
+   marker?timeline.offsetTop+(parseFloat(marker.style.top)||0):timeline.offsetTop+8*64;
+  main.scrollTop=Math.max(0,target-Math.min(100,main.clientHeight*.2));
  }
  previousRenderKey=viewKey;
+ previousRenderFocus=state.focus;
  syncModalFocus();
  maintainCurrentTimeLine();
 }
@@ -587,7 +608,7 @@ root.addEventListener('click',async ev=>{
  if(b.hasAttribute('data-primary-view')){
   const v=b.dataset.primaryView;
   state.panel=null;state.search=false;
-  if(v==='today'){state.focus=clamp(today());state.view='month';}
+  if(v==='today'){state.focus=clamp(today());}
   else if(v==='list')state.view='list';
   render();return;
  }
