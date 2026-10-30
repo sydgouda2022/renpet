@@ -246,8 +246,9 @@ function dayView(){
   const cal=schedule.calendars.find(c=>c.id===i.calendarId);
   const color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
   const pos=layout.get(i.id+':'+(i._occurrenceStart??i.startDay))||{col:0,cols:1},width=100/pos.cols;
-  const resizable=i.repeat==='none'&&i.startDay===i.endDay;
-  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus)+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  const resizable=i.startDay===i.endDay;
+  const shortEvent=end-start<60;
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
  return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
@@ -391,7 +392,7 @@ function editor(){
  const initialEnd=state.dialog?.draftEnd??item?.endMinutes??Math.min(1440,initialStart+60);
  const finish=item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d;
  const spansDays=finish!==d;
- return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<label class="repeat-scope">'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'<select name="repeatScope"><option value="one">'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</option><option value="series">'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</option></select></label>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'</legend><div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="one" checked><span>'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</span></label><label><input type="radio" name="repeatScope" value="series"><span>'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</span></label></div></fieldset>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.alert!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label><label>'+safe(T().alert)+'<select name="alert">'+[['none',T().none],['atTime','0'],['5min','5'],['15min','15'],['1hour','60'],['1day','1440']].map(([v,n])=>'<option value="'+v+'" '+((item?.alert||'none')===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select><small class="alert-limit">'+safe(lang()==='ar'?'تعمل التنبيهات عند فتح رنبت؛ لا يمكن ضمان إشعارات بعد إغلاق التطبيق.':'Alerts work while Renpet is open; background notifications are not guaranteed.')+'</small></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
 }
 
 function panelContent(){
@@ -611,7 +612,7 @@ root.addEventListener('click',async ev=>{
  if(b.hasAttribute('data-delete')){
   const v=loadScheduler(),item=v.items.find(x=>x.id===b.dataset.delete);
   if(!item)return;
-  const one=item.repeat!=='none'&&root.querySelector('[name="repeatScope"]')?.value==='one';
+  const one=item.repeat!=='none'&&root.querySelector('[name="repeatScope"]:checked')?.value==='one';
   if(!confirm(one?(lang()==='ar'?'حذف هذا التكرار فقط؟':'Delete this occurrence only?'):(item.repeat!=='none'?
    (lang()==='ar'?'حذف سلسلة المواعيد المتكررة كاملة؟':'Delete the entire recurring series?'):
    T().confirm)))return;
@@ -753,7 +754,9 @@ root.addEventListener('pointerdown',ev=>{
  const block=ev.target.closest('.timeline-event[data-edit]');
  if(!block||ev.button!==0||ev.target.closest('.event-delete-action'))return;
  const item=loadScheduler().items.find(i=>i.id===block.dataset.edit);
- if(!item||item.allDay||item.repeat!=='none'||item.startDay!==item.endDay)return;
+ if(!item||item.allDay||item.startDay!==item.endDay)return;
+ const anchor=Number(block.dataset.occurrence);
+ if(item.repeat!=='none'&&occurrenceStartForDay(item,anchor)!==anchor)return;
  // WebKit can retarget a captured mouse/pointer at the adjacent event body,
  // especially when the touch grip is under a responsive or RTL overlay.
  // Geometry at pointerdown is the stable authority for a resize hit.
@@ -764,7 +767,7 @@ root.addEventListener('pointerdown',ev=>{
    ev.clientX>=gripBox.left&&ev.clientX<=gripBox.right);
  const mode=onGrip?'resize':'move';
  const main=root.querySelector('#main-content');
- activeDrag={id:item.id,pointerId:ev.pointerId,mode,y:ev.clientY,scrollAtStart:main?.scrollTop||0,start:item.startMinutes,
+ activeDrag={id:item.id,occurrenceDay:anchor,pointerId:ev.pointerId,mode,y:ev.clientY,scrollAtStart:main?.scrollTop||0,start:item.startMinutes,
   end:item.endMinutes||item.startMinutes+60,block,moved:false};
  try{block.setPointerCapture?.(ev.pointerId);}catch{}
 });
@@ -798,7 +801,7 @@ function finishDrag(ev,cancel=false){
  // Keep the block as a temporary visual preview, not a persisted change.
  // Only the editor Save button writes the revised minutes to IndexedDB.
  suppressEditUntil=Date.now()+550;
- state.dialog={id:drag.id,occurrenceDay:state.focus,draftStart:drag.next.start,draftEnd:drag.next.end};
+ state.dialog={id:drag.id,occurrenceDay:drag.occurrenceDay,draftStart:drag.next.start,draftEnd:drag.next.end};
  render();
  const editor=root.querySelector('#event-editor');
  if(editor){
@@ -820,15 +823,17 @@ root.addEventListener('keydown',ev=>{
   ev.preventDefault();
   const block=resize.closest('.timeline-event[data-edit]');
   const item=schedule.items.find(i=>i.id===block.dataset.edit);
-  if(!item||item.repeat!=='none'||item.startDay!==item.endDay)return;
+  if(!item||item.startDay!==item.endDay)return;
+  const occurrenceDay=Number(block.dataset.occurrence);
+  if(item.repeat!=='none'&&occurrenceStartForDay(item,occurrenceDay)!==occurrenceDay)return;
   const nextEnd=Math.max(item.startMinutes+15,Math.min(1440,item.endMinutes+(ev.key==='ArrowDown'?15:-15)));
-  state.dialog={id:item.id,occurrenceDay:state.focus,draftStart:item.startMinutes,draftEnd:nextEnd};
+  state.dialog={id:item.id,occurrenceDay,draftStart:item.startMinutes,draftEnd:nextEnd};
   render();root.querySelector('#event-editor .save-button')?.focus();
   return;
  }
  const edit=ev.target.closest('.event-drag[role=button]');
  if(edit&&(ev.key==='Enter'||ev.key===' ')){
-  ev.preventDefault();state.dialog={id:edit.closest('[data-edit]').dataset.edit};render();
+  ev.preventDefault();state.dialog={id:edit.closest('[data-edit]').dataset.edit,occurrenceDay:Number(edit.closest('[data-occurrence]')?.dataset.occurrence??state.focus)};render();
  }
 });
 document.addEventListener('click',ev=>{
