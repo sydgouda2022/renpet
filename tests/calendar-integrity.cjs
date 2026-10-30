@@ -23,7 +23,7 @@ async function main(){
   assert.equal(await page.locator('.timeline-event:has-text("Three-day preservation test")').count(),1);
   await page.locator('.timeline-event:has-text("Three-day preservation test")').click();
   assert.equal(await page.locator('#event-editor [name=egyDay]').inputValue(),'26');
-  await page.locator('[data-close]').click();
+  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
   await page.reload();await page.locator('.month-agenda').waitFor();
   const persistent=(await record(page,'scheduler')).items.find(i=>i.id===saved.id);
   assert.equal(persistent.endDay,saved.endDay);
@@ -65,37 +65,44 @@ async function main(){
   state=await record(page,'scheduler');
   assert.ok(state.items.some(i=>i.id===item.id),'Quick delete must retain the recurring series');
   assert.ok(state.items.find(i=>i.id===item.id).excludedDays.includes(thirdDay));
-  // A Cancel or backdrop tap must ask before discarding real user changes.
+  // The backdrop closes a draft immediately. Only Save can persist an event.
+  let unexpectedPrompts=0;
+  page.removeAllListeners('dialog');
+  page.on('dialog',d=>{unexpectedPrompts++;d.dismiss();});
   await page.locator('header [data-new]').click();
-  await page.locator('#event-editor [name=title]').fill('Unsaved Egyptian event');
-  page.removeAllListeners('dialog');
-  let prompts=0;
-  page.on('dialog',d=>{prompts++;d.dismiss();});
-  await page.locator('#event-editor [data-close]').click();
-  assert.equal(await page.locator('#event-editor').count(),1,'Dismissed discard confirmation must preserve the editor');
+  const draft=page.locator('#event-editor');
+  assert.equal(await draft.locator('[data-close]').count(),0,'No close X or Cancel action is needed');
+  await draft.locator('[name=title]').fill('Not saved on outside tap');
+  await draft.locator('.sheet-body').click({position:{x:25,y:12}});
+  assert.equal(await page.locator('#event-editor').count(),1,'Tapping inside must keep editor open');
+  const editorBounds=await draft.boundingBox();
+  assert.ok(editorBounds&&editorBounds.y>=45,'The editor must leave space for an outside tap');
   await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
-  assert.equal(await page.locator('#event-editor').count(),1,'Backdrop must not discard changed input');
-  page.removeAllListeners('dialog');
-  page.on('dialog',d=>{prompts++;d.accept();});
+  assert.equal(await page.locator('#event-editor').count(),0,'First outside tap dismisses editor');
+  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Not saved on outside tap'));
+
+  // The same rule applies to editing a previously saved appointment.
+  const unchanged=(await record(page,'scheduler')).items.find(i=>i.title==='Three-day preservation test');
+  assert.ok(unchanged);
+  await page.locator('header [data-new]').click();
+  await page.locator('#event-editor [name=title]').fill('Escape must not save');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#event-editor').count(),0);
-  assert.equal(prompts,3,'Cancel, backdrop and Escape must each request confirmation');
-  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Unsaved Egyptian event'));
-  // An adjusted but unconfirmed time-picker value also counts as an unsaved edit.
+  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Escape must not save'));
+
+  // An open time picker must not consume the first outside tap.
   await page.locator('header [data-new]').click();
   const timeDraft=page.locator('#event-editor');
+  await timeDraft.locator('[name=title]').fill('Time picker draft');
   const initialTime=await timeDraft.locator('[name=start]').inputValue();
   await timeDraft.locator('[data-time-open=start]').click();
   await timeDraft.locator('[data-time-minute="'+(initialTime.endsWith(':00')?15:0)+'"]').click();
-  page.removeAllListeners('dialog');
-  let timePrompts=0;
-  page.on('dialog',d=>{timePrompts++;d.dismiss();});
-  await timeDraft.locator('[data-close]').click();
-  assert.equal(await page.locator('#event-editor').count(),1,'Unconfirmed changed time must request discard consent');
-  assert.equal(timePrompts,1);
-  await timeDraft.locator('[data-time-dismiss]').click();
-  await timeDraft.locator('[data-close]').click();
-  assert.equal(await page.locator('#event-editor').count(),0,'Unmodified editor closes without extra confirmation');
+  assert.equal(await timeDraft.locator('.time-picker-host:not([hidden])').count(),1);
+  assert.equal(await timeDraft.locator('[data-time-dismiss]').count(),0,'No picker close X');
+  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+  assert.equal(await page.locator('#event-editor').count(),0);
+  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Time picker draft'));
+  assert.equal(unexpectedPrompts,0,'Outside dismissal must never require browser confirmation');
   page.removeAllListeners('dialog');
   page.on('dialog',d=>d.accept());
   // Reminder completion is its own accessible button, not a span inside Edit.
