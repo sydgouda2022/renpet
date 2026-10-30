@@ -54,9 +54,15 @@ async function main(){
   const editor=page.locator('#event-editor');
   assert.equal(await editor.locator('[name=repeatScope][value=one]').isChecked(),true,'One occurrence is the safe edit default');
   assert.equal(await editor.locator('.repeat-scope-options label').count(),2,'Recurring edits offer two clear touch choices');
+  const specificDate=await editor.locator('.repeat-scope-date').innerText();
+  assert.ok(specificDate.length>2,'Selected recurrence date is visible');
   await editor.locator('[name=repeatScope][value=series]').check();
   assert.equal(await editor.locator('[name=repeatScope][value=series]').isChecked(),true);
+  const original=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),item.startDay);
+  assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),original.day,'Entire series shows the original start date, not a later occurrence');
+  assert.notEqual(await editor.locator('.repeat-scope-date').innerText(),specificDate,'Scope description follows selected series anchor');
   await editor.locator('[name=repeatScope][value=one]').check();
+  assert.equal(await editor.locator('.repeat-scope-date').innerText(),specificDate,'Returning to one occurrence restores its date');
   const expectedDate=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),secondDay);
   assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),expectedDate.day);
   await editor.locator('[name=title]').fill('Only this Egyptian day');
