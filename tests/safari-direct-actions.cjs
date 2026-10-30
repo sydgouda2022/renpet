@@ -34,6 +34,23 @@ async function main(){
     assert.ok(b&&b.height>=20,'Missing accessible resize grip');
     const x=b.x+b.width/2,y=b.y+b.height/2;
     await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+51,{steps:8});await page.mouse.up();
+    const editor=page.locator('#event-editor');
+    await editor.waitFor();
+    assert.equal(await editor.locator('[name=start]').inputValue(),'10:00','Resize does not shift appointment start');
+    assert.ok((await editor.locator('[name=end]').inputValue())>'11:00','Proposed resized time should appear in the editor');
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).endMinutes,660,'Drag preview cannot silently save');
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    assert.equal(await page.locator('#event-editor').count(),0);
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).endMinutes,660,'Outside dismissal discards resize');
+    // Repeat and explicitly save the proposed duration to confirm it.
+    const newBlock=page.locator('.timeline-event[data-edit="'+item.id+'"]');
+    const newGrip=newBlock.locator('.event-resize');
+    await newGrip.scrollIntoViewIfNeeded();
+    const next=await newGrip.boundingBox();
+    const xx=next.x+next.width/2,yy=next.y+next.height/2;
+    await page.mouse.move(xx,yy);await page.mouse.down();await page.mouse.move(xx,yy+51,{steps:8});await page.mouse.up();
+    await page.locator('#event-editor .save-button').click();
+    await page.locator('.save-confirmation').waitFor();
     await page.waitForFunction(async id=>{
      const state=await(await import('./storage.js')).readRecord('scheduler');
      return state?.items.some(i=>i.id===id&&i.endMinutes>660);
@@ -45,7 +62,7 @@ async function main(){
     await page.waitForFunction(async id=>!(await(await import('./storage.js')).readRecord('scheduler'))?.items.some(x=>x.id===id),item.id);
     assert.ok(!(await record(page,'scheduler')).items.some(i=>i.id===item.id));
     await page.screenshot({path:path.join(out,'webkit-'+width+'-'+lang+'-direct.png'),fullPage:true});
-    results.push({width,lang,resize:true,delete:true});
+    results.push({width,lang,resizePreview:true,outsideDiscard:true,explicitSave:true,delete:true});
    }finally{await context.close();}
   }
  }finally{await browser.close();}
