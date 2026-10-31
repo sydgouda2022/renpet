@@ -312,7 +312,7 @@ function dayView(){
   const pos=layout.get(key(i));
   const resizable=i.startDay===i.endDay;
   const shortEvent=end-start<60;
-  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable&&!shortEvent?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(!shortEvent?'<button type="button" class="event-move" aria-label="'+safe(T().start)+' · '+safe(i.title)+'" title="'+safe(T().start)+'"><span aria-hidden="true"></span></button>':'')+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable&&!shortEvent?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
  return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
@@ -601,14 +601,14 @@ async function submitEvent(form){
  if(!saved.items.some(v=>v.id===item.id&&v.title===item.title) || !itemsForDay(saved,startDay).some(v=>v.id===item.id)){
   showEditorError(form,lang()==='ar'?'لم يتم تأكيد تخزين الموعد':lang()==='cop'?'Ⲥⲱⲛϩ: !':'𓏞: !');return;
  }
- closeKeyboard();state.dialog=null;state.focus=clamp(startDay);
+ closeKeyboard();state.dialog=null;suppressEditUntil=0;state.focus=clamp(startDay);
  state.view='day';state.revealItemId=item.id;state.saveNotice=true;render();
 }
 
 // Closing a pop-up discards its draft; only Save writes appointment data.
 function dismissEditor(){
  const returnGroup=state.dialog?.returnCrowdedGroup;
- closeKeyboard();state.dialog=null;render();
+ closeKeyboard();state.dialog=null;suppressEditUntil=0;render();
  if(Number.isInteger(returnGroup))root.querySelector('[data-open-crowded="'+returnGroup+'"]')?.focus({preventScroll:true});
 }
 function dismissCrowdedGroup(){
@@ -851,10 +851,13 @@ let activeDrag=null,suppressEditUntil=0;
 const snap=n=>Math.round(n/15)*15;
 root.addEventListener('pointerdown',ev=>{
  const block=ev.target.closest('.timeline-event[data-edit]');
- if(!block||ev.button!==0||ev.target.closest('.event-delete-action'))return;
- // Short cards are wholly tappable and touch-scrollable; their duration is
- // edited via the same full-size time controls in the Save-only sheet.
- if(ev.pointerType==='touch'&&block.dataset.short==='true')return;
+ if(!block||ev.button!==0||ev.target.closest('[data-quick-delete]'))return;
+ // Fingers may scroll from the event text. Only an explicit grip owns a
+ // touch drag; mouse/pen users can still drag the card body as before.
+ const moveGrip=ev.target.closest('.event-move');
+ const resizeGrip=ev.target.closest('.event-resize');
+ if(ev.pointerType==='touch'&&!moveGrip&&!resizeGrip)return;
+ if(block.dataset.short==='true'&&ev.pointerType==='touch')return;
  const item=loadScheduler().items.find(i=>i.id===block.dataset.edit);
  if(!item||item.allDay||item.startDay!==item.endDay)return;
  const anchor=Number(block.dataset.occurrence);
@@ -864,9 +867,9 @@ root.addEventListener('pointerdown',ev=>{
  // Geometry at pointerdown is the stable authority for a resize hit.
  const grip=block.querySelector('.event-resize');
  const gripBox=grip?.getBoundingClientRect();
- const onGrip=Boolean(ev.target.closest('.event-resize'))||
-  Boolean(gripBox&&ev.clientY>=gripBox.top-1&&ev.clientY<=gripBox.bottom+1&&
-   ev.clientX>=gripBox.left&&ev.clientX<=gripBox.right);
+ const onGrip=Boolean(resizeGrip)||
+  (!moveGrip&&Boolean(gripBox&&ev.clientY>=gripBox.top-1&&ev.clientY<=gripBox.bottom+1&&
+   ev.clientX>=gripBox.left&&ev.clientX<=gripBox.right));
  const mode=onGrip?'resize':'move';
  const main=root.querySelector('#main-content');
  activeDrag={id:item.id,occurrenceDay:anchor,pointerId:ev.pointerId,mode,y:ev.clientY,scrollAtStart:main?.scrollTop||0,start:item.startMinutes,

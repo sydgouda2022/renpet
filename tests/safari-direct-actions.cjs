@@ -28,6 +28,61 @@ async function main(){
     await page.locator('[data-date="'+item.startDay+'"]').click();
     const block=page.locator('.timeline-event[data-edit="'+item.id+'"]');
     await block.waitFor();
+    // On touch devices the body is a normal scrolling/tap surface.
+    // Only the separate 44px move grip or the lower resize grip can drag.
+    const controlState=await block.evaluate(el=>{
+      const body=el.querySelector('.event-drag'),move=el.querySelector('.event-move');
+      const resize=el.querySelector('.event-resize');
+      const m=move?.getBoundingClientRect(),r=resize?.getBoundingClientRect();
+      return {
+        bodyTouch:getComputedStyle(body).touchAction,
+        blockTouch:getComputedStyle(el).touchAction,
+        moveTouch:getComputedStyle(move).touchAction,
+        resizeTouch:getComputedStyle(resize).touchAction,
+        moveWidth:m?.width,moveHeight:m?.height,
+        resizeRight:r?.right,resizeLeft:r?.left,
+        moveLeft:m?.left,moveRight:m?.right
+      };
+    });
+    assert.equal(controlState.bodyTouch,'pan-y','Long event text must allow vertical touch scrolling');
+    assert.equal(controlState.blockTouch,'pan-y','Long event card must allow vertical touch scrolling');
+    assert.equal(controlState.moveTouch,'none','Only the move grip owns a touch drag');
+    assert.equal(controlState.resizeTouch,'none','Only the resize grip owns a touch drag');
+    assert.ok(controlState.moveWidth>=44&&controlState.moveHeight>=44,'Move grip is a full touch target');
+    assert.ok(controlState.resizeRight<=controlState.moveLeft+1||
+      controlState.moveRight<=controlState.resizeLeft+1,'Move and resize grips do not overlap');
+
+    const touchGesture=async(selector,delta)=>{
+      await block.evaluate((el,{selector,delta})=>{
+        const grip=el.querySelector(selector),rect=grip.getBoundingClientRect();
+        const x=rect.left+Math.min(rect.width/2,25),y=rect.top+Math.min(rect.height/2,20);
+        for(const [type,dy] of [['pointerdown',0],['pointermove',delta],['pointerup',delta]]){
+          grip.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,button:0,pointerId:301,pointerType:'touch',clientX:x,clientY:y+dy}));
+        }
+      },{selector,delta});
+    };
+    await touchGesture('.event-drag',48);
+    assert.equal(await page.locator('#event-editor').count(),0,
+      'A touch scroll begun on the appointment body cannot open a move preview');
+    await touchGesture('.event-move',8);
+    assert.equal(await page.locator('#event-editor').count(),0,
+      'An 8px move-grip wobble cannot propose an appointment change');
+    await touchGesture('.event-move',32);
+    await page.locator('#event-editor').waitFor();
+    assert.equal(await page.locator('#event-editor [name=start]').inputValue(),'10:30',
+      'The move grip proposes a snapped time without storing it');
+    assert.equal(await page.locator('#event-editor [name=end]').inputValue(),'11:30');
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).startMinutes,600);
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).startMinutes,600);
+    await touchGesture('.event-resize',32);
+    await page.locator('#event-editor').waitFor();
+    assert.equal(await page.locator('#event-editor [name=start]').inputValue(),'10:00',
+      'Resize grip cannot move the start');
+    assert.equal(await page.locator('#event-editor [name=end]').inputValue(),'11:30');
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).endMinutes,660);
+
     const grip=block.locator('.event-resize');
     await grip.scrollIntoViewIfNeeded();
     const b=await grip.boundingBox();
@@ -157,7 +212,7 @@ async function main(){
     },repeat);
     assert.equal(nextOccurs,true,'Future repeats must remain scheduled');
     await page.screenshot({path:path.join(out,'webkit-'+width+'-'+lang+'-direct.png'),fullPage:true});
-    results.push({width,lang,resizePreview:true,outsideDiscard:true,explicitSave:true,recurringOccurrenceResize:true,seriesPreserved:true,delete:true});
+    results.push({width,lang,touchMoveGrip:true,touchScrollBody:true,resizePreview:true,outsideDiscard:true,explicitSave:true,recurringOccurrenceResize:true,seriesPreserved:true,delete:true});
    }finally{await context.close();}
   }
  }finally{await browser.close();}
