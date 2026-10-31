@@ -53,17 +53,14 @@ async function main(){
       controlState.moveRight<=controlState.resizeLeft+1,'Move and resize grips do not overlap');
 
     const touchGesture=async(selector,delta)=>{
-      await block.evaluate(({selector,delta})=>{
-        const target=el=>el.querySelector(selector);
-        const el=document.querySelector('.timeline-event[data-edit="'+CSS.escape(window.__gestureEventId)+'"]');
-        const grip=target(el),rect=grip.getBoundingClientRect();
+      await block.evaluate((el,{selector,delta})=>{
+        const grip=el.querySelector(selector),rect=grip.getBoundingClientRect();
         const x=rect.left+Math.min(rect.width/2,25),y=rect.top+Math.min(rect.height/2,20);
         for(const [type,dy] of [['pointerdown',0],['pointermove',delta],['pointerup',delta]]){
           grip.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,button:0,pointerId:301,pointerType:'touch',clientX:x,clientY:y+dy}));
         }
       },{selector,delta});
     };
-    await page.evaluate(id=>{window.__gestureEventId=id;},item.id);
     await touchGesture('.event-drag',48);
     assert.equal(await page.locator('#event-editor').count(),0,
       'A touch scroll begun on the appointment body cannot open a move preview');
