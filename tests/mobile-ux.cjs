@@ -68,6 +68,35 @@ async function main(){
      assert.ok(metrics.scrollable,'Long Egyptian month can scroll at '+width);
      assert.ok(metrics.unit>=11,'Egyptian date signs need legible width at '+width);
      assert.ok(metrics.agendaVisible,'Month agenda must remain visible at '+width);
+     const agendaHeight=await page.locator('.month-agenda').evaluate(el=>el.getBoundingClientRect().height);
+     assert.ok(agendaHeight>=170,'Selected-day agenda must offer usable height on phone '+width);
+     // A long Egyptian month must resume in the same position after opening
+     // a Day. This includes the 320px iPhone and hieroglyphic 5-column grid.
+     const visit=await page.locator('.month-section').evaluate(grid=>{
+      grid.scrollTop=Math.min(250,Math.max(0,grid.scrollHeight-grid.clientHeight-16));
+      const outer=grid.getBoundingClientRect();
+      const visible=[...grid.querySelectorAll('.date[data-date]')].find(el=>{
+       const r=el.getBoundingClientRect();
+       return r.top>=outer.top+4&&r.bottom<=outer.bottom-4;
+      });
+      return {top:grid.scrollTop,day:visible?.dataset.date};
+     });
+     assert.ok(visit.top>0&&visit.day,'Month test needs a scrollable, visible Egyptian date');
+     await page.locator('.month-section .date[data-date="'+visit.day+'"]').click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+     await page.locator('[data-back]').click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+     const restored=await page.locator('.month-section').evaluate(grid=>grid.scrollTop);
+     assert.ok(Math.abs(restored-visit.top)<=3,
+      'Returning from Day preserves the Month scroll position at '+width);
+     const agendaScroll=await page.locator('.month-agenda').evaluate(el=>{
+      el.scrollTop=Math.min(40,Math.max(0,el.scrollHeight-el.clientHeight));
+      return el.scrollTop;
+     });
+     await page.locator('header [data-open-panel=settings]').click();
+     await page.locator('.ux-panel-backdrop').click({position:{x:8,y:8}});
+     assert.ok(Math.abs((await page.locator('.month-agenda').evaluate(el=>el.scrollTop))-agendaScroll)<=3,
+      'Opening and dismissing Settings preserves selected-day agenda scroll');
     }
     // A future appointment appears in the iPad's preview pane, without
     // occupying the phone calendar or duplicating appointment records.
