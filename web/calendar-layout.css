@@ -256,3 +256,90 @@ html[data-renpet-layout="phone"] .day-heading small{
 html[data-renpet-layout="phone"] .timeline-event[data-compact="true"]:not([data-short="true"]) .event-drag{
  padding-block:5px 2px;padding-inline:7px 48px
 }
+
+/* iPhone editor and navigation: same actions, better physical touch targets.
+   Do not apply this to the iPad split/staked layouts. */
+html[data-renpet-layout="phone"] .ux-bottom{
+ min-height:60px;padding:4px 8px max(5px,env(safe-area-inset-bottom));gap:8px
+}
+html[data-renpet-layout="phone"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child) .ux-nav-item{
+ flex:1 1 0;max-width:none;min-height:48px;gap:2px;padding:3px 8px;
+ border-radius:12px
+}
+html[data-renpet-layout="phone"] .ux-bottom .ux-nav-item svg{width:23px;height:23px;flex:none}
+html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom{min-height:70px}
+html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom .ux-nav-item{
+ min-height:60px;gap:0
+}
+html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom .ux-nav-item span{
+ font-size:21px;line-height:1.2;min-height:24px
+}
+html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom .ux-nav-item svg{
+ width:24px;height:24px
+}
+/* The editor stays a genuine modal sheet and preserves outside-tap dismissal.
+   Its time picker uses the same 57px header, so keep that dimension stable. */
+html[data-renpet-layout="phone"] .sheet{
+ /* A viewport-anchored bottom sheet cannot be pushed offscreen when the
+    browser scrolls a focused input into view. */
+ position:fixed;bottom:0;left:0;right:0;margin-inline:auto;
+ height:min(88dvh,760px);max-height:88dvh;min-height:0;
+ border-radius:22px 22px 0 0
+}
+/* When the native-script keyboard is open, the same fixed sheet sits
+   above its dock rather than underneath the keyboard hit targets. */
+html[data-renpet-layout="phone"] body.keyboard-open .sheet{
+ bottom:var(--renpet-kb-height);
+ height:calc(98dvh - var(--renpet-kb-height));
+ max-height:calc(98dvh - var(--renpet-kb-height));
+ border-radius:16px 16px 0 0
+}
+html[data-renpet-layout="phone"] .sheet-head{position:relative;min-height:57px;padding-inline:16px}
+html[data-renpet-layout="phone"] .sheet-head::before{
+ content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
+ width:34px;height:4px;border-radius:99px;background:var(--line);pointer-events:none
+}
+html[data-renpet-layout="phone"] .sheet-head .save-button{
+ min-height:44px;min-width:70px;padding:8px 15px;border-radius:999px;
+ background:var(--green);color:#fff;font-weight:750
+}
+html[data-renpet-layout="phone"] .sheet-head .save-button:focus-visible{
+ outline:3px solid var(--gold);outline-offset:2px
+}
+html[data-renpet-layout="phone"] .sheet-body{
+ flex:1 1 auto;min-height:0;
+ padding:14px 16px max(20px,env(safe-area-inset-bottom));
+ overscroll-behavior-y:contain;scroll-padding-block:16px;gap:12px
+}
+/* Keep native radio inputs operable (including keyboard and automation).
+   The selected segment carries the state visually instead of loose text. */
+html[data-renpet-layout="phone"] .kind-toggle{gap:3px;padding:4px;border-radius:14px}
+html[data-renpet-layout="phone"] .kind-toggle label{
+ display:flex;justify-content:center;align-items:center;gap:7px;min-width:0;
+ min-height:48px;padding:7px 8px;border-radius:11px;font-weight:650;
+ cursor:pointer;line-height:1.35
+}
+html[data-renpet-layout="phone"] .kind-toggle input{
+ flex:none;width:18px;height:18px;margin:0;accent-color:var(--green)
+}
+html[data-renpet-layout="phone"] .kind-toggle label:has(input:checked){
+ background:var(--surface);color:var(--deep-green);box-shadow:0 1px 4px #23332621
+}
+html[data-renpet-layout="phone"] .kind-toggle label:focus-within{
+ outline:2px solid var(--gold);outline-offset:-2px
+}
+/* Three squeezed native selectors were too narrow on 320px phones.
+   Use a full-width year above a month/day pair in every script, including
+   the optional end-date selectors. This is layout only, not a calendar change. */
+html[data-renpet-layout="phone"] .date-fields{
+ grid-template-columns:repeat(2,minmax(0,1fr));gap:8px
+}
+html[data-renpet-layout="phone"] .date-fields select:first-child{
+ grid-column:1/-1;min-height:50px;max-width:100%;text-overflow:ellipsis
+}
+html[data-renpet-layout="phone"] .date-fields select:nth-child(n+2){
+ min-height:48px;max-width:100%;text-overflow:ellipsis
+}
+html[data-renpet-layout="phone"] body:not([data-language=egy]) .date-fields select{
+ font-size:16px!important;padding:10px!important
+}

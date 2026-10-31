@@ -726,7 +726,14 @@ root.addEventListener('click',async ev=>{
   return;
  }
  if(b.hasAttribute('data-hour')){state.saveNotice=false;state.dialog={kind:'event',hour:Number(b.dataset.hour)};render();return;}
- if(b.hasAttribute('data-new')){state.saveNotice=false;state.dialog={kind:'event'};render();root.querySelector('[name="title"]')?.focus();return;}
+ if(b.hasAttribute('data-new')){
+  state.saveNotice=false;state.dialog={kind:'event'};render();
+  // On phones, keep the whole form reachable at first opening. Auto-focus
+  // would raise the Coptic/hieroglyphic keyboard over All-day/time controls.
+  if(document.documentElement.dataset.renpetLayout!=='phone')
+   root.querySelector('[name="title"]')?.focus();
+  return;
+ }
  if(b.hasAttribute('data-edit')){state.dialog={id:b.dataset.edit,occurrenceDay:Number(b.dataset.occurrence??state.focus)};render();return;}
  if(b.hasAttribute('data-delete')){
   const v=loadScheduler(),item=v.items.find(x=>x.id===b.dataset.delete);

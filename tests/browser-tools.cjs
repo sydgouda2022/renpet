@@ -18,6 +18,21 @@ async function saveEvent(page,title){
  await page.locator('header [data-new]').click();
  const form=page.locator('#event-editor');
  await form.locator('[name=title]').fill(title);
+ // Save must remain reachable on small phones, regardless of language.
+ const saveBounds=await form.evaluate(el=>{
+  const button=el.querySelector('.save-button'),b=button.getBoundingClientRect();
+  const f=el.getBoundingClientRect(),h=el.querySelector('.sheet-head').getBoundingClientRect();
+  return {x:b.x,y:b.y,right:b.right,bottom:b.bottom,formX:f.x,formWidth:f.width,
+   headerWidth:h.width,viewportWidth:innerWidth,viewportHeight:innerHeight,
+   formHeight:f.height,formBottom:f.bottom,overlayTop:el.closest('.sheet-overlay')?.getBoundingClientRect().top,
+   overlayHeight:el.closest('.sheet-overlay')?.getBoundingClientRect().height,
+   maxHeight:getComputedStyle(el).maxHeight,cssHeight:getComputedStyle(el).height,
+   documentScrollY:scrollY,visualTop:visualViewport?.offsetTop??null,
+   visualHeight:visualViewport?.height??null};
+ });
+ if(saveBounds.x<0||saveBounds.y<0||saveBounds.right>saveBounds.viewportWidth+2||
+   saveBounds.bottom>saveBounds.viewportHeight+2)
+  throw Error('Appointment Save is outside phone viewport: '+JSON.stringify(saveBounds));
  await form.locator('.save-button').click();
  await page.locator('.save-confirmation').waitFor();
  await page.locator('#event-editor').waitFor({state:'detached'});

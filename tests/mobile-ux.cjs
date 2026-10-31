@@ -39,6 +39,63 @@ async function main(){
      const prefs=await record(page,'preferences');
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
+     if(width<700){
+      // Actual 320–430px phone widths, every script. Keep both bottom
+      // shortcuts visible without wasting the extra height of a tab bar.
+      const nav=await page.locator('.ux-bottom').evaluate(el=>{
+       const choices=[...el.querySelectorAll('.ux-nav-item')];
+       return {height:el.getBoundingClientRect().height,
+        targets:choices.map(e=>e.getBoundingClientRect().height),
+        labels:choices.map(e=>e.querySelector('span')?.getBoundingClientRect().height)};
+      });
+      assert.ok(nav.height<=(lang==='egy'?82:74),
+       'Bottom navigation is too tall for '+width+'px '+lang);
+      assert.ok(nav.targets.every(n=>n>=44),'Every bottom action must retain a 44px hit area');
+      assert.ok(nav.labels.every(n=>n>=12),'Bottom labels cannot collapse or disappear');
+
+      await page.locator('header [data-new]').click();
+      const editor=page.locator('#event-editor');
+      assert.equal(await page.locator('#renpet-keyboard').isVisible(),false,
+       'Opening an iPhone appointment cannot cover form controls with a keyboard');
+      const metrics=await editor.evaluate(form=>{
+       const box=sel=>form.querySelector(sel)?.getBoundingClientRect();
+       const year=box('[name=egyYear]'),month=box('[name=egyMonth]'),day=box('[name=egyDay]');
+       const sheet=form.getBoundingClientRect(),save=box('.save-button');
+       const segments=[...form.querySelectorAll('.kind-toggle label')].map(e=>e.getBoundingClientRect().height);
+       return {sheetTop:sheet.top,sheetBottom:sheet.bottom,screenHeight:innerHeight,
+        saveTop:save.top,saveBottom:save.bottom,saveWidth:save.width,
+        yearTop:year.top,yearBottom:year.bottom,yearWidth:year.width,
+        monthTop:month.top,monthWidth:month.width,dayTop:day.top,dayWidth:day.width,
+        segments,scrollable:form.querySelector('.sheet-body').scrollHeight>=form.querySelector('.sheet-body').clientHeight};
+      });
+      assert.ok(metrics.sheetTop>=0&&metrics.sheetBottom<=metrics.screenHeight+2,
+       'Editor must stay within the iPhone viewport');
+      assert.ok(metrics.saveWidth>=44&&metrics.saveTop>=metrics.sheetTop&&metrics.saveBottom<=metrics.screenHeight,
+       'Save remains reachable in the sheet header');
+      assert.ok(metrics.yearBottom<=metrics.monthTop+2&&Math.abs(metrics.monthTop-metrics.dayTop)<2,
+       'Full-width year must sit above month and day on a phone');
+      assert.ok(metrics.yearWidth>metrics.monthWidth&&metrics.monthWidth>=80&&metrics.dayWidth>=80,
+       'All three Egyptian date selectors need useful physical width at '+width);
+      assert.ok(metrics.segments.every(h=>h>=44),'Kind segments need large touch targets');
+      assert.equal(metrics.scrollable,true,'Editor content remains scrollable in the bounded sheet');
+      await editor.locator('.kind-toggle label').last().click();
+      assert.equal(await editor.locator('[name=kind][value=reminder]').isChecked(),true,
+       'Touching the selected segment must choose the reminder');
+      await editor.locator('[name=kind][value=event]').check();
+      assert.equal(await editor.locator('[name=kind][value=event]').isChecked(),true,
+       'Native radio inputs remain keyboard and automation accessible');
+      await editor.locator('.end-date-details summary').click();
+      const endDates=await editor.evaluate(form=>{
+       const a=form.querySelector('[name=endEgyYear]').getBoundingClientRect();
+       const b=form.querySelector('[name=endEgyMonth]').getBoundingClientRect();
+       const c=form.querySelector('[name=endEgyDay]').getBoundingClientRect();
+       return {yearBottom:a.bottom,monthTop:b.top,dayTop:c.top};
+      });
+      assert.ok(endDates.yearBottom<=endDates.monthTop+2&&Math.abs(endDates.monthTop-endDates.dayTop)<2,
+       'Optional end date uses the same phone-native layout');
+      await page.locator('.sheet-overlay').click({position:{x:7,y:7}});
+      assert.equal(await editor.count(),0,'Outside tap still dismisses the unsaved editor');
+     }
     }
     // One-day appointments keep an uncluttered editor in all three scripts.
     await page.locator('header [data-new]').click();
