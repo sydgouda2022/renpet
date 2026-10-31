@@ -155,7 +155,7 @@ async function main(){
     await cluster.click();
     assert.equal(await page.locator('.crowded-choice').count(),4);
     assert.equal(await page.locator('.crowded-choice').first().isVisible(),true);
-    assert.equal(await page.evaluate(()=>document.activeElement?.closest('.crowded-sheet')!==null),true,'Crowded sheet traps focus');
+    assert.equal(await page.evaluate(()=>Boolean(document.activeElement?.closest('.crowded-sheet'))),true,'Crowded sheet traps focus');
     await page.keyboard.press('Shift+Tab');
     assert.equal(await page.locator('.crowded-choice').last().evaluate(el=>el===document.activeElement),true,'Reverse Tab wraps inside sheet');
     await page.keyboard.press('Tab');
