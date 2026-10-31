@@ -530,7 +530,7 @@ body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
 
 /* Dense overlapping appointments have a single large entry point instead
    of 4–8 unreadable narrow event columns. */
-.timeline-crowded{position:absolute;inset-inline:1px;width:calc(100% - 2px);z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:44px;box-sizing:border-box;overflow:hidden;padding:7px 12px;border:1px solid var(--green);border-inline-start:4px solid var(--green);border-radius:11px;background:var(--mint);color:var(--ink);text-align:start;pointer-events:auto;touch-action:manipulation}
+.timeline-crowded{position:absolute;left:1px;width:calc(100% - 2px);z-index:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:44px;box-sizing:border-box;overflow:hidden;padding:7px 12px;border:1px solid var(--green);border-inline-start:4px solid var(--green);border-radius:11px;background:var(--mint);color:var(--ink);text-align:start;pointer-events:auto;touch-action:manipulation}
 .timeline-crowded strong{font-size:15px;line-height:1.35}
 .timeline-crowded span{font-size:12px;line-height:1.35;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .timeline-crowded:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
