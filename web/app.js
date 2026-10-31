@@ -224,65 +224,95 @@ function dayView(){
   const last=anchor+Math.max(0,(i.endDay??i.startDay)-i.startDay);
   return {...i,_dayStart:state.focus>anchor?0:i.startMinutes,_dayEnd:state.focus<last?1440:i.endMinutes};
  });
- const ordered=[...timed].sort((a,b)=>a._dayStart-b._dayStart||a._dayEnd-b._dayEnd);
- const clusters=[];let current=[],end=-1;
+ // A 15-minute event occupies 16px of clock time, but needs a 46px
+ // touch target. Arrange by the actual rendered footprints, not only by
+ // overlapping appointment times. This never changes their stored times.
+ const hourPixels=64,minTouchPixels=46,dayPixels=24*hourPixels;
+ const ordered=timed.map(item=>{
+  const rawTop=item._dayStart/60*hourPixels;
+  const top=Math.min(rawTop,dayPixels-minTouchPixels);
+  const duration=Math.max(15,item._dayEnd-item._dayStart);
+  const bottom=Math.min(dayPixels,top+Math.max(minTouchPixels,duration/60*hourPixels-3));
+  return {...item,_visualTop:top,_visualBottom:bottom};
+ }).sort((a,b)=>a._visualTop-b._visualTop||a._visualBottom-b._visualBottom);
+ const key=i=>i.id+':'+(i._occurrenceStart??i.startDay);
+ const clusters=[];let current=[],lastBottom=-1;
  for(const item of ordered){
-  if(current.length&&item._dayStart>=end){clusters.push(current);current=[];end=-1;}
-  current.push(item);end=Math.max(end,item._dayEnd??item._dayStart+60);
+  if(current.length&&item._visualTop>=lastBottom){clusters.push(current);current=[];lastBottom=-1;}
+  current.push(item);lastBottom=Math.max(lastBottom,item._visualBottom);
  }
  if(current.length)clusters.push(current);
- // A connected overlap cluster may include later, non-crowded events.
- // Hide only appointments participating in truly overfull time intervals.
  crowdedDayGroups=[];
- const crowdedKeys=new Set(),crowdedBlocks=[];
+ const crowdedKeys=new Set(),groupRects=[];
  const maxVisibleColumns=window.matchMedia?.('(max-width:700px)').matches?2:3;
- const key=i=>i.id+':'+(i._occurrenceStart??i.startDay);
  for(const cluster of clusters){
-  const times=[...new Set(cluster.flatMap(i=>[i._dayStart,i._dayEnd??i._dayStart+60]))].sort((a,b)=>a-b);
-  const crowded=new Set();let firstDense=null,lastDense=null;
-  for(let t=0;t<times.length-1;t++){
-   const at=times[t];
-   const active=cluster.filter(i=>i._dayStart<=at&&(i._dayEnd??i._dayStart+60)>at);
+  const boundaries=[...new Set(cluster.flatMap(i=>[i._visualTop,i._visualBottom]))].sort((a,b)=>a-b);
+  const members=new Set();let firstDense=null,lastDense=null;
+  for(let t=0;t<boundaries.length-1;t++){
+   const at=boundaries[t];
+   const active=cluster.filter(i=>i._visualTop<=at&&i._visualBottom>at);
    if(active.length<=maxVisibleColumns)continue;
    if(firstDense===null)firstDense=at;
-   lastDense=times[t+1];
-   for(const item of active)crowded.add(key(item));
+   lastDense=boundaries[t+1];
+   for(const item of active)members.add(key(item));
   }
-  if(!crowded.size)continue;
-  const grouped=cluster.filter(i=>crowded.has(key(i)));
+  if(!members.size)continue;
+  const grouped=cluster.filter(i=>members.has(key(i)));
   const index=crowdedDayGroups.length;
   crowdedDayGroups.push(grouped);
   for(const item of grouped)crowdedKeys.add(key(item));
-  const height=Math.min(94,Math.max(46,(lastDense-firstDense)/60*64-3));
-  crowdedBlocks.push('<button type="button" class="timeline-crowded" data-open-crowded="'+index+
-   '" style="top:'+(firstDense/60*64)+'px;height:'+height+'px" aria-label="'+
-   safe(N(grouped.length)+' '+T().event+' · '+timeText(firstDense,lang())+' – '+timeText(lastDense,lang()))+'">'+
-   '<strong>'+safe(N(grouped.length)+' '+T().event)+'</strong><span>'+
-   safe(timeText(firstDense,lang())+' – '+timeText(lastDense,lang())+' · '+
-    grouped.slice(0,2).map(i=>i.title).join(' · '))+'</span></button>');
+  // Place the summary over the dense interval, not across the whole
+  // lifetime of its members: later independent appointments keep their width.
+  const top=firstDense;
+  groupRects.push({_layoutKey:'group:'+index,_visualTop:top,
+   _visualBottom:Math.min(dayPixels,top+Math.min(94,Math.max(minTouchPixels,lastDense-top-3))),
+   index,grouped});
  }
- // Recompute width after removing crowded members. Visible events should
- // occupy their actual free space, not a hidden four-column cluster.
+ // Pack the actual on-screen objects, including group summaries, into lanes.
+ // In particular a summary cannot cover a neighboring, ungrouped event.
+ const displayed=[
+  ...ordered.filter(i=>!crowdedKeys.has(key(i))).map(i=>({...i,_layoutKey:key(i)})),
+  ...groupRects
+ ].sort((a,b)=>a._visualTop-b._visualTop||a._visualBottom-b._visualBottom);
  const layout=new Map();
- for(const cluster of clusters){
-  const visible=cluster.filter(i=>!crowdedKeys.has(key(i)));
+ let component=[],componentEnd=-1;
+ const assignComponent=()=>{
   const ends=[];
-  for(const item of visible){
-   let col=ends.findIndex(v=>v<=item._dayStart);
+  for(const entry of component){
+   let col=ends.findIndex(bottom=>bottom<=entry._visualTop);
    if(col<0){col=ends.length;ends.push(-1);}
-   ends[col]=Math.max(item._dayEnd??item._dayStart+60,item._dayStart+15);
-   layout.set(key(item),{col,cols:0});
+   ends[col]=entry._visualBottom;
+   layout.set(entry._layoutKey,{col,cols:0});
   }
-  for(const item of visible)layout.get(key(item)).cols=ends.length;
+  for(const entry of component)layout.get(entry._layoutKey).cols=ends.length;
+ };
+ for(const entry of displayed){
+  if(component.length&&entry._visualTop>=componentEnd){assignComponent();component=[];componentEnd=-1;}
+  component.push(entry);componentEnd=Math.max(componentEnd,entry._visualBottom);
  }
- const blocks=timed.filter(i=>!crowdedKeys.has(i.id+':'+(i._occurrenceStart??i.startDay))).map(i=>{
-  const start=Math.max(0,Math.min(1439,i._dayStart||0)),end=Math.max(start+15,Math.min(1440,i._dayEnd??start+60));
+ if(component.length)assignComponent();
+ const horizontal=pos=>{
+  const width=100/pos.cols;
+  return 'left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)';
+ };
+ const crowdedBlocks=groupRects.map(group=>{
+  const pos=layout.get(group._layoutKey),people=group.grouped;
+  const start=Math.min(...people.map(i=>i._dayStart)),end=Math.max(...people.map(i=>i._dayEnd));
+  const range=timeText(start,lang())+' – '+timeText(end,lang());
+  return '<button type="button" class="timeline-crowded" data-open-crowded="'+group.index+
+   '" style="top:'+group._visualTop+'px;height:'+(group._visualBottom-group._visualTop)+'px;'+horizontal(pos)+
+   '" aria-label="'+safe(N(people.length)+' '+T().event+' · '+range)+'">'+
+   '<strong>'+safe(N(people.length)+' '+T().event)+'</strong><span>'+
+   safe(range+' · '+people.slice(0,2).map(i=>i.title).join(' · '))+'</span></button>';
+ });
+ const blocks=ordered.filter(i=>!crowdedKeys.has(key(i))).map(i=>{
+  const start=i._dayStart,end=i._dayEnd;
   const cal=schedule.calendars.find(c=>c.id===i.calendarId);
   const color=/^#[0-9a-f]{6}$/i.test(cal?.color)?cal.color:'#187568';
-  const pos=layout.get(i.id+':'+(i._occurrenceStart??i.startDay))||{col:0,cols:1},width=100/pos.cols;
+  const pos=layout.get(key(i));
   const resizable=i.startDay===i.endDay;
   const shortEvent=end-start<60;
-  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+(start/60*64)+'px;height:'+Math.max(46,(end-start)/60*64-3)+'px;left:calc('+width*pos.col+'% + 1px);width:calc('+width+'% - 3px)" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
  return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
@@ -855,7 +885,7 @@ root.addEventListener('pointermove',ev=>{
  const start=drag.mode==='move'?Math.max(0,Math.min(1440-duration,drag.start+delta)):drag.start;
  const end=drag.mode==='resize'?Math.max(start+15,Math.min(1440,drag.end+delta)):start+duration;
  drag.next={start,end};
- drag.block.style.top=(start/60*64)+'px';
+ drag.block.style.top=Math.min(start/60*64,24*64-46)+'px';
  drag.block.style.height=Math.max(46,(end-start)/60*64-3)+'px';
  drag.block.dataset.dragPreview='true';
  const label=drag.block.querySelector('.event-drag small');

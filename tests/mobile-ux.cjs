@@ -194,6 +194,57 @@ async function main(){
     assert.equal(await laterBlock.count(),1,'Later non-crowded event stays visible on timeline');
     const laterWidth=await laterBlock.evaluate(el=>el.getBoundingClientRect().width/el.parentElement.getBoundingClientRect().width);
     assert.ok(laterWidth>0.85,'Later event gets available width instead of ghost columns');
+    // Adjacent short appointments have 46px minimum touch targets even
+    // though their actual 15-minute duration is only 16px on this timeline.
+    // The rendered targets must never hide or intercept one another.
+    const shortDay=future.start+1;
+    const shortItems=await page.evaluate(async day=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js');
+      const state=await storage.readRecord('scheduler');
+      const times=[[600,615],[615,630],[630,645],[645,660],[690,750],[1410,1425],[1425,1440]];
+      const ids=times.map(([startMinutes,endMinutes],n)=>{
+        const item=domain.createItem({title:'Short slot '+n,startDay:day,startMinutes,endMinutes,calendarId:'personal'});
+        state.items.push(item);return item.id;
+      });
+      await storage.writeRecord('scheduler',state);
+      return ids;
+    },shortDay);
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+future.start+'"]').click();
+    await page.locator('[data-next]').click();
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    const overlapErrors=await page.evaluate(()=>{
+      const elements=[...document.querySelectorAll('.timeline-event,.timeline-crowded')];
+      const rects=elements.map(e=>({label:e.dataset.edit||e.dataset.openCrowded,r:e.getBoundingClientRect()}));
+      const errors=[];
+      for(let i=0;i<rects.length;i++)for(let j=i+1;j<rects.length;j++){
+        const a=rects[i],b=rects[j];
+        const dx=Math.min(a.r.right,b.r.right)-Math.max(a.r.left,b.r.left);
+        const dy=Math.min(a.r.bottom,b.r.bottom)-Math.max(a.r.top,b.r.top);
+        if(dx>2&&dy>2)errors.push(a.label+' overlaps '+b.label);
+      }
+      const bounds=document.querySelector('.timeline-events').getBoundingClientRect();
+      for(const row of rects){
+        if(row.r.height<44)errors.push('Undersized touch target '+row.label);
+        if(row.r.bottom>bounds.bottom+2)errors.push('Event beyond midnight '+row.label);
+      }
+      return errors;
+    });
+    assert.deepEqual(overlapErrors,[],'No two Day appointment touch targets may collide');
+    const visible=await page.locator('.timeline-event').count();
+    const groups=await page.locator('.timeline-crowded').count();
+    assert.ok(groups+visible>0);
+    if(width<700){
+      assert.ok(groups>=1,'Phone groups adjacent 15-minute slots that would create 3 narrow lanes');
+      await page.locator('.timeline-crowded').first().click();
+      assert.ok(await page.locator('.crowded-choice').count()>=3,'All short events remain selectable');
+      await page.keyboard.press('Escape');
+    }else{
+      assert.equal(await page.locator('.timeline-event[data-edit="'+shortItems[0]+'"]').count(),1,'iPad displays its first short appointment');
+      assert.equal(await page.locator('.timeline-event[data-edit="'+shortItems[3]+'"]').count(),1,'iPad displays its last short appointment');
+    }
+    assert.equal((await record(page,'scheduler')).items.filter(i=>shortItems.includes(i.id)).length,7,
+      'Visual grouping must not change or remove any stored appointment');
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
