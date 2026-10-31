@@ -282,6 +282,10 @@ async function main(){
       state.items.push(a,b);await storage.writeRecord('scheduler',state);
       return {first:a.id,second:b.id};
     },shortDay+1);
+    // The app intentionally caches its loaded local schedule per render.
+    // An external IndexedDB test seed needs a reload before navigation.
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+shortDay+'"]').click();
     await page.locator('[data-next]').click();
     assert.equal(await page.locator('body').getAttribute('data-view'),'day');
     const first=page.locator('.timeline-event[data-edit="'+pair.first+'"]');
