@@ -56,6 +56,59 @@ async function main(){
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
      if(width<700){
+      // Today must be the direct return from List to Month. It should not
+      // silently keep the List view open after changing its starting date.
+      await page.locator('[data-primary-view=list]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'list');
+      await page.locator('[data-primary-view=today]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month',
+       'Today from List must return to the default Month in '+lang);
+      const titleBases={
+       ar:'تجهيز مستلزمات الوردية وشراء الطعام ومراجعة مواعيد العمل',
+       cop:'Ⲡⲓⲉⲣⲅⲟⲛ ⲛ̀ⲧⲉ ⲡⲓϩⲟⲟⲩ ⲛⲉⲙ ⲛⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ ⲡⲓⲣⲟⲙⲡⲓ',
+       egy:'𓉐 𓂋𓈖 𓏞 𓆳 𓋹 𓄿 𓏺 𓇳 𓐍 𓅓'
+      };
+      const longTitle=Array(3).fill(titleBases[lang]).join(' · ')+' '+width;
+      assert.ok(longTitle.length<=200,'Long-title fixture exceeds input limit');
+      const longItem=await saveEvent(page,longTitle);
+      await page.reload();await page.locator('.month-agenda').waitFor();
+      await page.locator('[data-primary-view=today]').click();
+      const monthRow=page.locator('.month-agenda .event-row[data-edit="'+longItem.id+'"]');
+      await monthRow.waitFor();
+      const preview=await monthRow.locator('.event-copy strong').evaluate(el=>{
+       const style=getComputedStyle(el);
+       return {height:el.getBoundingClientRect().height,lineHeight:parseFloat(style.lineHeight),
+        text:el.textContent,clamp:style.webkitLineClamp};
+      });
+      assert.equal(preview.text,longTitle,'Saved Month title is unchanged');
+      assert.ok(preview.height<=preview.lineHeight*3+2,
+       'Long Month preview must fit three lines: '+JSON.stringify(preview));
+      const deleteTarget=await page.locator('.month-agenda .event-delete-action[data-quick-delete="'+longItem.id+'"]').evaluate(el=>{
+       const r=el.getBoundingClientRect();return {width:r.width,height:r.height};
+      });
+      assert.ok(deleteTarget.width>=44&&deleteTarget.height>=44,
+       'Long title cannot shrink its direct Delete action');
+      await monthRow.click();
+      assert.equal(await page.locator('#event-editor [name=title]').inputValue(),longTitle);
+      await page.locator('.sheet-overlay').click({position:{x:6,y:6}});
+      await page.locator('[data-primary-view=list]').click();
+      const listRow=page.locator('.list-page .event-row[data-edit="'+longItem.id+'"]');
+      await listRow.waitFor();
+      const listPreview=await listRow.locator('.event-copy strong').evaluate(el=>({
+       height:el.getBoundingClientRect().height,
+       lineHeight:parseFloat(getComputedStyle(el).lineHeight),text:el.textContent
+      }));
+      assert.equal(listPreview.text,longTitle);
+      assert.ok(listPreview.height<=listPreview.lineHeight*3+2,
+       'Long List preview must fit three lines: '+lang);
+      await listRow.click();
+      assert.equal(await page.locator('#event-editor [name=title]').inputValue(),longTitle);
+      await page.locator('.sheet-overlay').click({position:{x:6,y:6}});
+      await page.locator('.list-page [data-quick-delete="'+longItem.id+'"]').click();
+      assert.equal((await record(page,'scheduler')).items.some(item=>item.id===longItem.id),false,
+       'Deleting a long-title appointment in List must remove only that item');
+      await page.locator('[data-primary-view=today]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
       // Actual 320–430px phone widths, every script. Keep both bottom
       // shortcuts visible without wasting the extra height of a tab bar.
       const nav=await page.locator('.ux-bottom').evaluate(el=>{

@@ -431,3 +431,17 @@ html[data-renpet-layout="phone"] .event-row-shell .event-copy{
 html[data-renpet-layout="phone"] .event-row-shell .event-copy strong{
  overflow-wrap:anywhere;line-height:1.4
 }
+
+/* On iPhone, keep appointment and reminder summaries readable without one
+   200-character title pushing every later row offscreen. The full title
+   remains in the editable appointment and the button's accessible name. */
+html[data-renpet-layout="phone"] .event-row-shell .event-copy strong{
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+ overflow:hidden;max-height:4.2em;line-height:1.4;
+ overflow-wrap:anywhere;word-break:normal
+}
+html[data-renpet-layout="phone"] .event-row-shell .event-copy small{
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ overflow:hidden;max-height:2.8em;line-height:1.4;
+ overflow-wrap:anywhere
+}
