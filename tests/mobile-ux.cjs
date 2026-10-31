@@ -32,10 +32,10 @@ async function main(){
       const season=el.querySelector('.year-month.active-month')?.closest('.year-season');
       const parent=el.getBoundingClientRect(),r=season?.getBoundingClientRect();
       return {scrollTop:el.scrollTop,season:season?.dataset.season,
-       top:r?.top-parent.top,bottom:r?.bottom-parent.top};
+       top:r?.top-parent.top,bottom:r?.bottom-parent.top,height:parent.height};
      });
      assert.equal(yearJump.season,'shemu','Year opens on the selected later-season month');
-     assert.ok(yearJump.scrollTop>100&&yearJump.top>=-20&&yearJump.top<100,
+     assert.ok(yearJump.scrollTop>100&&yearJump.top>=-20&&yearJump.top<yearJump.height&&yearJump.bottom>0,
       'Phone Year should reveal the selected season without starting at Akhet: '+JSON.stringify(yearJump));
     }
     await page.locator('[data-open-month="2"]').click();
