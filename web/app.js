@@ -601,14 +601,14 @@ async function submitEvent(form){
  if(!saved.items.some(v=>v.id===item.id&&v.title===item.title) || !itemsForDay(saved,startDay).some(v=>v.id===item.id)){
   showEditorError(form,lang()==='ar'?'لم يتم تأكيد تخزين الموعد':lang()==='cop'?'Ⲥⲱⲛϩ: !':'𓏞: !');return;
  }
- closeKeyboard();state.dialog=null;state.focus=clamp(startDay);
+ closeKeyboard();state.dialog=null;suppressEditUntil=0;state.focus=clamp(startDay);
  state.view='day';state.revealItemId=item.id;state.saveNotice=true;render();
 }
 
 // Closing a pop-up discards its draft; only Save writes appointment data.
 function dismissEditor(){
  const returnGroup=state.dialog?.returnCrowdedGroup;
- closeKeyboard();state.dialog=null;render();
+ closeKeyboard();state.dialog=null;suppressEditUntil=0;render();
  if(Number.isInteger(returnGroup))root.querySelector('[data-open-crowded="'+returnGroup+'"]')?.focus({preventScroll:true});
 }
 function dismissCrowdedGroup(){
