@@ -577,16 +577,24 @@ async function submitEvent(form){
 
 // Closing a pop-up discards its draft; only Save writes appointment data.
 function dismissEditor(){
+ const returnGroup=state.dialog?.returnCrowdedGroup;
  closeKeyboard();state.dialog=null;render();
+ if(Number.isInteger(returnGroup))root.querySelector('[data-open-crowded="'+returnGroup+'"]')?.focus({preventScroll:true});
+}
+function dismissCrowdedGroup(){
+ const group=state.crowdedGroup;
+ state.crowdedGroup=null;render();
+ if(Number.isInteger(group))root.querySelector('[data-open-crowded="'+group+'"]')?.focus({preventScroll:true});
 }
 root.addEventListener('click',async ev=>{
- if(ev.target.matches?.('[data-dismiss-crowded]')){state.crowdedGroup=null;render();return;}
+ if(ev.target.matches?.('[data-dismiss-crowded]')){dismissCrowdedGroup();return;}
  const openCrowded=ev.target.closest('[data-open-crowded]');
  if(openCrowded){state.crowdedGroup=Number(openCrowded.dataset.openCrowded);render();return;}
  const crowdedEdit=ev.target.closest('[data-crowded-edit]');
  if(crowdedEdit){
+  const returnCrowdedGroup=state.crowdedGroup;
   state.crowdedGroup=null;
-  state.dialog={id:crowdedEdit.dataset.crowdedEdit,occurrenceDay:Number(crowdedEdit.dataset.crowdedOccurrence)};
+  state.dialog={id:crowdedEdit.dataset.crowdedEdit,occurrenceDay:Number(crowdedEdit.dataset.crowdedOccurrence),returnCrowdedGroup};
   render();return;
  }
  if(ev.target.matches?.('[data-close-festival-overlay]')){state.festivalDetail=null;render();return;}
@@ -906,7 +914,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCurren
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
   if(state.festivalDetail){state.festivalDetail=null;render();}
   else if(state.dialog)dismissEditor();
-  else if(state.crowdedGroup!==null){state.crowdedGroup=null;render();}
+  else if(state.crowdedGroup!==null)dismissCrowdedGroup();
   else if(state.panel){state.panel=null;render();}
   else if(state.search){state.search=false;render();}
  }});
