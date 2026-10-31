@@ -792,8 +792,12 @@ root.addEventListener('click',async ev=>{
  if(b.hasAttribute('data-primary-view')){
   const v=b.dataset.primaryView;
   state.panel=null;state.search=false;
-  if(v==='today'){state.focus=clamp(today());}
-  else if(v==='list')state.view='list';
+  if(v==='today'){
+   state.focus=clamp(today());
+   // Today is the direct return to Month from List or Year; in Day and
+   // Month it moves only the date, preserving the current view.
+   if(state.view==='list'||state.view==='year')state.view='month';
+  }else if(v==='list')state.view='list';
   render();return;
  }
  if(b.hasAttribute('data-open-panel')){
