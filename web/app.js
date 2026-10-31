@@ -483,13 +483,15 @@ function panelContent(){
  const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals};
  const body=panels[state.panel]?.();
  if(!body)return '';
- return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
+ return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
 }
 function render(){
  if(!data)return;
  const viewKey=state.view;
  const oldMain=root.querySelector('#main-content');
  const keepScroll=viewKey===previousRenderKey?oldMain?.scrollTop:0;
+ const oldPanel=root.querySelector('.ux-panel');
+ const panelScroll=oldPanel?.dataset.panel===state.panel?oldPanel.querySelector('.ux-panel-body')?.scrollTop:null;
  // Month grid and selected-day agenda scroll independently. Preserve both
  // when rendering a panel, opening Day, or returning from the editor.
  const previousMonth=previousRenderKey==='month'?root.querySelector('.month-section'):null;
@@ -516,6 +518,16 @@ function render(){
  }
  const main=root.querySelector('#main-content');
  if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
+ if(main&&state.view==='year'&&viewKey!==previousRenderKey&&
+    document.documentElement.dataset.renpetLayout==='phone'){
+  // Opening the year from a late-season month should reveal that season,
+  // not drop the user at Akhet and force a long scroll.
+  const season=root.querySelector('.year-month.active-month')?.closest('.year-season');
+  if(season){
+   const outer=main.getBoundingClientRect(),inner=season.getBoundingClientRect();
+   main.scrollTop=Math.max(0,main.scrollTop+inner.top-outer.top-8);
+  }
+ }
  if(state.view==='month'){
   const region=root.querySelector('.month-section'),agenda=root.querySelector('.month-agenda');
   const date=egy(state.focus);
@@ -558,6 +570,10 @@ function render(){
  previousRenderKey=viewKey;
  previousRenderFocus=state.focus;
  syncModalFocus();
+ if(panelScroll!==null&&panelScroll!==undefined){
+  const panelBody=root.querySelector('.ux-panel-body');
+  if(panelBody)panelBody.scrollTop=panelScroll;
+ }
  maintainCurrentTimeLine();
 }
 
