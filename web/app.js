@@ -231,34 +231,49 @@ function dayView(){
   current.push(item);end=Math.max(end,item._dayEnd??item._dayStart+60);
  }
  if(current.length)clusters.push(current);
- const layout=new Map();
- for(const cluster of clusters){
-  const ends=[];
-  for(const item of cluster){
-   let col=ends.findIndex(v=>v<=item._dayStart);
-   if(col<0){col=ends.length;ends.push(-1);}
-   ends[col]=Math.max(item._dayEnd||item._dayStart+60,item._dayStart+15);
-   layout.set(item.id+':'+(item._occurrenceStart??item.startDay),{col,cols:0});
-  }
-  for(const item of cluster)layout.get(item.id+':'+(item._occurrenceStart??item.startDay)).cols=ends.length;
- }
- // When a simultaneous cluster would be too narrow to read, present one
- // accessible summary instead; its full list opens in an outside-dismiss sheet.
+ // A connected overlap cluster may include later, non-crowded events.
+ // Hide only appointments participating in truly overfull time intervals.
  crowdedDayGroups=[];
  const crowdedKeys=new Set(),crowdedBlocks=[];
  const maxVisibleColumns=window.matchMedia?.('(max-width:700px)').matches?2:3;
+ const key=i=>i.id+':'+(i._occurrenceStart??i.startDay);
  for(const cluster of clusters){
-  const columns=layout.get(cluster[0].id+':'+(cluster[0]._occurrenceStart??cluster[0].startDay))?.cols||1;
-  if(columns<=maxVisibleColumns)continue;
+  const times=[...new Set(cluster.flatMap(i=>[i._dayStart,i._dayEnd??i._dayStart+60]))].sort((a,b)=>a-b);
+  const crowded=new Set();let firstDense=null,lastDense=null;
+  for(let t=0;t<times.length-1;t++){
+   const at=times[t];
+   const active=cluster.filter(i=>i._dayStart<=at&&(i._dayEnd??i._dayStart+60)>at);
+   if(active.length<=maxVisibleColumns)continue;
+   if(firstDense===null)firstDense=at;
+   lastDense=times[t+1];
+   for(const item of active)crowded.add(key(item));
+  }
+  if(!crowded.size)continue;
+  const grouped=cluster.filter(i=>crowded.has(key(i)));
   const index=crowdedDayGroups.length;
-  crowdedDayGroups.push(cluster);
-  for(const event of cluster)crowdedKeys.add(event.id+':'+(event._occurrenceStart??event.startDay));
-  const first=Math.min(...cluster.map(i=>i._dayStart)),last=Math.max(...cluster.map(i=>i._dayEnd));
-  const height=Math.min(94,Math.max(46,(last-first)/60*64-3));
+  crowdedDayGroups.push(grouped);
+  for(const item of grouped)crowdedKeys.add(key(item));
+  const height=Math.min(94,Math.max(46,(lastDense-firstDense)/60*64-3));
   crowdedBlocks.push('<button type="button" class="timeline-crowded" data-open-crowded="'+index+
-   '" style="top:'+(first/60*64)+'px;height:'+height+'px" aria-label="'+safe(N(cluster.length)+' '+T().event)+'">'+
-   '<strong>'+safe(N(cluster.length)+' '+T().event)+'</strong><span>'+
-   safe(cluster.slice(0,2).map(i=>i.title).join(' · '))+'</span></button>');
+   '" style="top:'+(firstDense/60*64)+'px;height:'+height+'px" aria-label="'+
+   safe(N(grouped.length)+' '+T().event+' · '+timeText(firstDense,lang())+' – '+timeText(lastDense,lang()))+'">'+
+   '<strong>'+safe(N(grouped.length)+' '+T().event)+'</strong><span>'+
+   safe(timeText(firstDense,lang())+' – '+timeText(lastDense,lang())+' · '+
+    grouped.slice(0,2).map(i=>i.title).join(' · '))+'</span></button>');
+ }
+ // Recompute width after removing crowded members. Visible events should
+ // occupy their actual free space, not a hidden four-column cluster.
+ const layout=new Map();
+ for(const cluster of clusters){
+  const visible=cluster.filter(i=>!crowdedKeys.has(key(i)));
+  const ends=[];
+  for(const item of visible){
+   let col=ends.findIndex(v=>v<=item._dayStart);
+   if(col<0){col=ends.length;ends.push(-1);}
+   ends[col]=Math.max(item._dayEnd??item._dayStart+60,item._dayStart+15);
+   layout.set(key(item),{col,cols:0});
+  }
+  for(const item of visible)layout.get(key(item)).cols=ends.length;
  }
  const blocks=timed.filter(i=>!crowdedKeys.has(i.id+':'+(i._occurrenceStart??i.startDay))).map(i=>{
   const start=Math.max(0,Math.min(1439,i._dayStart||0)),end=Math.max(start+15,Math.min(1440,i._dayEnd??start+60));
