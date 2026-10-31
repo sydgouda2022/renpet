@@ -129,8 +129,19 @@ html[data-renpet-layout="phone"] body[data-language=egy] .month-section{
 html[data-renpet-layout="phone"] .month-section::-webkit-scrollbar{display:none}
 html[data-renpet-layout="phone"] .month-agenda,
 html[data-renpet-layout="phone"] body[data-language=egy] .month-agenda{
- flex:0 0 clamp(126px,28%,170px);min-height:126px;max-height:38%;
+ /* Show the selected day, not merely its heading. The long month grid
+    keeps its own scroll area, including large hieroglyphic date groups. */
+ flex:0 0 clamp(176px,34%,240px);min-height:176px;max-height:44%;
  overflow-y:auto;overscroll-behavior:contain
+}
+
+/* Landscape phones have less vertical space. Both sections must retain
+   a usable scroll area without reducing the Gregorian/Egyptian date font. */
+@media(max-height:559px){
+ html[data-renpet-layout="phone"] .month-agenda,
+ html[data-renpet-layout="phone"] body[data-language=egy] .month-agenda{
+  flex-basis:140px;min-height:120px;max-height:46%;
+ }
 }
 
 /* 6.10 — prominent, bold native numerals in date selectors and year overview.
