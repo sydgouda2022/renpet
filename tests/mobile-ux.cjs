@@ -8,7 +8,8 @@ async function main(){
  const results=[];
  try{
   for(const [name,width,height] of [
-   ['iphone-small',375,667],['iphone',390,844],
+   ['iphone-compact',320,640],['iphone-small',375,667],['iphone',390,844],
+   ['iphone-large',430,932],
    ['ipad-portrait',768,1024],['ipad-landscape',1194,834],['desktop',1440,900]
   ]){
    const context=await browser.newContext({viewport:{width,height},isMobile:width<700,hasTouch:true,timezoneId:'Africa/Cairo',serviceWorkers:'block'});
@@ -271,6 +272,42 @@ async function main(){
     assert.equal(await page.locator('#event-editor [name=title]').inputValue(),'Long touch target');
     await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
     assert.equal((await record(page,'scheduler')).items.find(i=>i.id===longId).startMinutes,780);
+    // Two simultaneous one-hour appointments should remain readable on a
+    // phone without sacrificing the existing direct Delete action.
+    const pair=await page.evaluate(async day=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js');
+      const state=await storage.readRecord('scheduler');
+      const a=domain.createItem({title:'First simultaneous shift',startDay:day,startMinutes:660,endMinutes:720,calendarId:'personal'});
+      const b=domain.createItem({title:'Second simultaneous shift',startDay:day,startMinutes:675,endMinutes:735,calendarId:'personal'});
+      state.items.push(a,b);await storage.writeRecord('scheduler',state);
+      return {first:a.id,second:b.id};
+    },shortDay+1);
+    // The app intentionally caches its loaded local schedule per render.
+    // An external IndexedDB test seed needs a reload before navigation.
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+shortDay+'"]').click();
+    await page.locator('[data-next]').click();
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    const first=page.locator('.timeline-event[data-edit="'+pair.first+'"]');
+    const second=page.locator('.timeline-event[data-edit="'+pair.second+'"]');
+    await first.waitFor();await second.waitFor();
+    const phone=width<700;
+    assert.equal(await first.getAttribute('data-compact'),String(phone),
+      'Side-by-side event controls respond to phone width '+width);
+    assert.equal(await first.locator('.event-move,.event-resize').count(),phone?0:2,
+      'Narrow phone cards edit move and duration in the full editor');
+    assert.equal(await first.locator('[data-quick-delete]').count(),1,
+      'Direct Delete remains present on overlapping appointments');
+    const heading=await page.locator('.day-heading').evaluate(el=>getComputedStyle(el).display);
+    assert.equal(heading,phone?'none':'flex','Avoid duplicate Day heading with Gregorian hidden');
+    await first.locator('.event-drag').click();
+    assert.equal(await page.locator('#event-editor [name=title]').inputValue(),'First simultaneous shift');
+    assert.equal(await page.locator('#event-editor [name=start]').inputValue(),'11:00');
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    await second.locator('[data-quick-delete]').click();
+    assert.equal((await record(page,'scheduler')).items.some(i=>i.id===pair.second),false,
+      'Direct Delete works on a compact overlapping appointment');
+    assert.equal((await record(page,'scheduler')).items.some(i=>i.id===pair.first),true);
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
