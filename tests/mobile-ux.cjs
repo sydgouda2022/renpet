@@ -80,9 +80,10 @@ async function main(){
       const listLayout=await page.locator('.list-page').evaluate(el=>({
        width:el.getBoundingClientRect().width,
        contentWidth:el.scrollWidth,clientWidth:el.clientWidth,
+       inset:parseFloat(getComputedStyle(el).paddingInlineStart),
        hasContent:Boolean(el.querySelector('.agenda,.schedule-empty'))
       }));
-      assert.ok(listLayout.hasContent&&listLayout.width>=width-24&&
+      assert.ok(listLayout.hasContent&&listLayout.width>=width-24&&listLayout.inset<=12&&
        listLayout.contentWidth<=listLayout.clientWidth+2,
        'List page keeps the same useful width as the Month agenda: '+lang+' '+width+' '+JSON.stringify(listLayout));
       await page.locator('header [data-open-year]').click();
