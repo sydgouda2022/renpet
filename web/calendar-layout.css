@@ -286,6 +286,14 @@ html[data-renpet-layout="phone"] .sheet{
  height:min(88dvh,760px);max-height:88dvh;min-height:0;
  border-radius:22px 22px 0 0
 }
+/* When the native-script keyboard is open, the same fixed sheet sits
+   above its dock rather than underneath the keyboard hit targets. */
+html[data-renpet-layout="phone"] body.keyboard-open .sheet{
+ bottom:var(--renpet-kb-height);
+ height:calc(98dvh - var(--renpet-kb-height));
+ max-height:calc(98dvh - var(--renpet-kb-height));
+ border-radius:16px 16px 0 0
+}
 html[data-renpet-layout="phone"] .sheet-head{position:relative;min-height:57px;padding-inline:16px}
 html[data-renpet-layout="phone"] .sheet-head::before{
  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
