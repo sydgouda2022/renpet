@@ -851,7 +851,7 @@ let activeDrag=null,suppressEditUntil=0;
 const snap=n=>Math.round(n/15)*15;
 root.addEventListener('pointerdown',ev=>{
  const block=ev.target.closest('.timeline-event[data-edit]');
- if(!block||ev.button!==0)return;
+ if(!block||ev.button!==0||ev.target.closest('[data-quick-delete]'))return;
  // Fingers may scroll from the event text. Only an explicit grip owns a
  // touch drag; mouse/pen users can still drag the card body as before.
  const moveGrip=ev.target.closest('.event-move');
