@@ -33,6 +33,12 @@ async function main(){
     const b=await grip.boundingBox();
     assert.ok(b&&b.height>=20,'Missing accessible resize grip');
     const x=b.x+b.width/2,y=b.y+b.height/2;
+    // A tap on a long event's resize handle should open the editor, not
+    // silently modify its end or leave the handle as a dead control.
+    await grip.click();
+    await page.locator('#event-editor').waitFor();
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===item.id).endMinutes,660);
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
     await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y+51,{steps:8});await page.mouse.up();
     const editor=page.locator('#event-editor');
     await editor.waitFor();
@@ -61,6 +67,45 @@ async function main(){
     await row.locator('[data-quick-delete="'+item.id+'"]').click();
     await page.waitForFunction(async id=>!(await(await import('./storage.js')).readRecord('scheduler'))?.items.some(x=>x.id===id),item.id);
     assert.ok(!(await record(page,'scheduler')).items.some(i=>i.id===item.id));
+    // Short cards reserve the entire 46px target for tap-to-edit. A finger
+    // moving over them must not start a hidden drag or intercept Day scrolling.
+    const short=await page.evaluate(async()=>{
+      const domain=await import('./scheduler.js'),storage=await import('./storage.js');
+      const state=await storage.readRecord('scheduler');
+      const now=new Date();
+      const day=Math.floor(Date.parse([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-')+'T00:00:00Z')/86400000);
+      const event=domain.createItem({title:'Quarter-hour touch test',startDay:day,startMinutes:840,endMinutes:855,calendarId:'personal'});
+      state.items.push(event);
+      await storage.writeRecord('scheduler',state);
+      return {id:event.id,day};
+    });
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('[data-date="'+short.day+'"]').click();
+    const shortBlock=page.locator('.timeline-event[data-edit="'+short.id+'"]');
+    await shortBlock.waitFor();await shortBlock.scrollIntoViewIfNeeded();
+    assert.equal(await shortBlock.locator('.event-resize').count(),0,'Short appointment must not steal tap space for a resize grip');
+    assert.equal(await shortBlock.evaluate(el=>getComputedStyle(el).touchAction),'pan-y',
+      'Vertical scroll remains available when a gesture starts on a short event');
+    await shortBlock.evaluate(el=>{
+      const rect=el.getBoundingClientRect(), x=rect.x+rect.width/2, y=rect.y+rect.height/2;
+      for(const [type,delta] of [['pointerdown',0],['pointermove',40],['pointerup',40]])
+       el.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerType:'touch',pointerId:303,button:0,clientX:x,clientY:y+delta}));
+    });
+    assert.equal(await page.locator('#event-editor').count(),0,'Touch movement alone cannot launch a short-event drag preview');
+    const hit=await shortBlock.locator('.event-drag').boundingBox();
+    await page.touchscreen.tap(hit.x+hit.width/2,hit.y+hit.height/2);
+    await page.locator('#event-editor').waitFor();
+    assert.equal(await page.locator('#event-editor [name=end]').inputValue(),'14:15');
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===short.id).endMinutes,855,'Tap cannot modify stored duration');
+    await page.locator('#event-editor [data-time-open=end]').click();
+    await page.locator('#event-editor [data-time-minute="45"]').click();
+    await page.locator('#event-editor [data-time-confirm]').click();
+    assert.equal(await page.locator('#event-editor [name=end]').inputValue(),'14:45');
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===short.id).endMinutes,855,'Picker is still a draft');
+    await page.locator('#event-editor .save-button').click();
+    await page.locator('.save-confirmation').waitFor();
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===short.id).endMinutes,885,
+      'Explicit Save updates the original appointment');
     // A recurring appointment is still a series: dragging one occurrence
     // must never mutate the parent until Save, and it must not affect future days.
     const repeat=await page.evaluate(async title=>{

@@ -523,9 +523,13 @@ body[data-language=cop] .repeat-editor select,body[data-language=cop] .repeat-pr
 body[data-language=egy] .end-date-details>summary{font-size:23px;line-height:1.45}
 body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
 
-/* Short Day events have one large, clear Edit touch area; Delete is
-   available in their editor rather than squeezed into a tiny button. */
-.timeline-event[data-short="true"] .event-drag{padding-inline-end:7px}
+/* A short card is one large tap target. Its 46px footprint is too
+   small to fit a second accessible resize grip; edit duration in its sheet.
+   Allow vertical calendar scrolling starting directly over these cards. */
+.timeline-event[data-short="true"]{touch-action:pan-y}
+.timeline-event[data-short="true"] .event-drag{
+ padding-inline-end:7px;touch-action:pan-y;cursor:pointer;justify-content:center
+}
 .timeline-event .event-delete-timeline:focus-visible{outline:3px solid var(--green);outline-offset:-3px}
 
 /* Dense overlapping appointments have a single large entry point instead
