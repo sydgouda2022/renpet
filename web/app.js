@@ -570,8 +570,10 @@ function render(){
  previousRenderKey=viewKey;
  previousRenderFocus=state.focus;
  syncModalFocus();
- if(panelScroll!==null&&panelScroll!==undefined)
-  root.querySelector('.ux-panel-body')?.scrollTo({top:panelScroll,behavior:'instant'});
+ if(panelScroll!==null&&panelScroll!==undefined){
+  const panelBody=root.querySelector('.ux-panel-body');
+  if(panelBody)panelBody.scrollTop=panelScroll;
+ }
  maintainCurrentTimeLine();
 }
 
