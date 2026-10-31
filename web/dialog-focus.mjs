@@ -1,7 +1,7 @@
 /** Modal keyboard focus policy; no observers and no duplicate dialog rendering. */
 let previous=null;
 let activeDialog=null;
-const findDialog=()=>document.querySelector('.renpet-backup-panel, .festival-detail-sheet, #event-editor, .ux-panel');
+const findDialog=()=>document.querySelector('.renpet-backup-panel, .festival-detail-sheet, #event-editor, .ux-panel, .crowded-sheet');
 const targets=dialog=>[...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex]')].filter(el=>
  !el.disabled&&!el.hidden&&el.getAttribute('tabindex')!=='-1'&&el.getClientRects().length>0);
 export function syncModalFocus(){
