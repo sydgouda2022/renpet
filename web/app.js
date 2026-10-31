@@ -51,6 +51,7 @@ async function saveScheduler(next){
 }
 let previousRenderKey=null;
 let previousRenderFocus=null;
+let monthViewport=null;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
@@ -489,6 +490,16 @@ function render(){
  const viewKey=state.view;
  const oldMain=root.querySelector('#main-content');
  const keepScroll=viewKey===previousRenderKey?oldMain?.scrollTop:0;
+ // Month grid and selected-day agenda scroll independently. Preserve both
+ // when rendering a panel, opening Day, or returning from the editor.
+ const previousMonth=previousRenderKey==='month'?root.querySelector('.month-section'):null;
+ if(previousMonth&&previousRenderFocus!==null){
+  const oldDate=egy(previousRenderFocus);
+  monthViewport={year:oldDate.year,month:oldDate.month,language:document.body.dataset.language,
+   week:previousMonth.dataset.week,gridTop:previousMonth.scrollTop,
+   agendaTop:root.querySelector('.month-agenda')?.scrollTop||0,
+   focus:previousRenderFocus};
+ }
  itemCache.clear();festivalCache.clear();
  document.documentElement.lang=LOCALES[lang()].html;
  document.documentElement.dir=lang()==='ar'?'rtl':'ltr';
@@ -505,8 +516,16 @@ function render(){
  }
  const main=root.querySelector('#main-content');
  if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
- if(state.view==='month'&&lang()==='egy'){
-  const region=root.querySelector('.month-section'),selected=region?.querySelector('.date.chosen');
+ if(state.view==='month'){
+  const region=root.querySelector('.month-section'),agenda=root.querySelector('.month-agenda');
+  const date=egy(state.focus);
+  const sameMonth=monthViewport&&monthViewport.year===date.year&&monthViewport.month===date.month&&
+   monthViewport.language===lang()&&Number(monthViewport.week)===week();
+  if(region&&sameMonth)region.scrollTop=monthViewport.gridTop;
+  if(agenda&&sameMonth&&monthViewport.focus===state.focus)agenda.scrollTop=monthViewport.agendaTop;
+  // On entering a different month or returning from a different Day, reveal
+  // the selected date without resetting a still-visible scroll position.
+  const selected=region?.querySelector('.date.chosen');
   if(region&&selected){
    const outer=region.getBoundingClientRect(),inner=selected.getBoundingClientRect();
    if(inner.top<outer.top||inner.bottom>outer.bottom){
