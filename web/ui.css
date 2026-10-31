@@ -442,13 +442,13 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 .timeline-event{overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .timeline-event .event-drag{
  min-height:0;flex:1;cursor:pointer;touch-action:pan-y;
- padding:5px 48px 1px 7px;
+ padding:5px 48px 1px 48px;
 }
 .timeline-event .event-drag strong{font-size:13px;min-height:13px}
 .timeline-event .event-resize{
  position:relative;z-index:3;flex:0 0 26px;display:grid;place-items:center;
  box-sizing:border-box;height:26px;min-height:26px;max-height:26px;
- width:calc(100% - 44px);align-self:flex-start;padding:0;border:0;border-top:1px solid color-mix(in srgb,var(--event) 45%,white);
+ width:calc(100% - 44px);align-self:flex-end;padding:0;border:0;border-top:1px solid color-mix(in srgb,var(--event) 45%,white);
  border-radius:0 0 9px 9px;background:color-mix(in srgb,var(--event) 18%,white);
  color:var(--event);cursor:ns-resize;touch-action:none;user-select:none;
 }
@@ -459,10 +459,10 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 /* A separate side grip makes a touch drag intentional. The appointment
    body remains scrollable, while resize keeps its distinct lower grip. */
 .timeline-event .event-move{
- position:absolute;z-index:4;inset-block:0;inset-inline-end:0;
+ position:absolute;z-index:4;inset-block:0;inset-inline-start:0;
  display:grid;place-items:center;width:44px;min-height:44px;padding:0;
- border:0;border-inline-start:1px solid color-mix(in srgb,var(--event) 35%,white);
- border-radius:0 10px 10px 0;
+ border:0;border-inline-end:1px solid color-mix(in srgb,var(--event) 35%,white);
+ border-radius:10px;
  background:color-mix(in srgb,var(--event) 14%,white);
  color:var(--event);cursor:grab;touch-action:none
 }
@@ -474,6 +474,19 @@ html[data-renpet-layout^="tablet"] .year-months{grid-template-columns:repeat(3,m
 .timeline-event .event-move span::after{
  content:'';position:absolute;inset-inline:0;top:5px;border-top:2px solid currentColor
 }
+/* Direct Delete remains at the trailing top edge; the move grip stays
+   at the opposite edge so they never compete for one touch target. */
+.timeline-event .event-delete-timeline{
+ position:absolute;z-index:5;top:0;inset-inline-end:0;
+ display:grid;place-items:center;width:44px;height:44px;padding:0;
+ border:0;border-radius:10px;background:rgba(255,255,255,.88);
+ color:var(--rubric);touch-action:manipulation
+}
+.timeline-event .event-delete-timeline svg{width:17px;height:17px}
+.timeline-event .event-delete-timeline:focus-visible{
+ outline:3px solid var(--green);outline-offset:-3px
+}
+
 
 
 /* Festival sources — one multi-select within the existing Settings sheet.
@@ -537,7 +550,7 @@ body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
    Allow vertical calendar scrolling starting directly over these cards. */
 .timeline-event[data-short="true"]{touch-action:pan-y}
 .timeline-event[data-short="true"] .event-drag{
- padding-inline-end:7px;touch-action:pan-y;cursor:pointer;justify-content:center
+ padding-inline:7px;touch-action:pan-y;cursor:pointer;justify-content:center
 }
 
 
