@@ -312,7 +312,7 @@ function dayView(){
   const pos=layout.get(key(i));
   const resizable=i.startDay===i.endDay;
   const shortEvent=end-start<60;
-  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable&&!shortEvent?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
  return '<div class="day-page"><div class="day-heading">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
@@ -677,7 +677,9 @@ root.addEventListener('click',async ev=>{
  if(complete){const sched=loadScheduler(),item=sched.items.find(i=>i.id===complete.dataset.complete);if(item){toggleCompleted(item,Number(complete.dataset.completeOccurrence??state.focus));if(!await saveScheduler(sched)){alert(lang()==='ar'?'تعذر حفظ التذكير':'Could not save reminder');return;}render();}return;}
  // Timeline events are accessible divs, not buttons. Open them directly.
  const timelineEvent=ev.target.closest('.timeline-event[data-edit]');
- if(timelineEvent&&!ev.target.closest('.event-resize')){
+ // A simple tap, including on a resize grip, opens the existing editor.
+ // Moving/resizing requires a real gesture and never saves on pointerup.
+ if(timelineEvent){
   state.dialog={id:timelineEvent.dataset.edit,occurrenceDay:Number(timelineEvent.dataset.occurrence??state.focus)};
   render();return;
  }
@@ -850,6 +852,9 @@ const snap=n=>Math.round(n/15)*15;
 root.addEventListener('pointerdown',ev=>{
  const block=ev.target.closest('.timeline-event[data-edit]');
  if(!block||ev.button!==0||ev.target.closest('.event-delete-action'))return;
+ // Short cards are wholly tappable and touch-scrollable; their duration is
+ // edited via the same full-size time controls in the Save-only sheet.
+ if(ev.pointerType==='touch'&&block.dataset.short==='true')return;
  const item=loadScheduler().items.find(i=>i.id===block.dataset.edit);
  if(!item||item.allDay||item.startDay!==item.endDay)return;
  const anchor=Number(block.dataset.occurrence);
@@ -877,10 +882,10 @@ root.addEventListener('pointermove',ev=>{
   else if(ev.clientY<bounds.top+42)main.scrollTop-=16;
  }
  const pixels=ev.clientY-drag.y+(main?.scrollTop||0)-drag.scrollAtStart;
- if(Math.abs(pixels)>6)drag.moved=true;
+ const delta=snap(pixels/64*60);
+ if(!drag.moved&&Math.abs(pixels)>=12&&delta!==0)drag.moved=true;
  if(!drag.moved)return;
  ev.preventDefault();
- const delta=snap(pixels/64*60);
  const duration=Math.max(15,drag.end-drag.start);
  const start=drag.mode==='move'?Math.max(0,Math.min(1440-duration,drag.start+delta)):drag.start;
  const end=drag.mode==='resize'?Math.max(start+15,Math.min(1440,drag.end+delta)):start+duration;
@@ -894,7 +899,10 @@ root.addEventListener('pointermove',ev=>{
 function finishDrag(ev,cancel=false){
  const drag=activeDrag;if(!drag||ev.pointerId!==drag.pointerId)return;
  activeDrag=null;
- if(!drag.moved||cancel||!drag.next){if(drag.moved)render();return;}
+ if(!drag.moved||cancel||!drag.next||
+    (drag.next.start===drag.start&&drag.next.end===drag.end)){
+  if(drag.moved)render();return;
+ }
  // Keep the block as a temporary visual preview, not a persisted change.
  // Only the editor Save button writes the revised minutes to IndexedDB.
  suppressEditUntil=Date.now()+550;
