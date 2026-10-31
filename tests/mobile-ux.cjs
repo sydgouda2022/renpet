@@ -36,7 +36,7 @@ async function main(){
      });
      assert.equal(yearJump.season,'shemu','Year opens on the selected later-season month');
      assert.ok(yearJump.scrollTop>100&&yearJump.top>=-20&&yearJump.top<100,
-      'Phone Year should reveal the selected season without starting at Akhet');
+      'Phone Year should reveal the selected season without starting at Akhet: '+JSON.stringify(yearJump));
     }
     await page.locator('[data-open-month="2"]').click();
     assert.equal(await page.locator('.month-section .date').count(),30);
