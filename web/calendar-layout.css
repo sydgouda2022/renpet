@@ -280,6 +280,9 @@ html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom .ux-nav-item
 /* The editor stays a genuine modal sheet and preserves outside-tap dismissal.
    Its time picker uses the same 57px header, so keep that dimension stable. */
 html[data-renpet-layout="phone"] .sheet{
+ /* A viewport-anchored bottom sheet cannot be pushed offscreen when the
+    browser scrolls a focused input into view. */
+ position:fixed;bottom:0;left:0;right:0;margin-inline:auto;
  height:min(88dvh,760px);max-height:88dvh;min-height:0;
  border-radius:22px 22px 0 0
 }
