@@ -155,13 +155,45 @@ async function main(){
     await cluster.click();
     assert.equal(await page.locator('.crowded-choice').count(),4);
     assert.equal(await page.locator('.crowded-choice').first().isVisible(),true);
+    assert.equal(await page.evaluate(()=>document.activeElement?.closest('.crowded-sheet')!==null),true,'Crowded sheet traps focus');
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await page.locator('.crowded-choice').last().evaluate(el=>el===document.activeElement),true,'Reverse Tab wraps inside sheet');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator('.crowded-choice').first().evaluate(el=>el===document.activeElement),true,'Tab wraps inside sheet');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.timeline-crowded').evaluate(el=>el===document.activeElement),true,'Escape restores group focus');
+    await page.locator('.timeline-crowded').click();
     await page.locator('.crowded-backdrop').click({position:{x:6,y:6}});
     assert.equal(await page.locator('.crowded-sheet').count(),0,'Outside tap dismisses the group list');
+    assert.equal(await page.locator('.timeline-crowded').evaluate(el=>el===document.activeElement),true,'Backdrop dismissal restores group focus');
     await page.locator('.timeline-crowded').click();
     await page.locator('.crowded-choice[data-crowded-edit="'+crowded[1]+'"]').click();
     assert.equal(await page.locator('#event-editor [name=title]').inputValue(),'Shift overlap 1');
     await page.locator('.sheet-overlay').click({position:{x:6,y:6}});
+    assert.equal(await page.locator('.timeline-crowded').evaluate(el=>el===document.activeElement),true,'Discarding edit restores group focus');
     assert.equal((await record(page,'scheduler')).items.filter(i=>crowded.includes(i.id)).length,4,'Opening/closing group must not mutate appointments');
+    // A long bridging event can overlap four simultaneous appointments,
+    // but a later two-way overlap must still have its own readable block.
+    const mixed=await page.evaluate(async day=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js');
+      const sched=await storage.readRecord('scheduler');
+      const bridge=domain.createItem({title:'Bridge overlap',startDay:day,startMinutes:645,endMinutes:690,calendarId:'personal'});
+      const later=domain.createItem({title:'Later separate appointment',startDay:day,startMinutes:675,endMinutes:720,calendarId:'personal'});
+      sched.items.push(bridge,later);
+      await storage.writeRecord('scheduler',sched);
+      return {bridge:bridge.id,later:later.id};
+    },future.start);
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+future.start+'"]').click();
+    assert.equal(await page.locator('.timeline-crowded').count(),1);
+    await page.locator('.timeline-crowded').click();
+    assert.equal(await page.locator('.crowded-choice').count(),5,'Only the five genuinely crowded events should be grouped');
+    assert.equal(await page.locator('.crowded-choice[data-crowded-edit="'+mixed.later+'"]').count(),0,'Later event must not be hidden in group');
+    await page.keyboard.press('Escape');
+    const laterBlock=page.locator('.timeline-event[data-edit="'+mixed.later+'"]');
+    assert.equal(await laterBlock.count(),1,'Later non-crowded event stays visible on timeline');
+    const laterWidth=await laterBlock.evaluate(el=>el.getBoundingClientRect().width/el.parentElement.getBoundingClientRect().width);
+    assert.ok(laterWidth>0.85,'Later event gets available width instead of ghost columns');
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
