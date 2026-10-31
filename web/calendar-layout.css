@@ -400,3 +400,34 @@ html[data-renpet-layout="phone"] body[data-language=egy] .settings-group select{
 html[data-renpet-layout="phone"] body[data-language=egy] .ux-panel-head strong{
  font-size:23px;line-height:1.4
 }
+
+/* iPhone: Month, Day, and List share the same content gutter. List previously
+   stacked its own 18px inset on top of 10px agenda padding, squeezing titles
+   beside their time and direct-delete controls on compact phones. */
+html[data-renpet-layout="phone"] .list-page{padding-inline:9px}
+html[data-renpet-layout="phone"] .list-page .agenda{
+ min-width:0;padding:10px 7px 14px;margin-bottom:9px
+}
+html[data-renpet-layout="phone"] .day-page .all-day{padding-inline:9px}
+html[data-renpet-layout="phone"] .day-page .timeline{margin-inline:9px 10px}
+/* The selected date and optional Gregorian caption can both be long in
+   Coptic or hieroglyphics. Wrap text rather than letting the heading push
+   an adjacent event or the phone viewport sideways. */
+html[data-renpet-layout="phone"] .agenda-heading{
+ flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:3px;min-width:0
+}
+html[data-renpet-layout="phone"] .agenda-heading h3{
+ flex:1 1 auto;min-width:0;overflow-wrap:anywhere;white-space:normal
+}
+html[data-renpet-layout="phone"] .agenda-heading .subtle{
+ flex:0 1 auto;min-width:0;overflow-wrap:anywhere;text-align:start
+}
+html[data-renpet-layout="phone"] .event-row-shell .event-row{
+ min-width:0
+}
+html[data-renpet-layout="phone"] .event-row-shell .event-copy{
+ flex:1 1 auto;min-width:0
+}
+html[data-renpet-layout="phone"] .event-row-shell .event-copy strong{
+ overflow-wrap:anywhere;line-height:1.4
+}
