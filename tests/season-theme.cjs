@@ -78,8 +78,19 @@ async function main(){
      return {mainBottom:main.bottom,lastBottom:end.bottom,columns};
     });
     if(width>=700){
-     assert.equal(year.columns,4,'An iPad shows four months in each season row');
-     assert.ok(year.lastBottom<=year.mainBottom+1,'Complete Coptic year must fit on the iPad');
+     assert.equal(year.columns,width<1024?3:4,
+      'iPad portrait has three legible months per row, landscape four');
+     if(width>=1024){
+      assert.ok(year.lastBottom<=year.mainBottom+1,
+       'Complete Coptic year fits the landscape iPad');
+     }else{
+      // Larger portrait month cards are more readable and intentionally
+      // scroll. Year-end days must remain directly reachable by touch.
+      await page.locator('.epagomenal-tile').scrollIntoViewIfNeeded();
+      assert.ok(await page.locator('.epagomenal-tile').isVisible(),
+       'Portrait Year must expose the year-end tile after scrolling');
+      await page.locator('.year-season').first().scrollIntoViewIfNeeded();
+     }
     }else{
      assert.equal(year.columns,2,'Phone mini-calendars remain readable');
      await page.locator('.epagomenal-tile').scrollIntoViewIfNeeded();

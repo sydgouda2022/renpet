@@ -197,3 +197,25 @@ html[data-renpet-layout^=tablet] body[data-language=egy] .year-overview .year-mo
  body{--art-top:22px;--art-garden:65px}
  .ux-toolbar-head{padding-block:1px 4px}
 }
+
+/* iPad portrait is a reading surface, not a miniature desktop grid. Three
+   month cards give Coptic and Egyptian numerals usable width. Landscape
+   retains its four-column year with the selected-day agenda alongside it. */
+html[data-renpet-layout="tablet-stacked"] .app-shell{
+ grid-template-columns:76px minmax(0,1fr)
+}
+html[data-renpet-layout="tablet-stacked"] .year-months{
+ grid-template-columns:repeat(3,minmax(0,1fr))
+}
+/* Arabic dates in Year must have the same reading order as Month on iPad,
+   just as they already do on iPhone. Other scripts remain left-to-right. */
+html[data-renpet-layout^="tablet"] .year-mini-grid{direction:inherit}
+html[data-renpet-layout^="tablet"] .year-overview .year-month-name{
+ min-width:0;flex:1;display:-webkit-box;-webkit-box-orient:vertical;
+ -webkit-line-clamp:2;line-clamp:2;white-space:normal;overflow:hidden;
+ overflow-wrap:anywhere
+}
+html[data-renpet-layout^="tablet"] .year-overview .year-mini-title{
+ align-items:flex-start;min-height:28px
+}
+html[data-renpet-layout^="tablet"] .year-month-index{flex:none}

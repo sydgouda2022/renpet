@@ -22,6 +22,35 @@ async function main(){
     assert.equal(await page.locator('.year-season').count(),3);
     assert.equal(await page.locator('.year-month').count(),12);
     assert.equal(await page.locator('.year-mini-day').count(),366);
+    if(width>=700){
+     const layout=await page.evaluate(()=>{
+      const grid=document.querySelector('.year-months'),rail=document.querySelector('.ux-bottom');
+      return {columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+       railWidth:rail.getBoundingClientRect().width,
+       direction:getComputedStyle(grid.querySelector('.year-mini-grid')).direction,
+       kind:document.documentElement.dataset.renpetLayout,
+       cardWidth:grid.querySelector('.year-month').getBoundingClientRect().width};
+     });
+     const stacked=width<1024;
+     assert.equal(layout.kind,stacked?'tablet-stacked':'tablet-split');
+     assert.equal(layout.columns,stacked?3:4,'iPad Year cards: '+JSON.stringify(layout));
+     assert.ok(layout.cardWidth>=155,'iPad mini calendars must remain legible');
+     assert.equal(layout.direction,'rtl','Arabic Year must match RTL Month on iPad');
+     if(stacked)assert.ok(layout.railWidth>=70&&layout.railWidth<=82,
+      'iPad portrait rail should preserve calendar width');
+     await page.locator('[data-open-month="11"]').click();
+     await page.locator('header [data-open-year]').click();
+     const jump=await page.locator('#main-content').evaluate(main=>{
+      const season=main.querySelector('.year-month.active-month')?.closest('.year-season');
+      const outer=main.getBoundingClientRect(),r=season.getBoundingClientRect();
+      return {season:season.dataset.season,top:r.top-outer.top,bottom:r.bottom-outer.top,
+       height:outer.height,scroll:main.scrollTop};
+     });
+     assert.equal(jump.season,'shemu');
+     assert.ok(jump.top<jump.height&&jump.bottom>0,
+      'iPad Year reveals selected season: '+JSON.stringify(jump));
+     if(stacked)assert.ok(jump.scroll>100,'iPad Year scrolls to late season');
+    }
     if(width<700){
      const direction=await page.locator('.year-mini-grid').first().evaluate(el=>getComputedStyle(el).direction);
      assert.equal(direction,'rtl','Arabic mini months follow Arabic Month view reading direction');
@@ -55,6 +84,40 @@ async function main(){
      const prefs=await record(page,'preferences');
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
+     if(width>=700){
+      const panes=await page.evaluate(()=>{
+       const month=document.querySelector('.month-section').getBoundingClientRect();
+       const agenda=document.querySelector('.month-agenda').getBoundingClientRect();
+       const rail=document.querySelector('.ux-bottom');
+       return {mode:getComputedStyle(document.querySelector('.month-scroll')).display,
+        month:{left:month.left,right:month.right,bottom:month.bottom,width:month.width},
+        agenda:{left:agenda.left,right:agenda.right,top:agenda.top,width:agenda.width},
+        direction:document.documentElement.dir,
+        targets:[...rail.querySelectorAll('.ux-nav-item')].map(el=>{
+         const r=el.getBoundingClientRect();return {width:r.width,height:r.height};
+        })};
+      });
+      assert.ok(panes.targets.every(t=>t.width>=44&&t.height>=64),
+       'iPad touch rail retains >=44px targets: '+lang+' '+JSON.stringify(panes));
+      if(width<1024){
+       assert.equal(panes.mode,'flex');
+       assert.ok(panes.month.bottom<=panes.agenda.top+2&&panes.agenda.width>=500,
+        'Portrait Month stacks full-width agenda: '+lang+' '+JSON.stringify(panes));
+      }else{
+       assert.equal(panes.mode,'grid');
+       assert.ok(panes.month.width>=300&&panes.agenda.width>=210,
+        'Landscape Month keeps two useful panes: '+lang+' '+JSON.stringify(panes));
+       assert.ok(panes.direction==='rtl'?panes.agenda.right<=panes.month.left+2:
+        panes.month.right<=panes.agenda.left+2,
+        'Landscape Month agenda follows script direction: '+lang);
+      }
+      await page.locator('header [data-open-year]').click();
+      assert.equal(await page.locator('.year-mini-grid').first().evaluate(el=>
+       getComputedStyle(el).direction),lang==='ar'?'rtl':'ltr',
+       'iPad Year follows script reading direction: '+lang);
+      await page.locator('.year-month.active-month').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+     }
      if(width<700){
       // Today must be the direct return from List to Month. It should not
       // silently keep the List view open after changing its starting date.
