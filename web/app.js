@@ -247,21 +247,25 @@ function dayView(){
  const maxVisibleColumns=window.matchMedia?.('(max-width:700px)').matches?2:3;
  for(const cluster of clusters){
   const boundaries=[...new Set(cluster.flatMap(i=>[i._visualTop,i._visualBottom]))].sort((a,b)=>a-b);
-  const members=new Set();
+  const members=new Set();let firstDense=null,lastDense=null;
   for(let t=0;t<boundaries.length-1;t++){
    const at=boundaries[t];
    const active=cluster.filter(i=>i._visualTop<=at&&i._visualBottom>at);
-   if(active.length>maxVisibleColumns)for(const item of active)members.add(key(item));
+   if(active.length<=maxVisibleColumns)continue;
+   if(firstDense===null)firstDense=at;
+   lastDense=boundaries[t+1];
+   for(const item of active)members.add(key(item));
   }
   if(!members.size)continue;
   const grouped=cluster.filter(i=>members.has(key(i)));
   const index=crowdedDayGroups.length;
   crowdedDayGroups.push(grouped);
   for(const item of grouped)crowdedKeys.add(key(item));
-  const top=Math.min(...grouped.map(i=>i._visualTop));
-  const bottom=Math.max(...grouped.map(i=>i._visualBottom));
+  // Place the summary over the dense interval, not across the whole
+  // lifetime of its members: later independent appointments keep their width.
+  const top=firstDense;
   groupRects.push({_layoutKey:'group:'+index,_visualTop:top,
-   _visualBottom:top+Math.min(94,Math.max(minTouchPixels,bottom-top)),
+   _visualBottom:Math.min(dayPixels,top+Math.min(94,Math.max(minTouchPixels,lastDense-top-3))),
    index,grouped});
  }
  // Pack the actual on-screen objects, including group summaries, into lanes.
