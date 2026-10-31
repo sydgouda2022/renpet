@@ -245,6 +245,32 @@ async function main(){
     }
     assert.equal((await record(page,'scheduler')).items.filter(i=>shortItems.includes(i.id)).length,7,
       'Visual grouping must not change or remove any stored appointment');
+    // A longer appointment gets independently tappable move/resize grips
+    // at every iPhone/iPad/desktop width, without blocking its scrollable body.
+    const longId=await page.evaluate(async day=>{
+      const storage=await import('./storage.js'),domain=await import('./scheduler.js');
+      const state=await storage.readRecord('scheduler');
+      const item=domain.createItem({title:'Long touch target',startDay:day,startMinutes:780,endMinutes:900,calendarId:'personal'});
+      state.items.push(item);await storage.writeRecord('scheduler',state);return item.id;
+    },shortDay);
+    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.locator('.date[data-date="'+shortDay+'"]').click();
+    const longBlock=page.locator('.timeline-event[data-edit="'+longId+'"]');
+    await longBlock.waitFor();
+    const longTargets=await longBlock.evaluate(el=>{
+      const m=el.querySelector('.event-move'),r=el.querySelector('.event-resize');
+      const a=m.getBoundingClientRect(),b=r.getBoundingClientRect();
+      return {moveWidth:a.width,moveHeight:a.height,
+       distinct:a.right<=b.left+1||b.right<=a.left+1,
+       bodyTouch:getComputedStyle(el.querySelector('.event-drag')).touchAction};
+    });
+    assert.ok(longTargets.moveWidth>=44&&longTargets.moveHeight>=44&&longTargets.distinct,
+      'Long appointment has an independent 44px move grip at '+width);
+    assert.equal(longTargets.bodyTouch,'pan-y','Long event text is a scrollable/tappable surface');
+    await longBlock.locator('.event-drag').click();
+    assert.equal(await page.locator('#event-editor [name=title]').inputValue(),'Long touch target');
+    await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+    assert.equal((await record(page,'scheduler')).items.find(i=>i.id===longId).startMinutes,780);
     await page.screenshot({path:path.join(out,name+'-indexeddb.png'),fullPage:true});
     results.push({name,width,height,languageChecks:3,yearMonths:12,offlineData:true});
    }finally{await context.close();}
