@@ -230,3 +230,18 @@ html[data-renpet-layout="phone"] body[data-language=egy] .egy-date-ones>span{wid
    avoiding accidental edits to the original series anchor. */
 .repeat-scope-date{margin:0;padding:10px 12px;border-radius:11px;background:var(--mint);color:var(--deep-green);font-size:14px;line-height:1.5;font-weight:650;overflow-wrap:anywhere}
 body[data-language=egy] .repeat-scope-date{font-size:22px;line-height:1.5}
+
+/* iPhone Day view: the toolbar already names the Egyptian day and month.
+   Retain the optional Gregorian reference, not a duplicate title. */
+html[data-renpet-layout="phone"] .day-heading{min-height:0;padding:5px 14px 8px;align-items:center}
+html[data-renpet-layout="phone"] .day-heading-native{display:none}
+html[data-renpet-layout="phone"] .day-heading.without-gregorian{display:none}
+html[data-renpet-layout="phone"] .day-heading small{
+ font-size:12px;line-height:1.5;font-weight:550;white-space:normal;overflow-wrap:anywhere
+}
+/* Side-by-side Day cards can be only ~140px wide on iPhone. Keep the
+   existing direct Delete but remove the two drag handles in that layout;
+   moving and changing duration remain available in the editor. */
+html[data-renpet-layout="phone"] .timeline-event[data-compact="true"]:not([data-short="true"]) .event-drag{
+ padding-block:5px 2px;padding-inline:7px 48px
+}
