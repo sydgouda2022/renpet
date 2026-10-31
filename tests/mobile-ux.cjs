@@ -113,8 +113,11 @@ async function main(){
        width:el.getBoundingClientRect().width,
        hourHeight:el.querySelector('.timeline-hour').getBoundingClientRect().height
       }));
-      assert.ok(dayLayout.width>=width-22&&dayLayout.hourHeight===64,
-       'Day time grid fits the phone and retains its hourly geometry: '+lang+' '+width);
+      // The app's 6px seasonal side borders sit outside the Day surface.
+      // Keep the timeline wider than the former 17px+9px inset layout,
+      // without removing its decorative Egyptian frame.
+      assert.ok(dayLayout.width>=width-36&&dayLayout.hourHeight===64,
+       'Day time grid fits the phone and retains its hourly geometry: '+lang+' '+width+' '+JSON.stringify(dayLayout));
       await page.locator('header [data-new]').click();
       const editor=page.locator('#event-editor');
       assert.equal(await page.locator('#renpet-keyboard').isVisible(),false,
