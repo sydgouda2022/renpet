@@ -279,7 +279,7 @@ html[data-renpet-layout="phone"] body[data-language=egy] .ux-bottom .ux-nav-item
 }
 /* The editor stays a genuine modal sheet and preserves outside-tap dismissal.
    Its time picker uses the same 57px header, so keep that dimension stable. */
-html[data-renpet-layout="phone"] .sheet{max-height:92dvh;border-radius:22px 22px 0 0}
+html[data-renpet-layout="phone"] .sheet{max-height:88dvh;border-radius:22px 22px 0 0}
 html[data-renpet-layout="phone"] .sheet-head{position:relative;min-height:57px;padding-inline:16px}
 html[data-renpet-layout="phone"] .sheet-head::before{
  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
