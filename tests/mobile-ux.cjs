@@ -118,6 +118,10 @@ async function main(){
       // without removing its decorative Egyptian frame.
       assert.ok(dayLayout.width>=width-36&&dayLayout.hourHeight===64,
        'Day time grid fits the phone and retains its hourly geometry: '+lang+' '+width+' '+JSON.stringify(dayLayout));
+      // Return to the Month that was open before this cross-view audit, so
+      // the existing month-scrolling and agenda tests keep their context.
+      await page.locator('[data-back]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
       await page.locator('header [data-new]').click();
       const editor=page.locator('#event-editor');
       assert.equal(await page.locator('#renpet-keyboard').isVisible(),false,
