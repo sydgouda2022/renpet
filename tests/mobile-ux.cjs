@@ -22,6 +22,22 @@ async function main(){
     assert.equal(await page.locator('.year-season').count(),3);
     assert.equal(await page.locator('.year-month').count(),12);
     assert.equal(await page.locator('.year-mini-day').count(),366);
+    if(width<700){
+     const direction=await page.locator('.year-mini-grid').first().evaluate(el=>getComputedStyle(el).direction);
+     assert.equal(direction,'rtl','Arabic mini months follow Arabic Month view reading direction');
+     await page.locator('[data-open-month="11"]').click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+     await page.locator('header [data-open-year]').click();
+     const yearJump=await page.locator('#main-content').evaluate(el=>{
+      const season=el.querySelector('.year-month.active-month')?.closest('.year-season');
+      const parent=el.getBoundingClientRect(),r=season?.getBoundingClientRect();
+      return {scrollTop:el.scrollTop,season:season?.dataset.season,
+       top:r?.top-parent.top,bottom:r?.bottom-parent.top};
+     });
+     assert.equal(yearJump.season,'shemu','Year opens on the selected later-season month');
+     assert.ok(yearJump.scrollTop>100&&yearJump.top>=-20&&yearJump.top<100,
+      'Phone Year should reveal the selected season without starting at Akhet');
+    }
     await page.locator('[data-open-month="2"]').click();
     assert.equal(await page.locator('.month-section .date').count(),30);
     await page.locator('.month-section .date').nth(10).click();
@@ -95,6 +111,26 @@ async function main(){
        'Optional end date uses the same phone-native layout');
       await page.locator('.sheet-overlay').click({position:{x:7,y:7}});
       assert.equal(await editor.count(),0,'Outside tap still dismisses the unsaved editor');
+      // A selected language with long labels must not push Settings controls
+      // outside the phone or shrink the native dropdown hit area.
+      await page.locator('header [data-open-panel=settings]').click();
+      const settings=await page.locator('.ux-panel').evaluate(panel=>{
+       const body=panel.querySelector('.ux-panel-body'),bounds=panel.getBoundingClientRect();
+       const rows=[...panel.querySelectorAll('.settings-group>label')].map(label=>{
+        const c=label.querySelector('select,input'),b=c.getBoundingClientRect();
+        return {left:b.left,right:b.right,height:b.height,rowHeight:label.getBoundingClientRect().height};
+       });
+       return {panelTop:bounds.top,panelBottom:bounds.bottom,viewportHeight:innerHeight,
+        scrollable:body.scrollHeight>=body.clientHeight,rows};
+      });
+      assert.ok(settings.panelTop>=-1&&settings.panelBottom<=settings.viewportHeight+1,
+       'Settings sheet must stay inside phone viewport');
+      assert.ok(settings.rows.every(r=>r.left>=-1&&r.right<=width+1&&r.rowHeight>=44),
+       'Every Settings control remains inside the narrow phone');
+      assert.ok(settings.rows.filter(r=>r.height>=44).length>=2,
+       'Native Settings dropdowns retain accessible touch height');
+      await page.locator('.ux-panel-backdrop').click({position:{x:8,y:8}});
+      assert.equal(await page.locator('.ux-panel').count(),0);
      }
     }
     // One-day appointments keep an uncluttered editor in all three scripts.
@@ -193,6 +229,21 @@ async function main(){
     assert.equal(await page.locator('.ux-panel').count(),0);
     await page.locator('header [data-open-panel=settings]').click();
     await page.locator('[data-open-panel=festivals]').click();
+    if(width<700){
+     const sources=page.locator('[data-festival-source-id]');
+     assert.ok(await sources.count()>0,'Festival source choices must remain available');
+     const last=sources.last();
+     await last.scrollIntoViewIfNeeded();
+     const beforeScroll=await page.locator('.ux-panel-body').evaluate(el=>el.scrollTop);
+     const checked=await last.isChecked();
+     await last.setChecked(!checked);
+     assert.equal(await sources.last().isChecked(),!checked,'Source toggle must persist after re-render');
+     const afterScroll=await page.locator('.ux-panel-body').evaluate(el=>el.scrollTop);
+     assert.ok(Math.abs(afterScroll-beforeScroll)<=3,
+      'Festival list cannot jump to top after selecting a source');
+     await sources.last().setChecked(checked);
+     assert.equal(await sources.last().isChecked(),checked,'Restore festival source preference');
+    }
     await page.locator('.ux-panel-backdrop').click({position:{x:9,y:9}});
     assert.equal(await page.locator('.ux-panel').count(),0);
     await page.locator('header [data-open-panel=settings]').click();
