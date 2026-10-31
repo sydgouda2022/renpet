@@ -68,7 +68,52 @@ async function main(){
        'Bottom navigation is too tall for '+width+'px '+lang);
       assert.ok(nav.targets.every(n=>n>=44),'Every bottom action must retain a 44px hit area');
       assert.ok(nav.labels.every(n=>n>=12),'Bottom labels cannot collapse or disappear');
-
+      // Visit all four views in each script at every phone width. These
+      // geometry checks guard against regressions hidden by clipped overflow.
+      const toolbarTargets=await page.locator('.ux-toolbar').evaluate(el=>
+       [...el.querySelectorAll('.ux-toolbar-actions button,.ux-period-controls button')]
+        .map(button=>{const b=button.getBoundingClientRect();return {left:b.left,right:b.right,width:b.width,height:b.height};}));
+      assert.ok(toolbarTargets.every(b=>b.width>=44&&b.height>=44&&b.left>=-1&&b.right<=width+1),
+       'Phone toolbar actions remain reachable in '+lang+' at '+width);
+      await page.locator('[data-primary-view=list]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'list');
+      const listLayout=await page.locator('.list-page').evaluate(el=>({
+       width:el.getBoundingClientRect().width,
+       contentWidth:el.scrollWidth,clientWidth:el.clientWidth,
+       hasContent:Boolean(el.querySelector('.agenda,.schedule-empty'))
+      }));
+      assert.ok(listLayout.hasContent&&listLayout.width>=width-24&&
+       listLayout.contentWidth<=listLayout.clientWidth+2,
+       'List page keeps the same useful width as the Month agenda: '+lang+' '+width+' '+JSON.stringify(listLayout));
+      await page.locator('header [data-open-year]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'year');
+      const yearTargets=await page.locator('.year-month').evaluateAll(cards=>cards.map(el=>{
+       const r=el.getBoundingClientRect();return {width:r.width,height:r.height};
+      }));
+      assert.equal(yearTargets.length,12);
+      assert.ok(yearTargets.every(r=>r.width>=100&&r.height>=44),
+       'Phone Year month tiles remain comfortably tappable in '+lang+' at '+width);
+      const expectedDirection=lang==='ar'?'rtl':'ltr';
+      assert.equal(await page.locator('.year-mini-grid').first().evaluate(el=>getComputedStyle(el).direction),
+       expectedDirection,'Year follows selected script reading direction');
+      await page.locator('.year-month.active-month').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+      const monthLayout=await page.locator('.month-scroll').evaluate(el=>{
+       const heading=el.querySelector('.agenda-heading h3');
+       const bounds=heading.getBoundingClientRect();
+       return {headingFont:parseFloat(getComputedStyle(heading).fontSize),
+        headingWidth:bounds.width,headingScroll:heading.scrollWidth};
+      });
+      assert.ok(monthLayout.headingFont>=16&&monthLayout.headingWidth>0,
+       'Month agenda keeps a readable selected-date heading in '+lang);
+      await page.locator('.month-section .date.chosen').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+      const dayLayout=await page.locator('.timeline').evaluate(el=>({
+       width:el.getBoundingClientRect().width,
+       hourHeight:el.querySelector('.timeline-hour').getBoundingClientRect().height
+      }));
+      assert.ok(dayLayout.width>=width-22&&dayLayout.hourHeight===64,
+       'Day time grid fits the phone and retains its hourly geometry: '+lang+' '+width);
       await page.locator('header [data-new]').click();
       const editor=page.locator('#event-editor');
       assert.equal(await page.locator('#renpet-keyboard').isVisible(),false,
