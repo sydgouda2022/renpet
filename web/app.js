@@ -518,10 +518,9 @@ function render(){
  }
  const main=root.querySelector('#main-content');
  if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
- if(main&&state.view==='year'&&viewKey!==previousRenderKey&&
-    document.documentElement.dataset.renpetLayout==='phone'){
-  // Opening the year from a late-season month should reveal that season,
-  // not drop the user at Akhet and force a long scroll.
+ if(main&&state.view==='year'&&viewKey!==previousRenderKey){
+  // Opening Year should reveal the selected season on both iPhone and iPad,
+  // rather than dropping users at Akhet regardless of the month they chose.
   const season=root.querySelector('.year-month.active-month')?.closest('.year-season');
   if(season){
    const outer=main.getBoundingClientRect(),inner=season.getBoundingClientRect();
