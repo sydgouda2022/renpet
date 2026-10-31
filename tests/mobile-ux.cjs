@@ -55,6 +55,8 @@ async function main(){
 
       await page.locator('header [data-new]').click();
       const editor=page.locator('#event-editor');
+      assert.equal(await page.locator('#renpet-keyboard').isVisible(),false,
+       'Opening an iPhone appointment cannot cover form controls with a keyboard');
       const metrics=await editor.evaluate(form=>{
        const box=sel=>form.querySelector(sel)?.getBoundingClientRect();
        const year=box('[name=egyYear]'),month=box('[name=egyMonth]'),day=box('[name=egyDay]');
