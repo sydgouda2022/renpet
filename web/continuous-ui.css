@@ -38,7 +38,7 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .ux-timeframe{min-width:0;display:flex;justify-content:flex-end;align-items:center;order:1;font-weight:720}
 .ux-timeframe button{min-width:58px;font-size:16px;padding-inline:7px}
 .ux-timeframe button span{white-space:nowrap}
-.ux-timeframe .ux-year-value{font-size:clamp(18px,3.5vw,27px);font-weight:800;color:#9b352b}
+.ux-timeframe .ux-year-value,.ux-timeframe .ux-month-value{font-size:clamp(18px,3.5vw,27px);font-weight:800;color:#9b352b}
 .ux-timeframe .ux-year-value .glyph{height:1em}
 .ux-toolbar-head{padding:0 7px 11px!important;min-height:57px}
 .ux-heading{min-width:0}
@@ -100,10 +100,26 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  background:transparent!important;box-shadow:none!important;border:0!important;
  padding:11px 0 24px!important;margin:0 0 7px!important;display:block!important
 }
+/* Year shows three distinct four-month landscapes. The full season section,
+   not each miniature month, owns its own Akhet, Peret or Shemu artwork. */
+.time-panel[data-stream-kind="year"] .year-season[data-season]{
+ background-color:var(--group-fill)!important;
+ background-image:linear-gradient(180deg,#fff9e89c,#fff7e3b9),var(--group-art)!important;
+ background-size:cover!important;
+ background-position:center 65%!important;
+ background-repeat:no-repeat!important;
+ border:1px solid #c9b58a9e!important;
+ border-radius:16px!important;
+ padding:12px 12px 17px!important;
+ margin:0 0 13px!important;
+ box-shadow:0 3px 14px #443c2a1c!important;
+}
+.time-panel[data-stream-kind="year"] .year-season::before{content:none!important}
+.time-panel[data-stream-kind="year"] .year-season .season-plant{display:none}
 .time-panel[data-stream-kind="year"] .year-season .season-heading{margin:0 0 9px!important;min-height:31px;flex-direction:row!important;align-items:center!important}
 .time-panel[data-stream-kind="year"] .year-months{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}
 .time-panel[data-stream-kind="year"] .year-month{
- background:#fff9e783!important;border:1px solid #d6c69c50!important;border-radius:12px!important;
+ background:#fff9e7dd!important;border:1px solid #d6c69c80!important;border-radius:12px!important;
  box-shadow:none!important;min-height:0!important;padding:10px 8px!important
 }
 .time-panel[data-stream-kind="year"] .year-mini-grid{width:100%;direction:inherit}
