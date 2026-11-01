@@ -148,6 +148,34 @@ async function main(){
      },saved.startDay);
      assert.ok(follows.some(x=>x.id===saved.id),'Next occurrence missing');
     });
+    await step(device,'searching a past recurring series opens its next occurrence',async()=>{
+     const seeded=await page.evaluate(async title=>{
+      const calendar=await import('./calendar.js');
+      const domain=await import('./scheduler.js');
+      const storage=await import('./storage.js');
+      const state=await storage.readRecord('scheduler');
+      const now=new Date();
+      const today=calendar.dayNumber([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'));
+      const item=domain.createItem({
+       title,startDay:today-7,startMinutes:660,endMinutes:720,
+       calendarId:'personal',repeat:'custom',repeatEvery:6,repeatUnit:'day'
+      });
+      state.items.push(item);await storage.writeRecord('scheduler',state);
+      return {id:item.id,next:today+5,original:today-7};
+     },'Old repeating shift '+device);
+     await page.reload();
+     await page.locator('.time-rail').waitFor();
+     await page.locator('header [data-search]').click();
+     await page.locator('.search-panel [name=query]').fill('Old repeating shift '+device);
+     const result=page.locator('.search-results [data-search-id="'+seeded.id+'"]');
+     assert.ok(await result.count(),'Past recurring event must be searchable');
+     assert.equal(Number(await result.getAttribute('data-result')),seeded.next,
+      'Search should lead to upcoming occurrence, not original series date');
+     await result.click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+     assert.ok(await page.locator('.time-panel[data-focus-day="'+seeded.next+'"] .timeline-event[data-edit="'+seeded.id+'"]').count(),
+      'Upcoming recurring event is missing after search navigation');
+    });
     await step(device,'Today returns to the current timeframe',async()=>{
      await page.locator('header [data-up-level]').click();
      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
