@@ -16,9 +16,10 @@ async function main(){
      await language(page,lang);
      const title=lang+' WebKit '+width;
      const item=await saveEvent(page,title);
-     const visibleBlock=page.locator('.timeline-event[data-edit="'+item.id+'"]');
+     const panel=page.locator('.time-panel[data-focus-day="'+item.startDay+'"]');
+     const visibleBlock=panel.locator('.timeline-event[data-edit="'+item.id+'"]');
      if(!await visibleBlock.count()){
-      const grouped=page.locator('.timeline-crowded');
+      const grouped=panel.locator('.timeline-crowded');
       assert.ok(await grouped.count(),'Saved appointment must be visible individually or in a readable overlap group');
       await grouped.first().click();
       assert.ok(await page.locator('.crowded-choice[data-crowded-edit="'+item.id+'"]').count(),'Saved item missing from crowded event list');
