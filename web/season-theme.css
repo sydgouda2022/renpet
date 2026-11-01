@@ -35,6 +35,8 @@ body[data-season=shemu]{
  background-image:linear-gradient(180deg,#122b4630 0%,#ffffff00 55%,#f2e5ce38),var(--season-image);
  background-size:cover;background-repeat:no-repeat;background-position:center 34%;
  border-bottom:2px solid #d9b878;
+ filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
+ transition:filter .18s linear;
 }
 .season-edge{display:none}
 .season-garden{
