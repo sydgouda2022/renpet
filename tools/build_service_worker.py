@@ -26,7 +26,9 @@ files = [
 required = {"./index.html", "./app.js", "./data.json", "./ui.css",
             "./calendar.js", "./scheduler.js", "./locales.js",
             "./time-editor.js", "./clock.js", "./keyboard.js",
-            "./calendar-presentation.mjs", "./season-theme.css",
+            "./calendar-presentation.mjs", "./season-theme.css", "./seasonal-layout.css",
+            "./assets/landscapes/akhet.svg", "./assets/landscapes/peret.svg",
+            "./assets/landscapes/shemu.svg",
             "./assets/seasons/akhet.webp", "./assets/seasons/peret.webp",
             "./assets/seasons/shemu.webp"}
 if not required.issubset(files):
