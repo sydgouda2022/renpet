@@ -12,3 +12,18 @@ test('no old storage scheduler is embedded in the UI',async()=>{
  assert.match(app,/writeRecord\('scheduler',next\)/);
  assert.doesNotMatch(app,/name="reminders"|requestAlertPermission|startForegroundAlerts/);
 });
+
+
+test('server HTML describes Renpet before JavaScript runs',async()=>{
+ const html=await readFile(new URL('../web/index.html',import.meta.url),'utf8');
+ assert.match(html,/<main class="loading" aria-busy="true">/);
+ assert.match(html,/<h1>رنبت — التقويم المصري<\/h1>/);
+ assert.match(html,/class="loading-sr" role="status" aria-live="polite"/);
+ assert.match(html,/<noscript><style>#app>\.loading\{display:none\}<\/style><main class="nojs-fallback"/);
+ assert.match(html,/class="skip-to-calendar" href="#main-content"/);
+ for(const property of ['og:title','og:description','og:image','og:url']){
+  assert.ok(html.includes('property="'+property+'"'),'missing '+property);
+ }
+ assert.match(html,/<link rel="canonical" href="https:\/\/renpet\.sydgouda\.workers\.dev\/">/);
+ assert.match(html,/<meta name="description"/);
+});
