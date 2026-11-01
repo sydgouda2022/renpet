@@ -14,6 +14,9 @@ body[data-season=peret]{
  --green:#477046;--deep-green:#244a36;--mint:#e5eedb;
  --gold-soft:#edf0d8;
 }
+/* In Year, the complete three-season overview takes priority over scenery.
+   Month and Day retain the full-height temple landscape. */
+body[data-view=year]{--art-top:118px;--art-garden:25px}
 body[data-season=shemu]{
  --season-image:url('assets/seasons/shemu.webp');
  --green:#94672b;--deep-green:#66491e;--mint:#f3e6cb;
@@ -328,4 +331,25 @@ body[data-language=egy] .year-season .season-heading{font-size:27px}
 }
 @media(prefers-reduced-motion:reduce){
  .month-section .date{transition:none}
+}
+@media(min-width:1024px) and (min-height:560px){
+ body[data-view=year]{--art-top:110px}
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-overview{
+  padding:4px 14px 10px
+ }
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-season{
+  padding:7px;margin-bottom:6px;gap:8px
+ }
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-months{gap:6px}
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-month{
+  padding:5px 6px 6px;gap:2px
+ }
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-mini-title{min-height:22px}
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-mini-grid{row-gap:2px}
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .year-mini-day{
+  min-height:17px;line-height:1.08
+ }
+ html[data-renpet-layout="tablet-split"] body[data-view=year] .epagomenal-tile{
+  min-height:40px;margin-top:5px;padding:6px 10px
+ }
 }
