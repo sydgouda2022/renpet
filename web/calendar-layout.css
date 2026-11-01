@@ -1,5 +1,5 @@
-/* Renpet responsive calendar: horizontal week bands; narrow ten-day grids use five columns.
-   Small screens show a month and agenda; large screens use navigation and calendar panes. */
+/* Shared calendar geometry and event editing controls.
+   Continuous phone and tablet navigation is defined in continuous-ui.css. */
 .week-bands,.month-section.ten-day .decades{display:flex;flex-direction:column;gap:0;padding:0}
 .week-band{position:relative;min-width:0;padding:6px 0 8px;border-bottom:1px solid var(--line)}
 .week-band:last-child{border-bottom:0}
