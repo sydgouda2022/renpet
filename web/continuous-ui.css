@@ -10,11 +10,9 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
  padding:0!important;border:0!important;overflow:hidden!important;
  background:transparent!important;isolation:isolate;position:relative
 }
-.app-shell>.season-art{
- position:absolute;inset:0;z-index:-1;pointer-events:none;
- background-image:linear-gradient(180deg,#fff4d6b8 0%,#f9edce9c 40%,#e9d8acb2 100%),var(--season-image);
- background-size:cover; background-position:center center;background-repeat:no-repeat
-}
+/* The moving time rail owns the landscape. Never paint a second, stationary
+   copy beneath it: transparent panels exposed a ghost image on iPhone. */
+.app-shell>.season-art{display:none!important}
 .app-shell>.season-art:after{
  content:'';position:absolute;inset:0;pointer-events:none;
  background:linear-gradient(180deg,#111c30,#17253e 55%,#29243c);
@@ -59,13 +57,12 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .time-panel[data-season-id="akhet"]{--rail-art:url('assets/seasons/akhet.webp')}
 .time-panel[data-season-id="peret"]{--rail-art:url('assets/seasons/peret.webp')}
 .time-panel[data-season-id="shemu"]{--rail-art:url('assets/seasons/shemu.webp')}
-.time-panel::before{
- content:'';position:absolute;z-index:-1;inset:0;pointer-events:none;
- background:linear-gradient(180deg,#fff8e72e,#fff8e729),var(--rail-art);
- background-size:cover;background-position:center center;
- opacity:.34;mask-image:linear-gradient(to bottom,transparent 0%,black 17%,black 86%,transparent 100%);
- -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 17%,black 86%,transparent 100%)
+.time-panel{
+ background-color:#f4e9ce;
+ background-image:linear-gradient(180deg,#fff8e7c9,#fff8e7b0),var(--rail-art);
+ background-size:cover;background-position:center center;background-repeat:no-repeat
 }
+.time-panel::before{content:none}
 .time-panel-header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 auto 18px;max-width:1150px;border:0}
 .time-panel-header h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:720;color:var(--deep-green)}
 .time-season-name{flex:0 0 auto;color:#8d692d;font-size:15px;font-weight:700}
