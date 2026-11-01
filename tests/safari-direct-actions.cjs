@@ -116,7 +116,7 @@ async function main(){
      const state=await(await import('./storage.js')).readRecord('scheduler');
      return state?.items.some(i=>i.id===id&&i.endMinutes>660);
     },item.id,{timeout:8000});
-    await page.locator('[data-up-level]').click();
+    await page.locator('[data-appointments]').click();
     const row=page.locator('.event-row-shell:has([data-edit="'+item.id+'"])');
     await row.waitFor();
     await row.locator('[data-quick-delete="'+item.id+'"]').click();
