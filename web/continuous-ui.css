@@ -1,7 +1,7 @@
 /* Renpet unified continuous calendar, phone and iPad.
    The three periods use the same native controls, uninterrupted vertical scroll,
    and seasonal scenery; there is no sidebar, card pagination or nested scroll. */
-:root{--night-opacity:.13}
+:root{--night-opacity:.13;--scene-brightness:1;--scene-saturation:1}
 html,body,#app{background:#f4e9ce}
 .app-shell,html[data-renpet-layout^="tablet"] .app-shell,
 html[data-renpet-layout="tablet-stacked"] .app-shell{
@@ -10,14 +10,8 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
  padding:0!important;border:0!important;overflow:hidden!important;
  background:transparent!important;isolation:isolate;position:relative
 }
-/* The moving time rail owns the landscape. Never paint a second, stationary
-   copy beneath it: transparent panels exposed a ghost image on iPhone. */
-.app-shell>.season-art{display:none!important}
-.app-shell>.season-art:after{
- content:'';position:absolute;inset:0;pointer-events:none;
- background:linear-gradient(180deg,#111c30,#17253e 55%,#29243c);
- opacity:var(--night-opacity);transition:opacity 75s linear
-}
+/* One landscape belongs to each scrolling time panel. It is never duplicated
+   behind the rail, so adjacent seasons can have different backgrounds. */
 .ux-toolbar,html[data-renpet-layout^="tablet"] .ux-toolbar{
  position:relative;z-index:5;flex:0 0 auto!important;grid-column:auto!important;
  grid-row:auto!important;padding: max(env(safe-area-inset-top),8px) max(16px,env(safe-area-inset-right)) 0!important;
@@ -57,21 +51,42 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .time-panel[data-season-id="akhet"]{--rail-art:url('assets/seasons/akhet.webp')}
 .time-panel[data-season-id="peret"]{--rail-art:url('assets/seasons/peret.webp')}
 .time-panel[data-season-id="shemu"]{--rail-art:url('assets/seasons/shemu.webp')}
+/* The artwork is a separate, non-interactive layer. Filtering a panel
+   directly would also darken dates, labels and appointment controls. */
 .time-panel{
- background-color:#f4e9ce;
- background-image:linear-gradient(180deg,#fff8e7c9,#fff8e7b0),var(--rail-art);
- background-size:cover;background-position:center center;background-repeat:no-repeat
+ background:#f4e9ce;
 }
-.time-panel::before{content:none}
+.time-panel::before{
+ content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+ background-image:linear-gradient(180deg,#fff8e72b,#fff8e71a),var(--rail-art);
+ background-color:#f4e9ce;
+ background-position:center center;
+ background-size:cover;
+ background-repeat:no-repeat;
+ filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
+ transition:filter .5s linear;
+}
+.time-panel::after{
+ content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
+ opacity:var(--night-opacity,.13);
+ transition:opacity .5s linear;
+}
+.time-panel>*{position:relative;z-index:1}
+/* There is no single correct season for a whole Year panel: its three
+   four-month groups each paint their own landscape instead. */
+.time-panel[data-stream-kind="year"]::before{content:none}
+.time-panel[data-stream-kind="year"]::after{content:none}
 .time-panel-header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 auto 18px;max-width:1150px;border:0}
 .time-panel-header h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:800;color:#9b352b}
 .time-season-name{flex:0 0 auto;color:#9b352b;font-size:15px;font-weight:800}
 .time-panel[data-stream-kind="month"]>.month-section{max-width:1150px;width:100%;margin:auto}
-/* The landscape is painted once by the scrolling time panel. The calendar
-   writing surface must be opaque, otherwise the same landscape reads as a
-   second, ghosted image beneath its dates on iPhone and iPad. */
+/* The month and day see their season behind a legible parchment surface.
+   This is a translucent surface over the SAME artwork, not a second image. */
 .time-panel[data-stream-kind="month"]>.month-section{
- background:#fff5e5!important;
+ background:linear-gradient(180deg,#fff9e6cf,#fff5e2d0)!important;
+ border:1px solid #c7a97766;
+ border-radius:14px;
 }
 
 .time-panel[data-stream-kind="month"] .month-section,
@@ -96,25 +111,41 @@ html[data-renpet-layout="tablet-stacked"] body[data-language="egy"] .time-panel 
 body[data-language="egy"] .time-panel .date .day-number{font-weight:800}
 body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11px}
 .time-panel[data-stream-kind="year"] .year-overview{max-width:1200px;padding:0!important;margin:auto!important;width:100%}
-.time-panel[data-stream-kind="year"] .year-season{
- background:transparent!important;box-shadow:none!important;border:0!important;
- padding:11px 0 24px!important;margin:0 0 7px!important;display:block!important
-}
-/* Year shows three distinct four-month landscapes. The full season section,
-   not each miniature month, owns its own Akhet, Peret or Shemu artwork. */
+/* Each Year season group paints exactly one of the three landscapes.
+   The same day/night shading applies here without dimming the mini calendars. */
 .time-panel[data-stream-kind="year"] .year-season[data-season]{
- background-color:var(--group-fill)!important;
- background-image:linear-gradient(180deg,#fff9e89c,#fff7e3b9),var(--group-art)!important;
- background-size:cover!important;
- background-position:center 65%!important;
- background-repeat:no-repeat!important;
+ position:relative;
+ isolation:isolate;
+ overflow:hidden;
+ display:block!important;
+ background:#fbf1df!important;
  border:1px solid #c9b58a9e!important;
  border-radius:16px!important;
  padding:12px 12px 17px!important;
  margin:0 0 13px!important;
  box-shadow:0 3px 14px #443c2a1c!important;
 }
-.time-panel[data-stream-kind="year"] .year-season::before{content:none!important}
+.time-panel[data-stream-kind="year"] .year-season::before{
+ content:''!important;
+ position:absolute;
+ inset:0;
+ z-index:0;
+ pointer-events:none;
+ opacity:1;
+ background-image:linear-gradient(180deg,#fff9e829,#fff7e338),var(--group-art);
+ background-size:cover;
+ background-position:center 65%;
+ background-repeat:no-repeat;
+ filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
+ transition:filter .5s linear;
+}
+.time-panel[data-stream-kind="year"] .year-season::after{
+ content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
+ opacity:var(--night-opacity,.13);
+ transition:opacity .5s linear;
+}
+.time-panel[data-stream-kind="year"] .year-season>*{position:relative;z-index:1}
 .time-panel[data-stream-kind="year"] .year-season .season-plant{display:none}
 .time-panel[data-stream-kind="year"] .year-season .season-heading{margin:0 0 9px!important;min-height:31px;flex-direction:row!important;align-items:center!important}
 .time-panel[data-stream-kind="year"] .year-months{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}
@@ -137,7 +168,7 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
 .time-panel[data-stream-kind="day"] .timeline{
  position:relative;max-width:none;width:100%;margin:12px 0 35px!important;
  border:0!important;border-radius:0!important;
- background:linear-gradient(to bottom,#ced8e79e 0%,#b7c9de76 18%,#fff3d58c 30%,#fff7e299 55%,#f0cda789 75%,#b4bbcd91 91%,#c0c9df95 100%)!important
+ background:linear-gradient(to bottom,#d4e0ee7a 0%,#d8e2eb65 20%,#fff6e271 40%,#fff8e37d 59%,#f3d9bb73 78%,#bfcede7e 100%)!important
 }
 .time-panel[data-stream-kind="day"] .timeline-slot{border-color:#846a3650}
 .time-panel[data-stream-kind="day"] .timeline-hour>span{font-size:12px}
@@ -187,7 +218,9 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
  .ux-heading h1{font-size:28px}
 }
 @media(prefers-reduced-motion:reduce){
- .app-shell>.season-art:after{transition:none}
+ .time-panel::before,.time-panel::after,
+ .time-panel[data-stream-kind="year"] .year-season::before,
+ .time-panel[data-stream-kind="year"] .year-season::after{transition:none}
 }
 
 /* One writing-surface size for seven- and ten-day months.
