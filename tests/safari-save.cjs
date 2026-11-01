@@ -25,7 +25,7 @@ async function main(){
       await page.locator('.crowded-backdrop').click({position:{x:6,y:6}});
      }
      assert.ok((await record(page,'scheduler')).items.some(i=>i.id===item.id),'Event absent from storage after save');
-     await page.reload();await page.locator('.month-agenda').waitFor();
+     await page.reload();await page.locator('.time-rail').waitFor();
      const saved=await record(page,'scheduler');
      assert.ok(saved.items.some(i=>i.id===item.id),'WebKit lost appointment after restart');
      await page.locator('header [data-new]').click();
