@@ -51,7 +51,7 @@ async function saveScheduler(next){
 }
 let previousRenderKey=null;
 let previousRenderFocus=null;
-let monthViewport=null;
+let forceStreamJump=false;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
@@ -185,10 +185,7 @@ function upcomingAgenda(d){
     '<div class="upcoming-empty">'+safe(T().noUpcoming)+'</div><button class="upcoming-add" type="button" data-new>'+safe(T().addFirst)+'</button>')+
   '</section>';
 }
-function monthView(){
- const e=egy(state.focus);
- return '<div class="month-scroll">'+monthSection(e)+'<div class="month-agenda">'+agenda(state.focus)+upcomingAgenda(state.focus)+'</div></div>';
-}
+function monthView(){return railHTML('month');}
 
 function yearView(){
  const e=egy(state.focus),yr=e.year,w=week(),current=today();
@@ -216,14 +213,14 @@ function yearView(){
  }).join('');
  return '<div class="year-overview">'+groups+'<button class="epagomenal-tile" data-open-month="13"><span>✦</span><strong>'+safe(LOCALES[lang()].epagomenal)+'</strong><span class="year-mini-epagomenal">'+mini+'</span></button></div>';
 }
-function dayView(){
- const daily=items(state.focus),all=daily.filter(i=>i.allDay);
+function dayView(d=state.focus){
+ const daily=items(d),all=daily.filter(i=>i.allDay);
  // A spanning event displays only the portion belonging to the selected day.
  // For repeated multi-day events, calculate the actual occurrence anchor first.
  const timed=daily.filter(i=>!i.allDay).map(i=>{
   const anchor=i._occurrenceStart??i.startDay;
   const last=anchor+Math.max(0,(i.endDay??i.startDay)-i.startDay);
-  return {...i,_dayStart:state.focus>anchor?0:i.startMinutes,_dayEnd:state.focus<last?1440:i.endMinutes};
+  return {...i,_dayStart:d>anchor?0:i.startMinutes,_dayEnd:d<last?1440:i.endMinutes};
  });
  // A 15-minute event occupies 16px of clock time, but needs a 46px
  // touch target. Arrange by the actual rendered footprints, not only by
@@ -316,10 +313,10 @@ function dayView(){
   // Two appointment lanes fit on a phone, but not three 44px controls.
   // Keep direct Delete and tap-to-edit; expose move/resize in the editor.
   const compact=window.matchMedia?.('(max-width:700px)').matches&&pos.cols>1;
-  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??state.focus)+'" data-short="'+shortEvent+'" data-compact="'+compact+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(!shortEvent&&!compact?'<button type="button" class="event-move" aria-label="'+safe(T().start)+' · '+safe(i.title)+'" title="'+safe(T().start)+'"><span aria-hidden="true"></span></button>':'')+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??state.focus))+(resizable&&!shortEvent&&!compact?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
+  return '<div class="timeline-event" role="group" data-occurrence="'+(i._occurrenceStart??d)+'" data-short="'+shortEvent+'" data-compact="'+compact+'" data-recurring="'+(i.repeat!=='none')+'" style="--event:'+color+';top:'+i._visualTop+'px;height:'+(i._visualBottom-i._visualTop)+'px;'+horizontal(pos)+'" data-edit="'+safe(i.id)+'"><span class="event-drag" role="button" tabindex="0" aria-label="'+safe(i.title)+'"><strong>'+safe(i.title)+'</strong><small>'+timeHtml(start,lang())+' – '+timeHtml(end,lang())+'</small></span>'+(!shortEvent&&!compact?'<button type="button" class="event-move" aria-label="'+safe(T().start)+' · '+safe(i.title)+'" title="'+safe(T().start)+'"><span aria-hidden="true"></span></button>':'')+(shortEvent?'':quickDeleteButton(i,'event-delete-timeline',i._occurrenceStart??d))+(resizable&&!shortEvent&&!compact?'<button type="button" class="event-resize" aria-label="'+safe(T().end)+' · '+safe(i.title)+'" title="'+safe(T().end)+'"><span aria-hidden="true"></span></button>':'')+'</div>';
  }).join('');
  const hours=Array.from({length:24},(_,h)=>'<div class="timeline-hour"><span>'+timeHtml(h*60,lang())+'</span><button class="timeline-slot" data-hour="'+h+'" aria-label="'+safe(T().add)+' '+safe(timeText(h*60,lang()))+'"></button></div>').join('');
- return '<div class="day-page"><div class="day-heading'+(prefs.gregorian?'':' without-gregorian')+'"><span class="day-heading-native">'+numHtml(egy(state.focus).day)+' '+safe(monthName(egy(state.focus).month))+'</span>'+(prefs.gregorian?'<small>'+safe(greg(state.focus,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(state.focus)+(festivalsOn(state.focus).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(state.focus),state.focus)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(state.focus===today()?nowLineMarkup():'')+'</div></div>';
+ return '<div class="day-page"><div class="day-heading'+(prefs.gregorian?'':' without-gregorian')+'"><span class="day-heading-native">'+numHtml(egy(d).day)+' '+safe(monthName(egy(d).month))+'</span>'+(prefs.gregorian?'<small>'+safe(greg(d,{weekday:'long',day:'numeric',month:'long'}))+'</small>':'')+'</div>'+hiddenCalendarNotice(d)+(festivalsOn(d).length?'<section class="day-festivals" aria-label="'+safe(T().festivals)+'">'+festivalMarkup(festivalsOn(d),d)+'</section>':'')+(all.length?'<div class="all-day">'+all.map(i=>eventRow(i,d)).join('')+'</div>':'')+'<div class="timeline"><div class="timeline-hours">'+hours+'</div><div class="timeline-events">'+blocks+crowdedBlocks.join('')+'</div>'+(d===today()?nowLineMarkup():'')+'</div></div>';
 }
 
 function listView(){
