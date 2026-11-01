@@ -48,9 +48,6 @@ const LIGHTING_POINTS=[
 ];
 function updateSceneLighting(){
  const now=new Date();
- const clockHour=now.getHours()+now.getMinutes()/60;
- const daylight=Math.max(0,Math.sin(Math.PI*(clockHour-5.5)/13));
- document.body.style.setProperty('--night-opacity',String((.45-.41*daylight).toFixed(3)));
  let hour=now.getHours()+now.getMinutes()/60;
  if(state.view==='day'){
   const main=root.querySelector('#main-content'),timeline=main&&visibleRailPanel(main)?.querySelector('.timeline');
@@ -59,6 +56,11 @@ function updateSceneLighting(){
    hour=Math.min(24,Math.max(0,(middle-timeline.getBoundingClientRect().top)/64));
   }
  }
+ // In Day, the clock follows the visible timeline; elsewhere it follows
+ // local wall time. Both the landscape color and the night shade use the
+ // same hour, otherwise scrolling a day produces inconsistent lighting.
+ const daylight=Math.max(0,Math.sin(Math.PI*(hour-5.5)/13));
+ document.body.style.setProperty('--night-opacity',String((.56-.49*daylight).toFixed(3)));
  const index=LIGHTING_POINTS.findIndex((p,i)=>i<LIGHTING_POINTS.length-1&&hour>=p[0]&&hour<=LIGHTING_POINTS[i+1][0]);
  const first=LIGHTING_POINTS[Math.max(0,index)],last=LIGHTING_POINTS[Math.min(LIGHTING_POINTS.length-1,Math.max(0,index)+1)];
  const t=(hour-first[0])/(last[0]-first[0]||1);
@@ -637,7 +639,7 @@ function render(){
  updateSceneLighting();
  const content=state.view==='list'?listView():railHTML(state.view);
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
- root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"></div>'+toolbar()+
+ root.innerHTML='<div class="app-shell">'+toolbar()+
   '<main class="main-scroll" id="main-content" tabindex="-1">'+content+'</main>'+nav()+'</div>'+
   (state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')+
   panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
@@ -676,6 +678,9 @@ function render(){
   const body=root.querySelector('.ux-panel-body');if(body)body.scrollTop=sheetScroll;
  }
  maintainCurrentTimeLine();
+ // Day timelines are inserted and positioned during render, so compute their
+ // visible-hour lighting only after the new DOM and scroll position exist.
+ updateSceneLighting();
 }
 root.addEventListener('scroll',ev=>{
  if(ev.target.id!=='main-content'||state.panel||state.dialog)return;
