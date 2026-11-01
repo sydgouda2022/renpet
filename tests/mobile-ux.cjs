@@ -4,6 +4,47 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const {boot,record,language,saveEvent}=require('./browser-tools.cjs');
 const out='renpet-mobile-evidence';fs.mkdirSync(out,{recursive:true});
+
+async function monthGeometry(page){
+ return page.locator('.time-panel[data-stream-kind="month"]').nth(2).evaluate(panel=>{
+  const box=panel.querySelector('.month-section');
+  const bands=[...box.querySelectorAll('.week-band')];
+  const rect=box.getBoundingClientRect();
+  const dates=[...bands[0].querySelectorAll('.date')];
+  const rows=bands.map(b=>b.getBoundingClientRect());
+  return {
+   week:Number(box.dataset.week),
+   width:rect.width,height:rect.height,
+   bands:bands.length,
+   bandHeights:rows.map(r=>r.height),
+   firstRowDates:dates.length,
+   firstRowTops:dates.map(d=>Math.round(d.getBoundingClientRect().top)),
+   gridBottom:Math.round(rows.at(-1).bottom),
+   boxBottom:Math.round(rect.bottom),
+   horizontalOverflow:box.scrollWidth-box.clientWidth
+  };
+ });
+}
+async function chooseWeek(page,days){
+ await page.locator('header [data-open-panel="settings"]').click();
+ await page.locator('.ux-panel [name="week"]').selectOption(String(days));
+ await page.locator('.ux-panel-backdrop').click({position:{x:5,y:5}});
+}
+function verifyMonthPair(seven,ten,screen){
+ assert.equal(seven.week,7,screen+' Arabic seven-day setting');
+ assert.equal(ten.week,10,screen+' ten-day setting');
+ assert.ok(Math.abs(seven.height-ten.height)<=2,screen+' outer month box must not shrink for ten-day weeks: '+JSON.stringify({seven,ten}));
+ assert.ok(Math.abs(seven.width-ten.width)<=2,screen+' box width must remain identical');
+ assert.equal(ten.bands,3,screen+' regular ten-day month must have three bands');
+ assert.equal(ten.firstRowDates,10,screen+' ten dates per row');
+ assert.equal(new Set(ten.firstRowTops).size,1,screen+' all ten dates must be on one line');
+ for(const geometry of [seven,ten]){
+  assert.ok(Math.max(...geometry.bandHeights)-Math.min(...geometry.bandHeights)<3,screen+' week bands must share available vertical space');
+  assert.ok(geometry.horizontalOverflow<=2,screen+' month box must not overflow horizontally');
+  assert.ok(Math.abs(geometry.boxBottom-geometry.gridBottom)<5,screen+' week bands must fill the writing surface');
+ }
+}
+
 async function main(){
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});
  const results=[];
@@ -17,6 +58,20 @@ async function main(){
    try{
     await boot(page);
     assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+    // Week length changes only the internal grid, never the outer month size.
+    const seven=await monthGeometry(page);
+    await chooseWeek(page,10);
+    const ten=await monthGeometry(page);
+    verifyMonthPair(seven,ten,name);
+    if(name==='ipad-landscape'){
+     await page.screenshot({path:path.join(out,'month-ten-days-ipad.png'),fullPage:false});
+    }
+    await chooseWeek(page,7);
+    await language(page,'cop');
+    assert.equal((await monthGeometry(page)).week,10,'Coptic defaults to ten days');
+    assert.ok(Math.abs((await monthGeometry(page)).height-seven.height)<=2,'Coptic and Arabic month boxes share geometry');
+    await language(page,'ar');
+    assert.equal((await monthGeometry(page)).week,7,'Arabic returns to seven days');
     assert.equal(await page.locator('.ux-toolbar-actions button').count(),3,'Search, Add, Settings share a toolbar');
     assert.equal(await page.locator('.ux-bottom .ux-nav-item').count(),2,'Only Appointments and Today remain fixed');
     assert.equal(await page.locator('.time-panel[data-stream-kind=month]').count(),5);
