@@ -65,16 +65,46 @@ async function main(){
      const card=yearPanel.locator('.year-season[data-season="'+season+'"]');
      assert.equal(await card.locator('.year-month').count(),4,season+' contains four months');
      const style=await card.evaluate(el=>({
-      image:getComputedStyle(el,'::before').backgroundImage,
+      image:getComputedStyle(el).backgroundImage,
+      imageSize:getComputedStyle(el).backgroundSize,
       pseudo:getComputedStyle(el,'::before').content,
       shade:getComputedStyle(el,'::after').opacity,
       border:getComputedStyle(el).borderTopWidth
      }));
-     assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must belong to section: '+style.image);
-     assert.notEqual(style.pseudo,'none',season+' paints exactly one art layer');
-     assert.ok(Number(style.shade)>0,season+' card is subject to real lighting');
+     assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must be directly visible: '+style.image);
+     assert.equal(style.pseudo,'none',season+' artwork must not be hidden in pseudo-element');
+     assert.ok(style.imageSize.includes('cover'),season+' landscape must fill section');
+     assert.ok(Number(style.shade)>0,season+' card keeps dynamic night shading');
      assert.notEqual(style.border,'0px',season+' remains a visible section');
     }
+    // The actual Year writing surface must occupy its viewport rather than
+    // leave wide decorative margins or undersized month strips.
+    const geometry=await yearPanel.evaluate(panel=>{
+     const main=document.querySelector('#main-content').getBoundingClientRect();
+     const overview=panel.querySelector('.year-overview').getBoundingClientRect();
+     const seasons=[...panel.querySelectorAll('.year-season')].map(node=>node.getBoundingClientRect());
+     const month=panel.querySelector('.year-month').getBoundingClientRect();
+     return {
+      mainWidth:main.width,mainHeight:main.height,
+      overviewWidth:overview.width,overviewHeight:overview.height,
+      seasonHeights:seasons.map(r=>r.height),
+      firstMonthHeight:month.height,
+      lastSeasonBottom:seasons.at(-1).bottom,
+      overviewBottom:overview.bottom,
+      yearBottom:panel.getBoundingClientRect().bottom,
+      firstSeasonTop:seasons[0].top
+     };
+    });
+    assert.ok(geometry.overviewWidth/geometry.mainWidth>.90,
+     name+' Year should use available width: '+JSON.stringify(geometry));
+    assert.ok(Math.max(...geometry.seasonHeights)-Math.min(...geometry.seasonHeights)<3,
+     name+' all three seasons should share space: '+JSON.stringify(geometry));
+    assert.ok(geometry.firstMonthHeight>(width<700?48:85),
+     name+' miniature months are still too compressed: '+JSON.stringify(geometry));
+    assert.ok(geometry.overviewHeight/geometry.mainHeight>.86,
+     name+' Year should use most of the screen height: '+JSON.stringify(geometry));
+    assert.ok(geometry.overviewBottom<=geometry.yearBottom+3,
+     name+' all seasons and epagomenal dates should fit within Year: '+JSON.stringify(geometry));
     await page.screenshot({path:path.join(out,name+'-year-season-cards.png'),fullPage:false});
     await yearPanel.locator('[data-open-month="1"]').click();
     for(const [month,season] of [[5,'peret'],[9,'shemu'],[1,'akhet']]){
