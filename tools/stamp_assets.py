@@ -10,7 +10,7 @@ root = Path(__file__).resolve().parents[1] / "web"
 version = json.loads((root / "data.json").read_text(encoding="utf-8"))["version"]
 html_path = root / "index.html"
 html = html_path.read_text(encoding="utf-8")
-assets = ["ui.css", "calendar-layout.css", "season-theme.css", "keyboard.css", "backup.css",
+assets = ["ui.css", "calendar-layout.css", "season-theme.css", "seasonal-layout.css", "keyboard.css", "backup.css",
           "time-editor.css", "app.js"]
 for asset in assets:
     data = (root / asset).read_bytes()
