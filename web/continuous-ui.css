@@ -43,7 +43,7 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .ux-toolbar-head{padding:0 7px 11px!important;min-height:57px}
 .ux-heading{min-width:0}
 .ux-heading h1{font-size:clamp(30px,6vw,43px);line-height:1.08;font-weight:800;color:#9b352b}
-.ux-heading p{font-size:14px;line-height:1.45;color:#9b352b;font-weight:800;margin-top:3px}
+.ux-heading p{font-size:14px;line-height:1.45;color:#9b352b;font-weight:800;margin-top:3px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;min-height:0;display:block}
 .main-scroll,html[data-renpet-layout^="tablet"] .main-scroll{
  grid-column:auto!important;grid-row:auto!important;
  flex:1 1 auto;min-height:0;width:100%;overflow-y:auto!important;overflow-x:hidden!important;
