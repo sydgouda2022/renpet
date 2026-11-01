@@ -179,7 +179,7 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
    calendar has three uninterrupted bands. Both must fill the same box rather
    than letting the smaller number of ten-day rows collapse its height.
    Month 13 follows the same geometry. The rail itself remains continuous. */
-.time-panel[data-stream-kind="month"] > .month-section{
+html[data-renpet-layout] body[data-language] .time-panel[data-stream-kind="month"] > .month-section[data-week]{
  box-sizing:border-box;
  height:clamp(510px,calc(100dvh - 250px),720px);
  min-height:510px;
