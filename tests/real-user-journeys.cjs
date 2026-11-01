@@ -45,9 +45,18 @@ async function main(){
       panelHeight:p.getBoundingClientRect().height,
       clientHeight:document.querySelector('#main-content').clientHeight,
       months:[...p.querySelectorAll('.year-month')].map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})),
-      season:[...p.querySelectorAll('.year-season')].map(e=>({width:e.getBoundingClientRect().width,skin:getComputedStyle(e).backgroundImage}))
+      season:[...p.querySelectorAll('.year-season')].map(e=>({width:e.getBoundingClientRect().width,skin:getComputedStyle(e).backgroundImage,nightOpacity:parseFloat(getComputedStyle(e,'::after').opacity)})),
+      compactCellFont:getComputedStyle(p.querySelector('.year-mini-day:not(.year-mini-today)')).fontSize,
+      compactDot:getComputedStyle(p.querySelector('.year-mini-day:not(.year-mini-today)'),'::after').content
      }));
-     for(const item of seasonGeometry.season)assert.ok(item.skin.includes('.webp'), 'Season artwork must be visible');
+     for(const item of seasonGeometry.season){
+      assert.ok(item.skin.includes('.webp'),'Season artwork must be visible');
+      assert.ok(item.nightOpacity<.30,'Night shading should not bury the season colors');
+     }
+     if(width<=359){
+      assert.equal(seasonGeometry.compactCellFont,'0px','Tiny Year should show distinct day dots instead of illegible numerals');
+      assert.notEqual(seasonGeometry.compactDot,'none','Tiny Year day dots must be visible');
+     }
      await page.screenshot({path:path.join(out,'real-'+device+'-year.png')});
      await current.locator('[data-open-month="7"]').click();
      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
@@ -150,6 +159,18 @@ async function main(){
     });
     await step(device,'no broken visible controls and no uncaught errors',async()=>{
      assert.deepEqual(errors,[],'Unhandled page errors');
+     const dayType=await page.locator('.time-panel[data-stream-kind="day"]').nth(2).evaluate(p=>{
+      const timeline=p.querySelector('.timeline');
+      const h=p.querySelector('.timeline-hour>span');
+      return {
+       background:getComputedStyle(timeline).backgroundImage,
+       clockSize:parseFloat(getComputedStyle(h).fontSize),
+       clockColor:getComputedStyle(h).color
+      };
+     });
+     assert.ok(dayType.background.includes('rgba(255, 249, 232')||dayType.background.includes('rgba(255, 248, 233'),
+       'Day writing surface should be paper, not raw illustrated scenery: '+dayType.background);
+     assert.ok(dayType.clockSize>=13,'Timeline hours must be readable on small screens');
      const survey=await page.evaluate(()=>{
       const all=[...document.querySelectorAll('button')].filter(el=>{
        const cs=getComputedStyle(el),r=el.getBoundingClientRect();
