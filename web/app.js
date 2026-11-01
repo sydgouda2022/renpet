@@ -53,7 +53,7 @@ let previousRenderKey=null;
 let previousRenderFocus=null;
 let monthViewport=null;
 let currentTimeTicker=null;
-let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
+let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',listOrigin:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
 const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
@@ -323,8 +323,13 @@ function dayView(){
 }
 
 function listView(){
+ // Appointments are scoped to the timeframe from which the list was opened.
+ // Gregorian labels and festival visibility never alter the date range.
+ const e=egy(state.focus),annual=state.listOrigin==='year';
+ const start=annual?yearStart(e.year):monthStart(e);
+ const length=annual?360+monthDays({year:e.year,month:13}):monthDays(e);
  const groups=[];
- for(let d=state.focus;d<=Math.min(max(),state.focus+59);d++)
+ for(let d=Math.max(min(),start);d<=Math.min(max(),start+length-1);d++)
   if(items(d).length||festivalsOn(d).length||hiddenItemsForDay(schedule,d).length)
    groups.push(agenda(d));
  return '<div class="list-page">'+(groups.length?groups.join(''):
@@ -351,8 +356,8 @@ function managerView(){
 }
 
 function nav(){
- // Month is the permanent default. Keep only meaningful shortcuts.
- const labels=[['today',T().today],['list',T().list]];
+ // Physical corners stay put in RTL and LTR; labels use their own script.
+ const labels=[['list',T().list],['today',T().today]];
  const glyphs={today:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h1M3 12h1M3 18h1"/>'};
  return '<nav class="ux-bottom" aria-label="'+safe(T().view)+'">'+labels.map(([v,label])=>{
   const active=v==='list'&&state.view==='list';
@@ -360,11 +365,17 @@ function nav(){
  }).join('')+'</nav>';
 }
 function toolbar(){
- const e=egy(state.focus),year=state.view==='year',month=state.view==='month',isList=state.view==='list';
- const heading=year?numHtml(e.year):month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
- const yearButton=year?'<span class="year-brand">'+safe(LOCALES[lang()].brand)+'</span>':'<button class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-label">'+safe(LOCALES[lang()].year)+'</span><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>';
+ const e=egy(state.focus),year=state.view==='year',month=state.view==='month',
+  day=state.view==='day',isList=state.view==='list';
+ const origin=state.listOrigin==='year'?'year':'month';
+ const heading=year?'':month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
+ const higher=day?
+  '<button type="button" data-back aria-label="'+safe(spoken('month'))+' · '+safe(monthName(e.month))+'">'+safe(monthName(e.month))+'</button>':
+  month?'<button type="button" class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>':
+  '<span class="year-brand">'+numHtml(e.year)+'</span>';
  const season=e.month===13?LOCALES[lang()].epagomenal:seasonName(seasonForMonth(e.month),lang());
- return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-back">'+(state.view==='day'?'<button data-back aria-label="'+safe(spoken('month'))+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':yearButton)+'</div><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div></div><div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(year?'':'<p>'+safe(season)+'</p>')+'</div><div class="ux-heading-actions"><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div></div>'+(state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
+ const showSeason=!year&&!isList;
+ return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div><div class="ux-back">'+higher+'</div></div><div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(showSeason?'<p>'+safe(season)+'</p>':'')+'</div><div class="ux-heading-actions"><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div></div>'+(state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
 function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>{const e=egy(i.startDay);const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(i.startDay):'');return '<button data-result="'+i.startDay+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';}).join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
@@ -792,11 +803,16 @@ root.addEventListener('click',async ev=>{
   const v=b.dataset.primaryView;
   state.panel=null;state.search=false;
   if(v==='today'){
+   // Today is the inverse of the top-right timeframe shortcut.
+   const origin=state.view==='list'?state.listOrigin:state.view;
    state.focus=clamp(today());
-   // Today is the direct return to Month from List or Year; in Day and
-   // Month it moves only the date, preserving the current view.
-   if(state.view==='list'||state.view==='year')state.view='month';
-  }else if(v==='list')state.view='list';
+   state.view=origin==='year'?'month':'day';
+  }else if(v==='list'){
+   // Day already displays every appointment on its 24-hour timeline.
+   if(state.view==='day')return;
+   if(state.view!=='list'){state.listOrigin=state.view;state.view='list';}
+   else{state.view=state.listOrigin;}
+  }
   render();return;
  }
  if(b.hasAttribute('data-open-panel')){
