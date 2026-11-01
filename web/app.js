@@ -199,7 +199,7 @@ function yearView(yr=egy(state.focus).year){
    const appointmentCount=items(c.gregorian).length,festivalCount=festivalsOn(c.gregorian).length;
     return '<span class="year-mini-day'+(isToday?' year-mini-today':'')+(isSelected&&!isToday?' year-mini-selected':'')+(appointmentCount?' has-appointments':'')+(festivalCount?' has-festivals':'')+'"'+(isToday?' aria-label="'+safe(T().today)+'"':'')+'>'+numHtml(c.day)+(appointmentCount?'<i class="year-mini-dot" aria-hidden="true"></i>':'')+(festivalCount?'<i class="year-mini-festival" aria-hidden="true"></i>':'')+'</span>';
   }).join('');
-  return '<button class="year-month'+(m===e.month?' active-month':'')+'" data-open-month="'+m+'" aria-label="'+safe(monthName(m))+'"><span class="year-mini-title"><span class="year-month-name">'+safe(monthName(m))+'</span><span class="year-month-index">'+numHtml(m)+'</span></span><span class="year-mini-grid" data-week="'+w+'" aria-hidden="true">'+body+'</span></button>';
+  return '<button class="year-month'+(m===e.month?' active-month':'')+'" data-open-month="'+m+'" data-year="'+yr+'" aria-label="'+safe(monthName(m))+'"><span class="year-mini-title"><span class="year-month-name">'+safe(monthName(m))+'</span><span class="year-month-index">'+numHtml(m)+'</span></span><span class="year-mini-grid" data-week="'+w+'" aria-hidden="true">'+body+'</span></button>';
  };
  const groups=SEASONS.map((season,index)=>{
   const isCurrent=yr===currentDate.year&&season.id===currentSeason.id;
@@ -211,7 +211,7 @@ function yearView(yr=egy(state.focus).year){
   const day=epStart+i,events=items(day).length,festivals=festivalsOn(day).length;
   return '<span class="year-mini-day'+(day===current?' year-mini-today':'')+(events?' has-appointments':'')+(festivals?' has-festivals':'')+'">'+numHtml(i+1)+(events?'<i class="year-mini-dot" aria-hidden="true"></i>':'')+(festivals?'<i class="year-mini-festival" aria-hidden="true"></i>':'')+'</span>';
  }).join('');
- return '<div class="year-overview">'+groups+'<button class="epagomenal-tile" data-open-month="13"><span>✦</span><strong>'+safe(LOCALES[lang()].epagomenal)+'</strong><span class="year-mini-epagomenal">'+mini+'</span></button></div>';
+ return '<div class="year-overview">'+groups+'<button class="epagomenal-tile" data-open-month="13" data-year="'+yr+'"><span>✦</span><strong>'+safe(LOCALES[lang()].epagomenal)+'</strong><span class="year-mini-epagomenal">'+mini+'</span></button></div>';
 }
 function dayView(d=state.focus){
  const daily=items(d),all=daily.filter(i=>i.allDay);
@@ -860,7 +860,6 @@ root.addEventListener('click',async ev=>{
    state.dialog={id:target.id,occurrenceDay:target.startDay};
   render();return;
  }
- if(b.hasAttribute('data-next')){navigate(1);return;}
  if(b.hasAttribute('data-back')){state.saveNotice=false;state.view='month';forceStreamJump=true;render();return;}
  if(b.hasAttribute('data-primary-view')){
   state.panel=null;state.search=false;
