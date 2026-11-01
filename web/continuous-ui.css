@@ -160,7 +160,9 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
 .time-panel[data-stream-kind="year"] .year-season::after{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
  background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
- opacity:var(--night-opacity,.13);
+ /* Preserve botanical colors even at midnight; night is conveyed by
+    the changing light, not by obscuring the artwork with a grey veil. */
+ opacity:calc(var(--night-opacity,.13) * .38);
  transition:opacity .5s linear;
 }
 .time-panel[data-stream-kind="year"] .year-season>*{position:relative;z-index:1}
@@ -197,7 +199,7 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  padding:clamp(5px,.8vh,10px) clamp(5px,.7vw,11px)!important;
  border:1px solid #d6c69c8a!important;
  border-radius:12px!important;
- background:#fff9e7cd!important;
+ background:#fff9e7e1!important;
  box-shadow:0 1px 6px #3e34271a!important;
 }
 .time-panel[data-stream-kind="year"] .year-month.active-month{
@@ -287,16 +289,64 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
   font-size:clamp(9px,2.35vw,12px);
  }
 }
+@media(max-width:359px) and (max-height:700px){
+ /* 320px-wide phones cannot legibly fit 30 printed dates in each of
+    twelve miniature tiles and still show the entire year. Use one distinct
+    dot per day, and keep Today numbered and highlighted. Tapping the month
+    opens its fully numbered writing surface. */
+ .time-panel[data-stream-kind="year"] .year-mini-day:not(.year-mini-today){
+  font-size:0!important;
+ }
+ .time-panel[data-stream-kind="year"] .year-mini-day:not(.year-mini-today)::after{
+  content:'';
+  display:block;
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:currentColor;
+  opacity:.82;
+ }
+ .time-panel[data-stream-kind="year"] .year-mini-day.has-appointments:not(.year-mini-today)::after{
+  background:#ad3c32;
+  width:6px;
+  height:6px;
+ }
+ .time-panel[data-stream-kind="year"] .year-mini-day.year-mini-today{
+  font-size:10px!important;
+  border-radius:7px;
+ }
+}
 .time-panel[data-stream-kind="day"]>.day-page{max-width:1100px!important;width:100%;margin:auto;padding:0!important}
 .time-panel[data-stream-kind="day"] .day-heading{display:none!important}
 .time-panel[data-stream-kind="day"] .timeline{
  position:relative;max-width:none;width:100%;margin:12px 0 35px!important;
  border:0!important;border-radius:0!important;
- background:linear-gradient(to bottom,#d4e0ee7a 0%,#d8e2eb65 20%,#fff6e271 40%,#fff8e37d 59%,#f3d9bb73 78%,#bfcede7e 100%)!important
+ background:linear-gradient(to bottom,#fff9e8ee 0%,#fff8e9e8 32%,#fff6e7e8 64%,#fff7e8ef 100%)!important
 }
-.time-panel[data-stream-kind="day"] .timeline-slot{border-color:#846a3650}
-.time-panel[data-stream-kind="day"] .timeline-hour>span{font-size:12px}
-.time-panel[data-stream-kind="day"] .all-day,.time-panel[data-stream-kind="day"] .day-festivals{background:#fff9e79c}
+.time-panel[data-stream-kind="day"] .timeline-slot{border-color:#755f4688}
+.time-panel[data-stream-kind="day"] .timeline-hour>span{
+ font-size:clamp(13px,1.2vw,15px);
+ color:#314650;
+ font-weight:700;
+ text-shadow:0 1px #fff9;
+}
+.time-panel[data-stream-kind="day"] .all-day,.time-panel[data-stream-kind="day"] .day-festivals{background:#fff8e9ee}
+.time-panel[data-stream-kind="day"] .festival-in-agenda{
+ background:#fffaf0f2;
+ border:1px solid #a88b658c;
+ color:#34454b;
+}
+.time-panel[data-stream-kind="day"] .festival-in-agenda strong{
+ font-size:clamp(14px,1.3vw,17px);
+ line-height:1.35;
+}
+.time-panel[data-stream-kind="day"] .festival-in-agenda small{
+ font-size:12px;
+ color:#57616a;
+}
+.time-panel[data-stream-kind="day"] .time-panel-header h2{
+ text-shadow:0 1px 2px #fff8e8e0;
+}
 .time-panel[data-stream-kind="day"] .timeline-event{border-radius:10px}
 .ux-bottom,html[data-renpet-layout^="tablet"] .ux-bottom,
 html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child){
