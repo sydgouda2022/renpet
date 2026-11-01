@@ -591,7 +591,7 @@ function render(){
  document.body.dataset.view=state.view;
  const content=state.view==='year'?yearView():state.view==='day'?dayView():state.view==='list'?listView():monthView();
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
- root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
+ root.innerHTML='<div class="app-shell">'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
    +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
    +panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){
