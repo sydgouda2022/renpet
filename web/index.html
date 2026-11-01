@@ -60,14 +60,14 @@
   if (el.querySelector('.app-shell')) { ready = true; return; }
   const status = document.getElementById('renpet-status');
   if (status) status.textContent = 'تعذّر تشغيل تقويم رنبت';
-  el.innerHTML = '<div class="renpet-startup-failed" role="alert">'+
+  el.innerHTML = '<main class="renpet-startup-failed" id="main-content" tabindex="-1" role="alert">'+
    '<div style="font-size:44px;color:#176c59" aria-hidden="true">𓆳</div>'+
    '<h1>تعذّر تشغيل رنبت</h1>'+
    '<p>لم يكتمل تحميل التقويم. مواعيدك المحفوظة لم تُحذف.</p>'+
    '<p>Calendar could not finish starting. Your saved appointments have not been deleted.</p>'+
    '<button type="button" data-retry>إعادة المحاولة · Retry</button>'+
    (navigator.onLine?'<button type="button" class="secondary" data-repair>إصلاح التحديث · Repair update</button>':'')+
-   '</div>';
+   '</main>';
   el.querySelector('[data-retry]').addEventListener('click', function(){location.reload();});
   const repair = el.querySelector('[data-repair]');
   if (repair) repair.addEventListener('click', async function () {
