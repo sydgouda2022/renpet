@@ -4,7 +4,7 @@ import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {AMUN_SOURCE,loadFestivalCatalog,enabledSourceIds,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
-import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
+import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {readRecord,writeRecord,requestPersistentStorage} from './storage.js';
 import {openBackup} from './backup.js';
 import {syncModalFocus} from './dialog-focus.mjs';
@@ -412,7 +412,17 @@ function toolbar(){
   (state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
-function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>{const e=egy(i.startDay);const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(i.startDay):'');return '<button data-result="'+i.startDay+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';}).join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
+function searchResults(){
+ return searchItems(schedule,state.query).slice(0,60).map(i=>{
+  // A recurring result should take the user to the next live occurrence,
+  // not to a distant original start date. Reuse the scheduler's calendar
+  // recurrence engine so custom intervals and exclusions are respected.
+  const occurrence=i.repeat==='none'?null:nextOccurrence(i,today());
+  const target=occurrence??i.startDay,e=egy(target);
+  const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(target):'');
+  return '<button data-result="'+target+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';
+ }).join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';
+}
 function dateFields(d,prefix=''){
  const e=egy(d);
  const names=prefix?{year:'endEgyYear',month:'endEgyMonth',day:'endEgyDay'}:{year:'egyYear',month:'egyMonth',day:'egyDay'};
@@ -887,7 +897,7 @@ root.addEventListener('click',async ev=>{
   state.focus=clamp(Number(b.dataset.result));state.view='day';state.search=false;forceStreamJump=true;
   // Hidden calendars remain hidden by user choice, but the found item opens directly.
   if(target&&!schedule.calendars.some(c=>c.id===target.calendarId&&c.visible!==false))
-   state.dialog={id:target.id,occurrenceDay:target.startDay};
+   state.dialog={id:target.id,occurrenceDay:Number(b.dataset.result)};
   render();return;
  }
  if(b.hasAttribute('data-back')){state.saveNotice=false;state.view='month';forceStreamJump=true;render();return;}
