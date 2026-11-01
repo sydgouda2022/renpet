@@ -39,6 +39,7 @@ if(typeof window!=='undefined'){
 const root=document.querySelector('#app');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>{const d=new Date();return dayNumber([d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'));};
+/* Unified day/night lighting is continuous and clock-aware. */
 /* Lighting is a continuous function of clock time, not a collection of
    interchangeable day/night artwork panels. Keep foreground text opaque. */
 const LIGHTING_POINTS=[
