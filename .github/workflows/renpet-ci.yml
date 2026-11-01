@@ -72,6 +72,7 @@ jobs:
           node tests/mobile-ux.cjs
           node tests/calendar-integrity.cjs
           node tests/season-theme.cjs
+          node tests/real-user-journeys.cjs
           node tests/safari-save.cjs
           node tests/safari-direct-actions.cjs
           node tests/offline-startup.cjs
