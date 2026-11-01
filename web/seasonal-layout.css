@@ -283,3 +283,22 @@ body[data-language=egy] .flow-month .month-agenda{
 }
 .flow-month .upcoming-section{margin-top:16px;border-top:1px solid #627e603a}
 .flow-month .upcoming-day{background:#fff8e960;border:0;border-bottom:1px solid #58756738}
+
+/* Each Year season has its own landscape; the annual grid changes the scene
+   gradually as the user moves vertically through the calendar. */
+.year-season[data-season=akhet]{--year-scene:url('assets/landscapes/akhet.svg')}
+.year-season[data-season=peret]{--year-scene:url('assets/landscapes/peret.svg')}
+.year-season[data-season=shemu]{--year-scene:url('assets/landscapes/shemu.svg')}
+.year-season::before{
+ content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background-image:
+  linear-gradient(rgba(17,43,56,var(--ambient-night)),rgba(17,43,56,var(--ambient-night))),
+  linear-gradient(#fff8e1aa,#fff8e1cc),var(--year-scene);
+ background-position:center;background-size:cover
+}
+body[data-view=day] .main-scroll,
+body[data-view=list] .main-scroll{
+ background-image:
+  linear-gradient(rgba(17,43,56,var(--ambient-night)),rgba(17,43,56,var(--ambient-night))),
+  linear-gradient(#fbf4e5b5,#fbf4e5ce),var(--landscape)
+}
