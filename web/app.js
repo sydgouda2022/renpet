@@ -614,6 +614,7 @@ function extendRail(main){
 function render(){
  if(!data)return;
  const before=root.querySelector('#main-content');
+ const focusedMain=before&&document.activeElement===before;
  const oldView=previousRenderKey,oldPanel=before&&visibleRailPanel(before);
  const oldAnchor=oldPanel?Number(oldPanel.dataset.focusDay):null;
  const oldOffset=oldPanel?streamTop(before,oldPanel)-before.scrollTop:0;
@@ -630,12 +631,13 @@ function render(){
  const content=state.view==='list'?listView():railHTML(state.view);
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
  root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"></div>'+toolbar()+
-  '<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'+
+  '<main class="main-scroll" id="main-content" tabindex="-1">'+content+'</main>'+nav()+'</div>'+
   (state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')+
   panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
  if(['cop','egy'].includes(lang())&&typeof document.createElement==='function')
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  const main=root.querySelector('#main-content');
+ if(focusedMain)main?.focus({preventScroll:true});
  const preserve=oldView===state.view&&!forceStreamJump&&oldAnchor!==null;
  if(main&&state.view!=='list'){
   if(preserve){
