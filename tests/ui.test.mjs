@@ -10,5 +10,5 @@ test('no old storage scheduler is embedded in the UI',async()=>{
  }
  assert.match(app,/readRecord\('scheduler'\)/);
  assert.match(app,/writeRecord\('scheduler',next\)/);
- assert.match(app,/name="reminders"/);
+ assert.doesNotMatch(app,/name="reminders"|requestAlertPermission|startForegroundAlerts/);
 });
