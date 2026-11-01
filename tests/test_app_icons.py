@@ -79,26 +79,3 @@ def main():
 
 if __name__=='__main__':
     main()
-,entry['src']),entry['src']
-    assert '?icon=' not in html and '?icon=' not in (WEB/'manifest.webmanifest').read_text()
-    for name,dimension in EXPECTED.items():
-        im=pixels(WEB/'assets'/name,dimension)
-        assert im[0][0]==BLUE and im[-1][-1]==BLUE,'No white corners: '+name
-        # The supplied icon must show the loop above the knotted rope closure.
-        upper=round(dimension*(.25 if 'maskable' in name else .16))
-        lower=round(dimension*(.70 if 'maskable' in name else .82))
-        assert im[upper][dimension//2][0]>110 and im[upper][dimension//2][1]>140 and im[upper][dimension//2][2]<100,'Missing gold loop: '+name
-        assert im[lower][dimension//2][0]>110 and im[lower][dimension//2][1]>140 and im[lower][dimension//2][2]<100,'Missing gold rope knot: '+name
-        gold=sum(1 for row in im for r,g,b in row if r>180 and 180<g<250 and b<100)
-        assert gold>dimension*dimension*.05,('Unrecognizable icon',name,gold)
-        if 'maskable' in name:
-            points=[(x,y) for y,row in enumerate(im) for x,(r,g,b) in enumerate(row) if r>180 and g>180 and b<100]
-            assert min(x for x,y in points)>dimension*.18
-            assert max(x for x,y in points)<dimension*.82
-            assert min(y for x,y in points)>dimension*.15
-            assert max(y for x,y in points)<dimension*.85
-    print('Gold rope/shen icon, iOS, Android, maskable and browser assets verified')
-
-
-if __name__=='__main__':
-    main()
