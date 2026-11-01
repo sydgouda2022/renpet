@@ -187,8 +187,8 @@ function upcomingAgenda(d){
 }
 function monthView(){return railHTML('month');}
 
-function yearView(){
- const e=egy(state.focus),yr=e.year,w=week(),current=today();
+function yearView(yr=egy(state.focus).year){
+ const e=egy(state.focus),w=week(),current=today();
  const currentDate=egy(current),currentSeason=seasonForMonth(currentDate.month);
  const monthCard=m=>{
   const start=monthStart({year:yr,month:m});
@@ -347,21 +347,45 @@ function managerView(){
  return '<section class="page"><h1>'+safe(T().calendars)+'</h1><div class="settings-group">'+a.calendars.map(c=>'<div class="cal-row"><input type="checkbox" data-visible="'+safe(c.id)+'" '+(c.visible!==false?'checked':'')+'><span class="color-dot" style="background:'+safe(c.color)+'"></span><span>'+safe(calName(c))+'</span>'+(c.custom?'<button data-remove-cal="'+safe(c.id)+'" aria-label="'+safe(spoken('delete'))+'">×</button>':'')+'</div>').join('')+'</div><form id="new-calendar" class="settings-group"><label>'+safe(T().newCalendar)+'<input name="name" required maxlength="80" placeholder="'+safe(T().name)+'"></label><label>'+safe(T().color)+'<input type="color" name="color" value="#187568"></label><button class="primary" type="submit">'+safe(T().add)+'</button></form></section>';
 }
 
+function appointmentsView(){
+ const e=egy(state.focus);
+ const start=state.view==='year'?yearStart(e.year):state.view==='month'?monthStart(e):state.focus;
+ const last=state.view==='year'?monthStart({year:e.year,month:13})+monthDays({year:e.year,month:13})-1:
+  state.view==='month'?start+monthDays(e)-1:state.focus;
+ const groups=[];
+ for(let d=start;d<=last;d++){
+  if(d<min()||d>max())continue;
+  const entries=items(d);
+  if(entries.length)groups.push('<section class="appointments-day"><h3>'+safe(N(egy(d).day)+' '+monthName(egy(d).month))+'</h3>'+
+   entries.map(i=>eventRow(i,d)).join('')+'</section>');
+ }
+ return '<div class="appointments-page">'+(groups.join('')||'<p class="empty">'+safe(T().noEvents)+'</p>')+'</div>';
+}
 function nav(){
- // Month is the permanent default. Keep only meaningful shortcuts.
- const labels=[['today',T().today],['list',T().list]];
- const glyphs={today:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',list:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h1M3 12h1M3 18h1"/>'};
- return '<nav class="ux-bottom" aria-label="'+safe(T().view)+'">'+labels.map(([v,label])=>{
-  const active=v==='list'&&state.view==='list';
-  return '<button type="button" data-primary-view="'+v+'" class="ux-nav-item'+(active?' active':'')+'" aria-current="'+(active?'page':'false')+'"><svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+glyphs[v]+'</svg><span>'+safe(label)+'</span></button>';
- }).join('')+'</nav>';
+ const appointments=lang()==='ar'?'المواعيد':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏏𓏥';
+ return '<nav class="ux-bottom" aria-label="'+safe(T().view)+'">'+
+ '<button type="button" class="ux-nav-item" data-appointments aria-label="'+safe(appointments)+'">'+icon('list')+'<span>'+safe(appointments)+'</span></button>'+
+ '<button type="button" class="ux-nav-item" data-primary-view="today" aria-label="'+safe(T().today)+'">'+
+ '<svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg><span>'+safe(T().today)+'</span></button></nav>';
+}
+function headerLabels(){
+ const e=egy(state.focus),v=state.view;
+ return {heading:v==='year'?numHtml(e.year):v==='day'?numHtml(e.day)+' '+safe(monthName(e.month)):safe(monthName(e.month)),
+  season:safe(e.month===13?LOCALES[lang()].epagomenal:seasonName(seasonForMonth(e.month),lang()))};
 }
 function toolbar(){
- const e=egy(state.focus),year=state.view==='year',month=state.view==='month',isList=state.view==='list';
- const heading=year?numHtml(e.year):month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
- const yearButton=year?'<span class="year-brand">'+safe(LOCALES[lang()].brand)+'</span>':'<button class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-label">'+safe(LOCALES[lang()].year)+'</span><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>';
- const season=e.month===13?LOCALES[lang()].epagomenal:seasonName(seasonForMonth(e.month),lang());
- return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-back">'+(state.view==='day'?'<button data-back aria-label="'+safe(spoken('month'))+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':yearButton)+'</div><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div></div><div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(year?'':'<p>'+safe(season)+'</p>')+'</div><div class="ux-heading-actions"><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div></div>'+(state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
+ const e=egy(state.focus),labels=headerLabels();
+ const timeframe=state.view==='day'?
+  '<button type="button" data-up-level aria-label="'+safe(T().month)+'">'+icon('calendar')+'<span>'+safe(T().month)+'</span></button>':
+  state.view==='month'?'<button type="button" data-up-level aria-label="'+safe(N(e.year))+'"><span class="ux-year-value">'+numHtml(e.year)+'</span></button>':
+  '<span class="ux-year-value">'+numHtml(e.year)+'</span>';
+ return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-toolbar-actions">'+
+  '<button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button>'+
+  '<button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button>'+
+  '<button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div>'+
+  '<div class="ux-timeframe">'+timeframe+'</div></div>'+
+  '<div class="ux-toolbar-head"><div class="ux-heading"><h1>'+labels.heading+'</h1><p>'+labels.season+'</p></div></div>'+
+  (state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
 function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>{const e=egy(i.startDay);const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(i.startDay):'');return '<button data-result="'+i.startDay+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';}).join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
@@ -476,8 +500,8 @@ function editor(){
 
 function panelContent(){
  if(!state.panel)return '';
- const panels={settings:settingsView,calendars:managerView,festivals:festivalsView};
- const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals};
+ const panels={settings:settingsView,calendars:managerView,festivals:festivalsView,appointments:appointmentsView};
+ const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals,appointments:lang()==='ar'?'المواعيد':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏏𓏥'};
  const body=panels[state.panel]?.();
  if(!body)return '';
  return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
