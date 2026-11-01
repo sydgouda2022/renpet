@@ -317,8 +317,8 @@ body[data-language=egy] .year-season .season-heading{font-size:27px}
  .ux-bottom,.ux-bottom:has(.ux-nav-item:nth-child(2):last-child){
   padding-inline:12px;min-height:65px
  }
- .day-page{padding:0 9px 14px}
- .timeline{margin-inline:4px}
+ .day-page{padding:0 7px 14px}
+ html[data-renpet-layout="phone"] .day-page .timeline{margin-inline:4px 4px}
 }
 @media(max-height:559px){
  body{--art-top:100px;--art-garden:26px}
