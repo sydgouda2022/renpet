@@ -10,9 +10,12 @@ assert f"app.js?v={version}" in html, "Wrong module version"
 assert "cache.match(event.request, {ignoreSearch: true})" in s, "Versioned JS/CSS must work offline"
 assert "await cache.match('./index.html')" in s, "Offline navigation requires the cached shell"
 assert "await cache.addAll(ASSETS)" in s, "Offline boot graph needs an atomic install"
-for asset in ["calendar-presentation.mjs", "season-theme.css", "assets/seasons/akhet.webp", "assets/seasons/peret.webp", "assets/seasons/shemu.webp"]:
+for asset in ["calendar-presentation.mjs", "season-theme.css", "seasonal-layout.css",
+              "assets/landscapes/akhet.svg", "assets/landscapes/peret.svg",
+              "assets/landscapes/shemu.svg", "assets/seasons/akhet.webp", "assets/seasons/peret.webp", "assets/seasons/shemu.webp"]:
     assert '"./' + asset + '"' in s, "Seasonal asset must be installed atomically: " + asset
 assert f"season-theme.css?v={version}-" in html, "Seasonal CSS must use its current content hash"
+assert f"seasonal-layout.css?v={version}-" in html, "Continuous UI stylesheet must be content-addressed"
 assert "url.pathname.endsWith('/festival-sources.json')" not in s, 'Static catalogs should be part of the immutable release cache'
 assert "serviceWorker.addEventListener('controllerchange'" in html, "Existing installed PWAs must reload after an update"
 assert "registration.update()" in html, "Installed PWAs must proactively check for updates"
