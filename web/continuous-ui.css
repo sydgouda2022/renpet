@@ -181,8 +181,8 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
    Month 13 follows the same geometry. The rail itself remains continuous. */
 html[data-renpet-layout] body[data-language] .time-panel[data-stream-kind="month"] > .month-section[data-week]{
  box-sizing:border-box;
- height:clamp(510px,calc(100dvh - 250px),720px);
- min-height:510px;
+ height:clamp(510px,calc(100dvh - 250px),720px)!important;
+ min-height:510px!important;
  display:flex!important;
  flex-direction:column!important;
 }
