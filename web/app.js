@@ -73,7 +73,6 @@ async function saveScheduler(next){
  return true;
 }
 let previousRenderKey=null;
-let previousRenderFocus=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
@@ -208,7 +207,6 @@ function upcomingAgenda(d){
     '<div class="upcoming-empty">'+safe(T().noUpcoming)+'</div><button class="upcoming-add" type="button" data-new>'+safe(T().addFirst)+'</button>')+
   '</section>';
 }
-function monthView(){return railHTML('month');}
 
 function yearView(yr=egy(state.focus).year){
  const e=egy(state.focus),w=week(),current=today();
@@ -666,7 +664,6 @@ function render(){
   updateStreamPosition(main);
  }else if(main)main.scrollTop=oldView==='list'?oldScroll:0;
  previousRenderKey=state.view;
- previousRenderFocus=state.focus;
  forceStreamJump=false;
  syncModalFocus();
  if(sheetScroll!==null&&sheetScroll!==undefined){
