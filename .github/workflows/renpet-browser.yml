@@ -57,6 +57,7 @@ jobs:
           node tests/safari-save.cjs
           node tests/safari-direct-actions.cjs
           node tests/offline-startup.cjs
+          node tests/offline-redirect.cjs
       - name: Preserve screenshots and failures for audit
         if: always()
         uses: actions/upload-artifact@v4
