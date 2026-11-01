@@ -252,7 +252,9 @@ function syncMonthStream(){
  // Recenter only when the user reaches the edge of the finite runway.
  // Preserve the visible month's exact screen position: fast flicks may cross
  // several months in one gesture without snapping to single-month pages.
- if(index<2||index>=months.length-2){
+ const atStart=anchor<=monthStart(egy(min()));
+ const atEnd=anchor>=monthStart(egy(max()));
+ if((index<2&&!atStart)||(index>=months.length-2&&!atEnd)){
   monthJump={anchor,top:visible.getBoundingClientRect().top-outer.top};
   render();
  }
