@@ -54,9 +54,10 @@ def main():
     assert 'apple-touch-icon' in html and 'shen-rope.svg' in html
     version=json.loads((WEB/'data.json').read_text(encoding='utf-8'))['version']
     for asset in ['manifest.webmanifest','assets/icon-180.png','assets/shen-rope.svg','assets/favicon-32.png']:
-        assert re.search(re.escape(asset)+r'\\?v='+re.escape(version)+r'-[0-9a-f]{12}',html),asset
+        assert re.search(re.escape(asset)+r'\?v='+re.escape(version)+r'-[0-9a-f]{12}',html),asset
     for entry in manifest['icons']:
-        assert re.search(r'\\?v='+re.escape(version)+r'-[0-9a-f]{12}
+        assert re.search(r'\?v='+re.escape(version)+r'-[0-9a-f]{12}',entry['src']),entry['src']
+    assert '?icon=' not in html and '?icon=' not in (WEB/'manifest.webmanifest').read_text()
     for name,dimension in EXPECTED.items():
         im=pixels(WEB/'assets'/name,dimension)
         assert im[0][0]==BLUE and im[-1][-1]==BLUE,'No white corners: '+name
