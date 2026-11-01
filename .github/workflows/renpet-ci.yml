@@ -76,6 +76,7 @@ jobs:
           node tests/safari-save.cjs
           node tests/safari-direct-actions.cjs
           node tests/offline-startup.cjs
+          node tests/offline-redirect.cjs
       - name: Install Cloudflare Wrangler ONLY after explicit cutover
         if: github.event_name != 'pull_request' && (vars.CUTOVER_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.deploy_now) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-cloudflare]')))
         run: npm install --global wrangler@4
