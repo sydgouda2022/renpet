@@ -21,8 +21,15 @@ const MIME={
  '.ttf':'font/ttf'
 };
 async function startServer(){
+ let serverUnavailable=false;
  const server=http.createServer(async(req,res)=>{
   try{
+   if(serverUnavailable){
+    // Simulate an unreachable origin without putting Linux WebKit's entire
+    // browser context into an unsupported network-disconnected state.
+    res.writeHead(503,{'Content-Type':'text/plain','Cache-Control':'no-store'});
+    res.end('Origin unavailable');return;
+   }
    const url=new URL(req.url,'http://127.0.0.1:8766');
    if(url.pathname==='/index.html'){
     // The redirect is the regression trigger. The old SW stores its
@@ -40,9 +47,9 @@ async function startServer(){
  });
  server.listen(8766,'127.0.0.1');
  await once(server,'listening');
- return server;
+ return {server,setUnavailable:value=>{serverUnavailable=value;}};
 }
-async function verify(engine,name){
+async function verify(engine,name,setUnavailable){
  const browser=await engine.launch(name==='chromium'?{channel:'chrome',headless:true,args:['--no-sandbox']}:{headless:true});
  try{
   const context=await browser.newContext({
@@ -69,8 +76,12 @@ async function verify(engine,name){
    assert.equal(cached.redirected,false,name+' must not cache followed HTML redirects: '+JSON.stringify(cached));
    // This is a fresh navigation: don't count the already-running app as
    // offline support (that was the previous WebKit test's blind spot).
-   await context.setOffline(true);
-   await page.reload({waitUntil:'domcontentloaded'});
+   if(name==='webkit')setUnavailable(true);
+   else await context.setOffline(true);
+   try {
+    const navigation=await page.reload({waitUntil:'domcontentloaded'});
+    assert.equal(navigation.status(),200,name+' must serve the cached HTML when origin is unavailable');
+   } finally {if(name==='webkit')setUnavailable(false);}
    await page.locator('.time-rail').waitFor({timeout:25000});
    assert.equal(await page.locator('body').getAttribute('data-view'),'month');
    assert.deepEqual(errors,[],name+' offline navigation must have no unhandled errors');
@@ -79,14 +90,16 @@ async function verify(engine,name){
     page:!!document.querySelector('.time-rail'),
     online:navigator.onLine
    }));
-   assert.ok(nav.controller&&nav.page&&!nav.online,name+' offline page must be served by its controller');
-   console.log('RENPET_OFFLINE_REDIRECT',JSON.stringify({engine:name,cache:cached,navigation:nav}));
+   assert.ok(nav.controller&&nav.page,name+' offline page must be served by its controller');
+   if(name==='chromium')assert.equal(nav.online,false,'Chromium must use real offline mode');
+   console.log('RENPET_OFFLINE_REDIRECT',JSON.stringify({engine:name,cache:cached,navigation:nav,
+    mode:name==='webkit'?'origin-server-503':'browser-offline'}));
   }finally{await context.close();}
  }finally{await browser.close();}
 }
 async function main(){
- const server=await startServer();
- try{await verify(webkit,'webkit');await verify(chromium,'chromium');}
+ const {server,setUnavailable}=await startServer();
+ try{await verify(webkit,'webkit',setUnavailable);await verify(chromium,'chromium',setUnavailable);}
  finally{await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
