@@ -49,13 +49,19 @@ async function scenario(engine,name){
   const page=await context.newPage();page.setDefaultTimeout(22000);
   try{
    await boot(page);
+   // The skip link must move keyboard focus to the real main landmark.
+   await page.locator('.skip-to-calendar').focus();
+   await page.keyboard.press('Enter');
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'main-content','Skip link did not focus the calendar');
    await page.route('**/app.js?v=*',route=>route.abort('failed'));
    await page.reload({waitUntil:'domcontentloaded'});
    await page.locator('.renpet-startup-failed').waitFor({timeout:20000});
+   assert.equal(await page.locator('#renpet-status').textContent(),'تعذّر تشغيل تقويم رنبت');
    await page.unroute('**/app.js?v=*');
    await page.locator('[data-retry]').click();
    await page.locator('.time-rail').waitFor();
-   results.push({engine:name,recovery:true});
+   assert.equal(await page.locator('#renpet-status').textContent(),'اكتمل تحميل تقويم رنبت');
+   results.push({engine:name,recovery:true,skipLink:true,announcements:true});
   }finally{await context.close();}
  }finally{await browser.close();}
  return results;
