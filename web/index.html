@@ -17,7 +17,7 @@
 <meta property="og:image:alt" content="شعار رنبت المصري الذهبي">
 <meta name="twitter:card" content="summary">
 <link rel="manifest" href="manifest.webmanifest?v=build">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png?v=build"><link rel="icon" type="image/svg+xml" href="assets/shen-rope.svg?v=build"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=build">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png?v=build"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=build"><link rel="icon" type="image/svg+xml" sizes="any" href="assets/shen-rope.svg?v=build">
 <link rel="stylesheet" href="ui.css?v=7.2.1-75cd9059fdaa"><link rel="stylesheet" href="calendar-layout.css?v=7.2.1-5f3b3c401a12"><link rel="stylesheet" href="season-theme.css?v=7.2.1-1c2fd7cec0c4"><link rel="stylesheet" href="backup.css?v=7.2.1-fb194ea6ca62"><link rel="stylesheet" href="keyboard.css?v=7.2.1-7077d57cb757"><link rel="stylesheet" href="time-editor.css?v=7.2.1-293057e13060"><link rel="stylesheet" href="continuous-ui.css?v=8.0.0">
 <style>
 /* Boot CSS is inline deliberately: render a useful recovery page even if
@@ -58,6 +58,8 @@
   const el = document.getElementById('app');
   if (!el) return;
   if (el.querySelector('.app-shell')) { ready = true; return; }
+  const status = document.getElementById('renpet-status');
+  if (status) status.textContent = 'تعذّر تشغيل تقويم رنبت';
   el.innerHTML = '<div class="renpet-startup-failed" role="alert">'+
    '<div style="font-size:44px;color:#176c59" aria-hidden="true">𓆳</div>'+
    '<h1>تعذّر تشغيل رنبت</h1>'+
@@ -89,7 +91,12 @@
   console.error('Renpet startup incomplete:', reason);
  }
  window.RenpetBoot = {
-  ready: function () { ready = true; clearTimeout(timer); },
+  ready: function () {
+   ready = true;
+   clearTimeout(timer);
+   const status = document.getElementById('renpet-status');
+   if (status) status.textContent = 'اكتمل تحميل تقويم رنبت';
+  },
   fail: fail
  };
  // A previous installed release may serve stale app.js and festival data
@@ -144,13 +151,13 @@
 <script type="module" src="app.js?v=7.2.1-9958e94e06fc"></script>
 </head>
 <body>
-<a class="skip-to-calendar" href="#main-content" lang="ar">تجاوز إلى التقويم</a>
-<div id="app"><main class="loading" aria-busy="true">
+<a class="skip-to-calendar" href="#main-content">تجاوز إلى التقويم</a>
+<div id="app"><main class="loading" id="main-content" tabindex="-1" aria-busy="true">
 <span class="loading-mark" aria-hidden="true">𓆳𓏏𓏤</span>
 <h1>رنبت — التقويم المصري</h1>
 <p>تقويم للمواعيد والأعياد والفصول المصرية، بالعربية والقبطية والهيروغليفية. يعمل محليًا على جهازك.</p>
-<span class="loading-sr" role="status" aria-live="polite">جارٍ تحميل تقويم رنبت</span>
 </main></div>
-<noscript><style>#app>.loading{display:none}</style><main class="nojs-fallback" lang="ar"><h1>رنبت — التقويم المصري</h1><p>لتشغيل التقويم وعرض المواعيد، فعّل JavaScript في المتصفح ثم افتح الصفحة مجددًا.</p><p>تبقى مواعيدك محفوظة محليًا على جهازك.</p></main></noscript>
+<div id="renpet-status" class="loading-sr" role="status" aria-live="polite" aria-atomic="true" lang="ar">جارٍ تحميل تقويم رنبت</div>
+<noscript><style>#app>.loading,#renpet-status,.skip-to-calendar{display:none}</style><main class="nojs-fallback" lang="ar"><h1>رنبت — التقويم المصري</h1><p>لتشغيل التقويم وعرض المواعيد، فعّل JavaScript في المتصفح ثم افتح الصفحة مجددًا.</p><p>تبقى مواعيدك محفوظة محليًا على جهازك.</p></main></noscript>
 </body>
 </html>
