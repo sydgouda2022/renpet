@@ -1,7 +1,7 @@
 const ROOT='http://127.0.0.1:8765/';
 async function boot(page){
  await page.goto(ROOT,{waitUntil:'domcontentloaded'});
- await page.locator('.month-agenda').waitFor();
+ await page.locator('.time-rail').waitFor();
 }
 async function record(page,key){
  return page.evaluate(async key=>(await import('./storage.js')).readRecord(key),key);

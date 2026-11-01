@@ -25,7 +25,7 @@ async function scenario(engine,name){
     await context.setOffline(true);
     if(name==='chromium'){
      await page.reload({waitUntil:'domcontentloaded'});
-     await page.locator('.month-agenda').waitFor({timeout:18000});
+     await page.locator('.time-rail').waitFor({timeout:18000});
      assert.ok((await record(page,'scheduler')).items.some(i=>i.id===event.id),'Offline reload lost IndexedDB appointment');
     }else{
      const state=await record(page,'scheduler');
@@ -44,7 +44,7 @@ async function scenario(engine,name){
    await page.locator('.renpet-startup-failed').waitFor({timeout:20000});
    await page.unroute('**/app.js?v=*');
    await page.locator('[data-retry]').click();
-   await page.locator('.month-agenda').waitFor();
+   await page.locator('.time-rail').waitFor();
    results.push({engine:name,recovery:true});
   }finally{await context.close();}
  }finally{await browser.close();}
