@@ -185,6 +185,22 @@ async function main(){
      await page.locator('[data-primary-view=today]').click();
      assert.equal(await page.locator('body').getAttribute('data-view'),'day');
     });
+    await step(device,'export local backups through Settings',async()=>{
+     await page.locator('header [data-open-panel=settings]').click();
+     await page.locator('.ux-panel [data-backup]').click();
+     const panel=page.locator('.renpet-backup-panel');
+     await panel.waitFor();
+     const [jsonExport]=await Promise.all([
+      page.waitForEvent('download'),panel.locator('[data-backup=export]').click()
+     ]);
+     assert.match(jsonExport.suggestedFilename(),/^renpet-\\d{4}-\\d{2}-\\d{2}\\.json$/,'Local JSON backup should download');
+     const [calendarExport]=await Promise.all([
+      page.waitForEvent('download'),panel.locator('[data-backup=ics]').click()
+     ]);
+     assert.match(calendarExport.suggestedFilename(),/\\.ics$/,'Local ICS export should download');
+     await page.locator('.renpet-backup-overlay').click({position:{x:4,y:4}});
+     assert.equal(await page.locator('.renpet-backup-panel').count(),0,'Backup popover should close on outside tap');
+    });
     await step(device,'no broken visible controls and no uncaught errors',async()=>{
      assert.deepEqual(errors,[],'Unhandled page errors');
      const dayType=await page.locator('.time-panel[data-stream-kind="day"]').nth(2).evaluate(p=>{
