@@ -204,7 +204,8 @@ function monthView(){
   }
   const anchor=monthStart(e);
   contents+='<section class="flow-month" data-month-anchor="'+anchor+'" data-month="'+e.month+'" data-year="'+e.year+'">'+
-   '<h3 class="flow-month-name">'+safe(monthName(e.month))+'</h3>'+monthSection(e)+'</section>';
+   '<h3 class="flow-month-name">'+safe(monthName(e.month))+'</h3>'+monthSection(e)+
+   (offset===0?'<div class="month-agenda">'+agenda(state.focus)+upcomingAgenda(state.focus)+'</div>':'')+'</section>';
  }
  flush();
  return '<div class="month-scroll month-continuum" aria-label="'+safe(T().month)+'">'+groups.join('')+'</div>';
@@ -227,7 +228,8 @@ function syncMonthStream(){
  if(!months.length)return;
  const outer=main.getBoundingClientRect();
  const line=outer.top+Math.min(105,main.clientHeight*.18);
- const index=Math.max(0,months.findIndex(el=>el.getBoundingClientRect().bottom>line));
+ const found=months.findIndex(el=>el.getBoundingClientRect().bottom>line);
+ const index=found<0?months.length-1:found;
  const visible=months[index],anchor=Number(visible.dataset.monthAnchor);
  if(!Number.isFinite(anchor))return;
  const e=egy(anchor),before=egy(state.focus);
@@ -244,6 +246,8 @@ function syncMonthStream(){
   main.querySelectorAll('.date.chosen').forEach(el=>{el.classList.remove('chosen');el.setAttribute('aria-pressed','false');});
   const selected=main.querySelector('.date[data-date="'+state.focus+'"]');
   if(selected){selected.classList.add('chosen');selected.setAttribute('aria-pressed','true');}
+  const agendaHost=main.querySelector('.month-agenda');
+  if(agendaHost){agendaHost.innerHTML=agenda(state.focus)+upcomingAgenda(state.focus);visible.append(agendaHost);}
  }
  // Recenter only when the user reaches the edge of the finite runway.
  // Preserve the visible month's exact screen position: fast flicks may cross
