@@ -24,7 +24,7 @@ async function main(){
    try{
     await boot(page);await language(page,lang);
     const item=await seed(page,lang+' direct '+width);
-    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.reload();await page.locator('.time-rail').waitFor();
     await page.locator('[data-date="'+item.startDay+'"]').click();
     const block=page.locator('.timeline-event[data-edit="'+item.id+'"]');
     await block.waitFor();
@@ -116,7 +116,7 @@ async function main(){
      const state=await(await import('./storage.js')).readRecord('scheduler');
      return state?.items.some(i=>i.id===id&&i.endMinutes>660);
     },item.id,{timeout:8000});
-    await page.locator('[data-back]').click();
+    await page.locator('[data-up-level]').click();
     const row=page.locator('.event-row-shell:has([data-edit="'+item.id+'"])');
     await row.waitFor();
     await row.locator('[data-quick-delete="'+item.id+'"]').click();
@@ -134,7 +134,7 @@ async function main(){
       await storage.writeRecord('scheduler',state);
       return {id:event.id,day};
     });
-    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.reload();await page.locator('.time-rail').waitFor();
     await page.locator('[data-date="'+short.day+'"]').click();
     const shortBlock=page.locator('.timeline-event[data-edit="'+short.id+'"]');
     await shortBlock.waitFor();await shortBlock.scrollIntoViewIfNeeded();
@@ -171,7 +171,7 @@ async function main(){
      state.items.push(recurring);await storage.writeRecord('scheduler',state);
      return {id:recurring.id,day};
     },lang+' recurring '+width);
-    await page.reload();await page.locator('.month-agenda').waitFor();
+    await page.reload();await page.locator('.time-rail').waitFor();
     await page.locator('[data-date="'+repeat.day+'"]').click();
     const recurringBlock=page.locator('.timeline-event[data-edit="'+repeat.id+'"]');
     await recurringBlock.waitFor();
