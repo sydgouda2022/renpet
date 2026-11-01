@@ -102,8 +102,19 @@ async function main(){
        dayCount:itemsForDay(rec,day).length,
        view:document.body.dataset.view,visibleEvents:document.querySelectorAll('.timeline-event').length};
      },saved.id);
-     assert.equal(visible.actual+visible.allDayRows,1,
-      'Saved appointment must appear in Day: '+JSON.stringify(visible));
+     if(visible.actual+visible.allDayRows===0){
+      const grouped=page.locator('.timeline-crowded');
+      assert.ok(await grouped.count(),
+       'Saved appointment must be visible or part of an overlap group: '+JSON.stringify(visible));
+      let found=false;
+      for(let index=0;index<await grouped.count();index++){
+       await grouped.nth(index).click();
+       found=(await page.locator('.crowded-choice[data-crowded-edit="'+saved.id+'"]').count())>0;
+       await page.locator('.crowded-backdrop').click({position:{x:6,y:6}});
+       if(found)break;
+      }
+      assert.ok(found,'Saved appointment missing from overlap group: '+JSON.stringify(visible));
+     }else assert.equal(visible.actual+visible.allDayRows,1);
      await page.reload();await page.locator('.month-agenda').waitFor();
      assert.ok((await record(page,'scheduler')).items.some(item=>item.id===saved.id));
      await page.locator('[data-primary-view=today]').click();
