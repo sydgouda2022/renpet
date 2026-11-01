@@ -399,7 +399,7 @@ function headerLabels(){
 function toolbar(){
  const e=egy(state.focus);
  const timeframe=state.view==='day'?
-  '<button type="button" data-up-level aria-label="'+safe(T().month)+'">'+icon('calendar')+'<span>'+safe(T().month)+'</span></button>':
+  '<button type="button" data-up-level aria-label="'+safe(monthName(e.month))+'"><span class="ux-month-value">'+safe(monthName(e.month))+'</span></button>':
   state.view==='month'?'<button type="button" data-up-level aria-label="'+safe(N(e.year))+'"><span class="ux-year-value">'+numHtml(e.year)+'</span></button>':
   '<span class="ux-year-value">'+numHtml(e.year)+'</span>';
  return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-toolbar-actions">'+
@@ -586,6 +586,13 @@ function updateStreamPosition(main){
  if(p&&p.textContent!==season)p.textContent=season;
  const year=root.querySelector('.ux-year-value');
  if(year&&view==='month')year.innerHTML=numHtml(egy(state.focus).year);
+ // Day's top-right button names its current month as the continuous rail moves.
+ const month=root.querySelector('.ux-month-value');
+ if(month&&view==='day'){
+  const name=monthName(egy(state.focus).month);
+  if(month.textContent!==name)month.textContent=name;
+  month.closest('[data-up-level]')?.setAttribute('aria-label',name);
+ }
  document.body.dataset.season=seasonForMonth(egy(state.focus).month).id;
 }
 function extendRail(main){
