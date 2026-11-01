@@ -67,6 +67,10 @@ function navigationHtml(response) {
  const headers = new Headers(response.headers);
  headers.set('Content-Type', 'text/html; charset=utf-8');
  headers.delete('Location');
+ // A fetch body is decoded before JavaScript receives it. Keeping the
+ // original wire-size/encoding headers would misdescribe this new response.
+ headers.delete('Content-Encoding');
+ headers.delete('Content-Length');
  // A new Response never carries Response.redirected, even when its source
  // was fetched by following a 301/302 from /index.html to /.
  return new Response(response.body, {
