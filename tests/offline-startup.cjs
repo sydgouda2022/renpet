@@ -30,7 +30,7 @@ async function scenario(engine,name){
     await page.locator('.time-rail').waitFor({timeout:18000});
     assert.ok((await record(page,'scheduler')).items.some(i=>i.id===event.id),
       name+' offline reload lost IndexedDB appointment');
-    assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    assert.equal(await page.locator('body').getAttribute('data-view'),'month');
     results.push({engine:name,width,offlineAssets:true,localAppointment:true,offlineNavigation:true});
    }finally{await context.close();}
   }
