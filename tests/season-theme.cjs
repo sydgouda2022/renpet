@@ -26,6 +26,24 @@ async function main(){
     assert.equal(await page.locator('.season-art').evaluate(el=>getComputedStyle(el).pointerEvents),'none');
     const lighting=await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue('--night-opacity').trim());
     assert.ok(Number(lighting)>0&&Number(lighting)<1,'Day-night lighting is a continuous opacity');
+    // Each four-month season gets its own landscape, not one repeated year skin.
+    await page.locator('header [data-up-level]').click();
+    const yearPanel=page.locator('.time-panel[data-stream-kind="year"]').nth(1);
+    assert.equal(await yearPanel.locator('.year-season').count(),3);
+    for(const season of ['akhet','peret','shemu']){
+     const card=yearPanel.locator('.year-season[data-season="'+season+'"]');
+     assert.equal(await card.locator('.year-month').count(),4,season+' contains four months');
+     const style=await card.evaluate(el=>({
+      image:getComputedStyle(el).backgroundImage,
+      pseudo:getComputedStyle(el,'::before').content,
+      border:getComputedStyle(el).borderTopWidth
+     }));
+     assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must belong to section: '+style.image);
+     assert.equal(style.pseudo,'none',season+' artwork must not double-paint');
+     assert.notEqual(style.border,'0px',season+' remains a visible section');
+    }
+    await page.screenshot({path:path.join(out,name+'-year-season-cards.png'),fullPage:false});
+    await yearPanel.locator('[data-open-month="1"]').click();
     for(const [month,season] of [[5,'peret'],[9,'shemu'],[1,'akhet']]){
      await page.locator('[data-primary-view=today]').click();
      await page.locator('[data-up-level]').click();
@@ -36,6 +54,11 @@ async function main(){
     }
     await page.locator('.time-panel[data-stream-kind=month]').nth(2).locator('.date[data-date]').nth(5).click();
     assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    // Top right displays the actual month name in the active language.
+    const names=await page.evaluate(async()=>(await(await fetch('./data.json')).json()).months.ar);
+    const dayMonth=page.locator('header [data-up-level] .ux-month-value');
+    assert.equal((await dayMonth.textContent()).trim(),names[0]);
+    assert.equal((await page.locator('header [data-up-level]').getAttribute('aria-label')).trim(),names[0]);
     assert.equal(await page.locator('.month-section').count(),0,'iPad Day is independent, without Month panel');
     const rect=await page.evaluate(()=>{
      const main=document.querySelector('#main-content').getBoundingClientRect();
