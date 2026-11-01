@@ -506,104 +506,157 @@ function panelContent(){
  if(!body)return '';
  return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
 }
+// One time rail serves every screen. Panels are sections of a continuous scroll
+// surface, not nested scroll containers or page-sized snap cards.
+function railAnchor(view,d){
+ const e=egy(d);
+ return view==='year'?yearStart(e.year):view==='month'?monthStart(e):d;
+}
+function railNext(view,anchor,direction){
+ if(view==='day'){const next=anchor+direction;return next>=min()&&next<=max()?next:null;}
+ if(view==='year'){const y=egy(anchor).year+direction;return supportedYear(y)?yearStart(y):null;}
+ const next=adjacent(egy(anchor),direction);
+ return next?monthStart(next):null;
+}
+function railPanel(view,anchor){
+ const e=egy(anchor),season=seasonForMonth(e.month);
+ const label=view==='year'?numHtml(e.year):view==='day'?numHtml(e.day)+' '+safe(monthName(e.month)):safe(monthName(e.month));
+ const seasonLabel=safe(e.month===13?LOCALES[lang()].epagomenal:seasonName(season,lang()));
+ const content=view==='year'?yearView(e.year):view==='day'?dayView(anchor):monthSection(e);
+ return '<section class="time-panel" data-focus-day="'+anchor+'" data-stream-kind="'+view+'" data-season-id="'+season.id+'">'+
+  '<div class="time-panel-header"><h2>'+label+'</h2><span class="time-season-name">'+seasonLabel+'</span></div>'+
+  content+'</section>';
+}
+function railHTML(view){
+ crowdedDayGroups=[];
+ const anchor=railAnchor(view,state.focus),count=view==='year'?1:2;
+ const panels=[railPanel(view,anchor)];let before=anchor,after=anchor;
+ for(let i=0;i<count;i++){const next=railNext(view,before,-1);if(next===null)break;before=next;panels.unshift(railPanel(view,before));}
+ for(let i=0;i<count;i++){const next=railNext(view,after,1);if(next===null)break;after=next;panels.push(railPanel(view,after));}
+ return '<div class="time-rail" data-rail-kind="'+view+'">'+panels.join('')+'</div>';
+}
+function streamTop(main,element){
+ return main.scrollTop+element.getBoundingClientRect().top-main.getBoundingClientRect().top;
+}
+function visibleRailPanel(main){
+ const panels=[...main.querySelectorAll('.time-panel')];
+ const line=main.getBoundingClientRect().top+Math.min(main.clientHeight*.28,220);
+ return panels.filter(p=>p.getBoundingClientRect().top<=line).at(-1)||panels[0]||null;
+}
+function scrollToRailDay(main,anchor){
+ const panel=[...main.querySelectorAll('.time-panel')].find(p=>Number(p.dataset.focusDay)===anchor);
+ if(panel)main.scrollTop=streamTop(main,panel);
+}
+function updateStreamPosition(main){
+ const panel=visibleRailPanel(main);if(!panel)return;
+ const anchor=Number(panel.dataset.focusDay),view=main.querySelector('.time-rail')?.dataset.railKind;
+ const current=egy(state.focus);
+ let next=anchor;
+ if(view==='month')next=anchor+Math.min(current.day,monthDays(egy(anchor)))-1;
+ else if(view==='year'){
+  const yr=egy(anchor).year;
+  next=toGregorian({year:yr,month:current.month,day:Math.min(current.day,monthDays({year:yr,month:current.month}))});
+ }
+ state.focus=clamp(next);
+ const {heading,season}=headerLabels();
+ const h=root.querySelector('.ux-heading h1'),p=root.querySelector('.ux-heading p');
+ if(h&&h.innerHTML!==heading)h.innerHTML=heading;
+ if(p&&p.textContent!==season)p.textContent=season;
+ const year=root.querySelector('.ux-year-value');
+ if(year&&view==='month')year.innerHTML=numHtml(egy(state.focus).year);
+ document.body.dataset.season=seasonForMonth(egy(state.focus).month).id;
+}
+function extendRail(main){
+ if(!main||!['month','year','day'].includes(state.view))return;
+ const rail=main.querySelector('.time-rail');if(!rail)return;
+ let panels=rail.querySelectorAll(':scope > .time-panel');if(!panels.length)return;
+ const first=panels[0];
+ if(main.scrollTop<Math.max(420,first.offsetHeight*.8)){
+  const beforeHeight=rail.scrollHeight;
+  const d=railNext(state.view,Number(first.dataset.focusDay),-1);
+  if(d!==null){first.insertAdjacentHTML('beforebegin',railPanel(state.view,d));main.scrollTop+=rail.scrollHeight-beforeHeight;}
+ }
+ panels=rail.querySelectorAll(':scope > .time-panel');
+ const last=panels[panels.length-1];
+ if(rail.scrollHeight-main.scrollTop-main.clientHeight<Math.max(420,last.offsetHeight*.8)){
+  const d=railNext(state.view,Number(last.dataset.focusDay),1);
+  if(d!==null)last.insertAdjacentHTML('afterend',railPanel(state.view,d));
+ }
+ panels=rail.querySelectorAll(':scope > .time-panel');
+ if(panels.length>11){
+  const index=[...panels].indexOf(visibleRailPanel(main));
+  if(index>5){const removed=panels[0],height=removed.offsetHeight;removed.remove();main.scrollTop-=height;}
+  else if(index<panels.length-6)panels[panels.length-1].remove();
+ }
+}
+function updateAmbientLight(){
+ const now=new Date(),hour=now.getHours()+now.getMinutes()/60;
+ const daylight=Math.max(0,Math.sin(Math.PI*(hour-5.5)/13));
+ document.body.style.setProperty('--night-opacity',String((.45-.41*daylight).toFixed(3)));
+}
 function render(){
  if(!data)return;
- const viewKey=state.view;
- const oldMain=root.querySelector('#main-content');
- const keepScroll=viewKey===previousRenderKey?oldMain?.scrollTop:0;
- const oldPanel=root.querySelector('.ux-panel');
- const panelScroll=oldPanel?.dataset.panel===state.panel?oldPanel.querySelector('.ux-panel-body')?.scrollTop:null;
- // Month grid and selected-day agenda scroll independently. Preserve both
- // when rendering a panel, opening Day, or returning from the editor.
- const previousMonth=previousRenderKey==='month'?root.querySelector('.month-section'):null;
- if(previousMonth&&previousRenderFocus!==null){
-  const oldDate=egy(previousRenderFocus);
-  monthViewport={year:oldDate.year,month:oldDate.month,language:document.body.dataset.language,
-   week:previousMonth.dataset.week,gridTop:previousMonth.scrollTop,
-   agendaTop:root.querySelector('.month-agenda')?.scrollTop||0,
-   focus:previousRenderFocus};
- }
+ const before=root.querySelector('#main-content');
+ const oldView=previousRenderKey,oldPanel=before&&visibleRailPanel(before);
+ const oldAnchor=oldPanel?Number(oldPanel.dataset.focusDay):null;
+ const oldOffset=oldPanel?streamTop(before,oldPanel)-before.scrollTop:0;
+ const oldScroll=before?.scrollTop||0;
+ const oldSheet=root.querySelector('.ux-panel');
+ const sheetScroll=oldSheet?.dataset.panel===state.panel?oldSheet.querySelector('.ux-panel-body')?.scrollTop:null;
  itemCache.clear();festivalCache.clear();
  document.documentElement.lang=LOCALES[lang()].html;
  document.documentElement.dir=lang()==='ar'?'rtl':'ltr';
  document.body.dataset.language=lang();
  document.body.dataset.season=seasonForMonth(egy(state.focus).month).id;
  document.body.dataset.view=state.view;
- const content=state.view==='year'?yearView():state.view==='day'?dayView():state.view==='list'?listView():monthView();
+ updateAmbientLight();
+ const content=state.view==='list'?listView():railHTML(state.view);
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
- root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"><div class="season-frieze"></div><div class="season-edge season-edge-start"></div><div class="season-edge season-edge-end"></div><div class="season-garden"></div></div>'+toolbar()+'<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'
-   +(state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')
-   +panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
- if(['cop','egy'].includes(lang())&&typeof document.createElement==='function'){
+ root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"></div>'+toolbar()+
+  '<main class="main-scroll" id="main-content">'+content+'</main>'+nav()+'</div>'+
+  (state.saveNotice?'<div class="save-confirmation" role="status" aria-live="polite">✓ '+savedText+'</div>':'')+
+  panelContent()+(state.dialog?editor():'')+festivalDetails()+crowdedSheet();
+ if(['cop','egy'].includes(lang())&&typeof document.createElement==='function')
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
- }
  const main=root.querySelector('#main-content');
- if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
- if(main&&state.view==='year'&&viewKey!==previousRenderKey){
-  // Opening Year should reveal the selected season on both iPhone and iPad,
-  // rather than dropping users at Akhet regardless of the month they chose.
-  const season=root.querySelector('.year-month.active-month')?.closest('.year-season');
-  if(season){
-   const outer=main.getBoundingClientRect(),inner=season.getBoundingClientRect();
-   main.scrollTop=Math.max(0,main.scrollTop+inner.top-outer.top-8);
-  }
- }
- if(state.view==='month'){
-  const region=root.querySelector('.month-section'),agenda=root.querySelector('.month-agenda');
-  const date=egy(state.focus);
-  const sameMonth=monthViewport&&monthViewport.year===date.year&&monthViewport.month===date.month&&
-   monthViewport.language===lang()&&Number(monthViewport.week)===week();
-  if(region&&sameMonth)region.scrollTop=monthViewport.gridTop;
-  if(agenda&&sameMonth&&monthViewport.focus===state.focus)agenda.scrollTop=monthViewport.agendaTop;
-  // On entering a different month or returning from a different Day, reveal
-  // the selected date without resetting a still-visible scroll position.
-  const selected=region?.querySelector('.date.chosen');
-  if(region&&selected){
-   const outer=region.getBoundingClientRect(),inner=selected.getBoundingClientRect();
-   if(inner.top<outer.top||inner.bottom>outer.bottom){
-    region.scrollTop+=inner.top-outer.top-(region.clientHeight-selected.clientHeight)/2;
+ const preserve=oldView===state.view&&!forceStreamJump&&oldAnchor!==null;
+ if(main&&state.view!=='list'){
+  if(preserve){
+   const matching=[...main.querySelectorAll('.time-panel')].find(p=>Number(p.dataset.focusDay)===oldAnchor);
+   if(matching)main.scrollTop=streamTop(main,matching)-oldOffset;
+   else scrollToRailDay(main,railAnchor(state.view,state.focus));
+  }else scrollToRailDay(main,railAnchor(state.view,state.focus));
+  if(state.view==='day'&&state.revealItemId){
+   const matching=[...main.querySelectorAll('.timeline-event[data-edit],.all-day .event-row[data-edit]')]
+    .find(el=>el.dataset.edit===state.revealItemId);
+   if(matching)main.scrollTop+=matching.getBoundingClientRect().top-main.getBoundingClientRect().top-Math.min(90,main.clientHeight*.2);
+   state.revealItemId=null;
+  }else if(state.view==='day'&&!preserve){
+   const panel=[...main.querySelectorAll('.time-panel')].find(p=>Number(p.dataset.focusDay)===state.focus);
+   const marker=panel?.querySelector('[data-now-line]');
+   const event=panel?.querySelector('.timeline-event');
+   const timeline=panel?.querySelector('.timeline');
+   if(timeline){
+    const top=streamTop(main,timeline);
+    main.scrollTop=Math.max(0,top+(event?parseFloat(event.style.top)||0:marker?parseFloat(marker.style.top)||0:8*64)-Math.min(100,main.clientHeight*.2));
    }
   }
- }
- if(main&&state.view==='day'&&state.revealItemId){
-  // Explicitly reveal the event just saved; never let auto-scroll to
-  // the current-time line hide a 09:00 appointment.
-  const matching=[...root.querySelectorAll('.timeline-event[data-edit],.all-day .event-row[data-edit]')]
-   .find(el=>el.dataset.edit===state.revealItemId);
-  if(matching){
-   const mainBounds=main.getBoundingClientRect(),itemBounds=matching.getBoundingClientRect();
-   main.scrollTop+=itemBounds.top-mainBounds.top-Math.min(90,main.clientHeight*.2);
-  }
-  state.revealItemId=null;
- }else if(main&&state.view==='day'&&(viewKey!==previousRenderKey||state.focus!==previousRenderFocus)){
-  // Enter near the first actual appointment, or near work hours on empty days.
-  // Today still opens near the current-time marker if no later event needs attention.
-  const timeline=root.querySelector('.timeline');
-  const events=[...root.querySelectorAll('.timeline-event,.timeline-crowded')];
-  const first=events.reduce((earliest,el)=>Math.min(earliest,parseFloat(el.style.top)||0),Infinity);
-  const marker=state.focus===today()?root.querySelector('[data-now-line]'):null;
-  const timelineTop=timeline.getBoundingClientRect().top-main.getBoundingClientRect().top+main.scrollTop;
-  const target=timelineTop+(Number.isFinite(first)?first:
-   marker?(parseFloat(marker.style.top)||0):8*64);
-  main.scrollTop=Math.max(0,target-Math.min(100,main.clientHeight*.2));
- }
- previousRenderKey=viewKey;
+  updateStreamPosition(main);
+ }else if(main)main.scrollTop=oldView==='list'?oldScroll:0;
+ previousRenderKey=state.view;
  previousRenderFocus=state.focus;
+ forceStreamJump=false;
  syncModalFocus();
- if(panelScroll!==null&&panelScroll!==undefined){
-  const panelBody=root.querySelector('.ux-panel-body');
-  if(panelBody)panelBody.scrollTop=panelScroll;
+ if(sheetScroll!==null&&sheetScroll!==undefined){
+  const body=root.querySelector('.ux-panel-body');if(body)body.scrollTop=sheetScroll;
  }
  maintainCurrentTimeLine();
 }
+root.addEventListener('scroll',ev=>{
+ if(ev.target.id!=='main-content'||state.panel||state.dialog)return;
+ extendRail(ev.target);updateStreamPosition(ev.target);
+},{capture:true,passive:true});
 
-function navigate(step){
- if(state.view==='year'){const y=egy(state.focus).year+step;if(supportedYear(y))state.focus=yearStart(y);}
- else if(state.view==='day')state.focus+=step;
- else if(state.view==='list')state.focus+=step*30;
- else{const e=egy(state.focus),next=adjacent(e,step);if(next)state.focus=monthStart(next)+Math.min(e.day,monthDays(next))-1;}
- state.focus=clamp(state.focus);render();
-}
 function showEditorError(form,message){
  let el=form.querySelector('.event-error');
  if(!el){el=document.createElement('p');el.className='event-error';el.setAttribute('role','alert');form.querySelector('.sheet-head')?.after(el);}
