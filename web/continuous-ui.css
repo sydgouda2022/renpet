@@ -107,6 +107,12 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  box-shadow:none!important;min-height:0!important;padding:10px 8px!important
 }
 .time-panel[data-stream-kind="year"] .year-mini-grid{width:100%;direction:inherit}
+/* Each Egyptian ten-day week occupies one row, including compact year tiles. */
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"]{grid-template-columns:repeat(10,minmax(0,1fr));column-gap:0;row-gap:5px}
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-day,
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-blank{min-width:0;font-size:clamp(8px,1.15vw,12px)}
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-day.year-mini-today{min-width:0;width:100%;min-height:18px;border-radius:7px}
+
 .time-panel[data-stream-kind="year"] .year-mini-day{line-height:1.2}
 .time-panel[data-stream-kind="year"] .year-mini-today{background:#b9413b!important}
 .time-panel[data-stream-kind="year"] .epagomenal-tile{margin-top:17px;border:0;background:#fff9e786}
