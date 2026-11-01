@@ -261,3 +261,25 @@ body[data-view=day] .month-continuum{display:none!important}
 @media (prefers-reduced-motion:reduce){
  .flow-season::after{transition:none}
 }
+
+/* Agenda belongs in the selected month in reading order; never a competing
+   side pane or a separately scrollable card. */
+.flow-month .month-agenda,
+html[data-renpet-layout^="tablet"] .flow-month .month-agenda,
+html[data-renpet-layout="phone"] .flow-month .month-agenda,
+body[data-language=egy] .flow-month .month-agenda{
+ display:block;position:static;width:100%;height:auto;min-height:0;max-height:none;
+ margin:8px 0 0;padding:7px 0 0;overflow:visible;
+ border-top:1px solid #58756756;background:transparent;box-shadow:none
+}
+.flow-month .agenda-heading,
+.flow-month .agenda-empty,.flow-month .upcoming-empty{
+ padding:4px 5px;background:transparent;border:0;border-radius:0
+}
+.flow-month .agenda-heading h3{font-size:clamp(17px,2.7vw,22px)}
+.flow-month .event-row,.flow-month .festival-in-agenda{
+ border:0;border-bottom:1px solid #5b765032;box-shadow:none;
+ background:#fffbec6a;border-radius:8px
+}
+.flow-month .upcoming-section{margin-top:16px;border-top:1px solid #627e603a}
+.flow-month .upcoming-day{background:#fff8e960;border:0;border-bottom:1px solid #58756738}
