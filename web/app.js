@@ -397,7 +397,7 @@ function headerLabels(){
   season:safe(e.month===13?LOCALES[lang()].epagomenal:seasonName(seasonForMonth(e.month),lang()))};
 }
 function toolbar(){
- const e=egy(state.focus),labels=headerLabels();
+ const e=egy(state.focus);
  const timeframe=state.view==='day'?
   '<button type="button" data-up-level aria-label="'+safe(T().month)+'">'+icon('calendar')+'<span>'+safe(T().month)+'</span></button>':
   state.view==='month'?'<button type="button" data-up-level aria-label="'+safe(N(e.year))+'"><span class="ux-year-value">'+numHtml(e.year)+'</span></button>':
@@ -407,7 +407,6 @@ function toolbar(){
   '<button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button>'+
   '<button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div>'+
   '<div class="ux-timeframe">'+timeframe+'</div></div>'+
-  '<div class="ux-toolbar-head"><div class="ux-heading"><h1>'+labels.heading+'</h1><p>'+labels.season+'</p></div></div>'+
   (state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
