@@ -51,7 +51,9 @@ async function saveScheduler(next){
 }
 let previousRenderKey=null;
 let previousRenderFocus=null;
-let monthViewport=null;
+let monthJump=null;
+let monthScrollFrame=0;
+const STREAM_RADIUS=7;
 let currentTimeTicker=null;
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
@@ -185,10 +187,76 @@ function upcomingAgenda(d){
     '<div class="upcoming-empty">'+safe(T().noUpcoming)+'</div><button class="upcoming-add" type="button" data-new>'+safe(T().addFirst)+'</button>')+
   '</section>';
 }
+// The calendar is a single chronological surface. We render a bounded,
+// recyclable runway rather than 100s of offscreen months or month cards.
 function monthView(){
- const e=egy(state.focus);
- return '<div class="month-scroll">'+monthSection(e)+'<div class="month-agenda">'+agenda(state.focus)+upcomingAgenda(state.focus)+'</div></div>';
+ const origin=egy(state.focus),groups=[];
+ let seasonKey='',contents='',seasonId='',seasonLabel='';
+ const flush=()=>{
+  if(contents)groups.push('<section class="flow-season" data-season="'+seasonId+'"><h2 class="flow-season-label">'+safe(seasonLabel)+'</h2>'+contents+'</section>');
+ };
+ for(let offset=-STREAM_RADIUS;offset<=STREAM_RADIUS;offset++){
+  const e=adjacent(origin,offset);
+  if(!e)continue;
+  const season=seasonForMonth(e.month),key=e.year+':'+season.id;
+  if(key!==seasonKey){
+   flush();contents='';seasonKey=key;seasonId=season.id;seasonLabel=seasonName(season,lang());
+  }
+  const anchor=monthStart(e);
+  contents+='<section class="flow-month" data-month-anchor="'+anchor+'" data-month="'+e.month+'" data-year="'+e.year+'">'+
+   '<h3 class="flow-month-name">'+safe(monthName(e.month))+'</h3>'+monthSection(e)+'</section>';
+ }
+ flush();
+ return '<div class="month-scroll month-continuum" aria-label="'+safe(T().month)+'">'+groups.join('')+'</div>';
 }
+
+function updateAmbientLight(){
+ // Continuous day/night illumination of the *whole landscape*, never a
+ // different card per hour. Twilight changes gradually as local time passes.
+ const now=new Date(),hours=now.getHours()+now.getMinutes()/60;
+ const daylight=Math.max(0,Math.min(1,(hours-5.3)/1.7,(19.2-hours)/1.7));
+ document.documentElement.style.setProperty('--ambient-night',String((1-daylight)*.32));
+ document.documentElement.style.setProperty('--ambient-warm',String(Math.max(0,1-Math.abs(hours-17.8)/2.1)*.16));
+}
+
+function syncMonthStream(){
+ if(state.view!=='month'||state.dialog||state.panel||state.festivalDetail)return;
+ const main=root.querySelector('#main-content');
+ if(!main)return;
+ const months=[...main.querySelectorAll('.flow-month')];
+ if(!months.length)return;
+ const outer=main.getBoundingClientRect();
+ const line=outer.top+Math.min(105,main.clientHeight*.18);
+ const index=Math.max(0,months.findIndex(el=>el.getBoundingClientRect().bottom>line));
+ const visible=months[index],anchor=Number(visible.dataset.monthAnchor);
+ if(!Number.isFinite(anchor))return;
+ const e=egy(anchor),before=egy(state.focus);
+ if(before.year!==e.year||before.month!==e.month){
+  state.focus=clamp(anchor+Math.min(before.day,monthDays(e))-1);
+  const season=seasonForMonth(e.month);
+  document.body.dataset.season=season.id;
+  const year=root.querySelector('.year-shortcut-value');
+  if(year)year.innerHTML=numHtml(e.year);
+  const shortcut=root.querySelector('.year-shortcut');
+  if(shortcut)shortcut.setAttribute('aria-label',LOCALES[lang()].year+' '+N(e.year));
+  const heading=root.querySelector('.ux-heading h1');
+  if(heading)heading.textContent=seasonName(season,lang());
+  main.querySelectorAll('.date.chosen').forEach(el=>{el.classList.remove('chosen');el.setAttribute('aria-pressed','false');});
+  const selected=main.querySelector('.date[data-date="'+state.focus+'"]');
+  if(selected){selected.classList.add('chosen');selected.setAttribute('aria-pressed','true');}
+ }
+ // Recenter only when the user reaches the edge of the finite runway.
+ // Preserve the visible month's exact screen position: fast flicks may cross
+ // several months in one gesture without snapping to single-month pages.
+ if(index<2||index>=months.length-2){
+  monthJump={anchor,top:visible.getBoundingClientRect().top-outer.top};
+  render();
+ }
+}
+root.addEventListener('scroll',ev=>{
+ if(ev.target.id!=='main-content'||state.view!=='month'||monthScrollFrame)return;
+ monthScrollFrame=requestAnimationFrame(()=>{monthScrollFrame=0;syncMonthStream();});
+},true);
 
 function yearView(){
  const e=egy(state.focus),yr=e.year,w=week(),current=today();
@@ -360,11 +428,20 @@ function nav(){
  }).join('')+'</nav>';
 }
 function toolbar(){
- const e=egy(state.focus),year=state.view==='year',month=state.view==='month',isList=state.view==='list';
- const heading=year?numHtml(e.year):month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
- const yearButton=year?'<span class="year-brand">'+safe(LOCALES[lang()].brand)+'</span>':'<button class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-label">'+safe(LOCALES[lang()].year)+'</span><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>';
+ const e=egy(state.focus),year=state.view==='year',month=state.view==='month';
+ // The year is the one common route into Year. The day/date returns to Month
+ // through the same Back gesture on phones and iPads: no second Month tab.
+ const yearButton=year?
+  '<button class="year-shortcut year-return" data-back aria-label="'+safe(T().month)+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':
+  state.view==='day'?
+  '<button class="year-shortcut year-return" data-back aria-label="'+safe(T().month)+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':
+  '<button class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>';
  const season=e.month===13?LOCALES[lang()].epagomenal:seasonName(seasonForMonth(e.month),lang());
- return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-back">'+(state.view==='day'?'<button data-back aria-label="'+safe(spoken('month'))+'">'+icon('back')+'<span>'+safe(T().month)+'</span></button>':yearButton)+'</div><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div></div><div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(year?'':'<p>'+safe(season)+'</p>')+'</div><div class="ux-heading-actions"><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div></div>'+(state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
+ const heading=month?safe(season):year?numHtml(e.year):state.view==='list'?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
+ return '<header class="toolbar ux-toolbar"><div class="ux-toolbar-top"><div class="ux-back">'+yearButton+
+ '</div><div class="ux-toolbar-actions"><button data-search aria-label="'+safe(spoken('search'))+'" aria-expanded="'+state.search+'">'+icon('search')+'</button><button data-new aria-label="'+safe(spoken('add'))+'">'+icon('plus')+'</button><button data-open-panel="settings" aria-label="'+safe(spoken('settings'))+'">'+icon('settings')+'</button></div></div>'+
+ '<div class="ux-toolbar-head"><div class="ux-heading"><h1>'+heading+'</h1>'+(month||year?'':'<p>'+safe(season)+'</p>')+'</div><div class="ux-period-controls"><button data-prev aria-label="'+safe(spoken('previous'))+'">‹</button><button data-next aria-label="'+safe(spoken('next'))+'">›</button></div></div>'+
+ (state.search?'<div class="search-panel"><input type="search" name="query" value="'+safe(state.query)+'" placeholder="'+safe(T().search)+'" autocomplete="off"><div class="search-results">'+searchResults()+'</div></div>':'')+'</header>';
 }
 
 function searchResults(){return searchItems(schedule,state.query).slice(0,60).map(i=>{const e=egy(i.startDay);const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(i.startDay):'');return '<button data-result="'+i.startDay+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';}).join('')||'<p class="empty">'+safe(T().noEvents)+'</p>';}
@@ -489,19 +566,19 @@ function render(){
  if(!data)return;
  const viewKey=state.view;
  const oldMain=root.querySelector('#main-content');
- const keepScroll=viewKey===previousRenderKey?oldMain?.scrollTop:0;
+ const keepScroll=state.view===previousRenderKey?oldMain?.scrollTop:0;
  const oldPanel=root.querySelector('.ux-panel');
  const panelScroll=oldPanel?.dataset.panel===state.panel?oldPanel.querySelector('.ux-panel-body')?.scrollTop:null;
- // Month grid and selected-day agenda scroll independently. Preserve both
- // when rendering a panel, opening Day, or returning from the editor.
- const previousMonth=previousRenderKey==='month'?root.querySelector('.month-section'):null;
- if(previousMonth&&previousRenderFocus!==null){
-  const oldDate=egy(previousRenderFocus);
-  monthViewport={year:oldDate.year,month:oldDate.month,language:document.body.dataset.language,
-   week:previousMonth.dataset.week,gridTop:previousMonth.scrollTop,
-   agendaTop:root.querySelector('.month-agenda')?.scrollTop||0,
-   focus:previousRenderFocus};
- }
+ const focusedMonth=egy(state.focus);
+ const oldMonth=oldMain?.querySelector('.flow-month[data-month-anchor="'+monthStart(focusedMonth)+'"]');
+ // Keep the chronological coordinate across a modal, settings change or
+ // virtual runway recenter, not an obsolete grid/agenda pane scroll position.
+ const preservedMonth=state.view==='month'&&previousRenderKey==='month'&&
+  state.focus===previousRenderFocus&&oldMonth?
+  {anchor:monthStart(focusedMonth),
+   top:oldMonth.getBoundingClientRect().top-oldMain.getBoundingClientRect().top}:null;
+ const jump=monthJump||preservedMonth;
+ monthJump=null;
  itemCache.clear();festivalCache.clear();
  document.documentElement.lang=LOCALES[lang()].html;
  document.documentElement.dir=lang()==='ar'?'rtl':'ltr';
@@ -517,31 +594,19 @@ function render(){
   root.querySelectorAll('input[type="text"],input[type="search"],textarea').forEach(el=>el.setAttribute('inputmode','none'));
  }
  const main=root.querySelector('#main-content');
- if(main&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
+ if(main&&state.view!=='month'&&keepScroll&&state.focus===previousRenderFocus)main.scrollTop=keepScroll;
  if(main&&state.view==='year'&&viewKey!==previousRenderKey){
-  // Opening Year should reveal the selected season on both iPhone and iPad,
-  // rather than dropping users at Akhet regardless of the month they chose.
   const season=root.querySelector('.year-month.active-month')?.closest('.year-season');
   if(season){
    const outer=main.getBoundingClientRect(),inner=season.getBoundingClientRect();
    main.scrollTop=Math.max(0,main.scrollTop+inner.top-outer.top-8);
   }
  }
- if(state.view==='month'){
-  const region=root.querySelector('.month-section'),agenda=root.querySelector('.month-agenda');
-  const date=egy(state.focus);
-  const sameMonth=monthViewport&&monthViewport.year===date.year&&monthViewport.month===date.month&&
-   monthViewport.language===lang()&&Number(monthViewport.week)===week();
-  if(region&&sameMonth)region.scrollTop=monthViewport.gridTop;
-  if(agenda&&sameMonth&&monthViewport.focus===state.focus)agenda.scrollTop=monthViewport.agendaTop;
-  // On entering a different month or returning from a different Day, reveal
-  // the selected date without resetting a still-visible scroll position.
-  const selected=region?.querySelector('.date.chosen');
-  if(region&&selected){
-   const outer=region.getBoundingClientRect(),inner=selected.getBoundingClientRect();
-   if(inner.top<outer.top||inner.bottom>outer.bottom){
-    region.scrollTop+=inner.top-outer.top-(region.clientHeight-selected.clientHeight)/2;
-   }
+ if(main&&state.view==='month'){
+  const target=main.querySelector('.flow-month[data-month-anchor="'+(jump?.anchor??monthStart(egy(state.focus)))+'"]');
+  if(target){
+   const relative=target.getBoundingClientRect().top-main.getBoundingClientRect().top;
+   main.scrollTop=Math.max(0,main.scrollTop+relative-(jump?.top??12));
   }
  }
  if(main&&state.view==='day'&&state.revealItemId){
@@ -1013,7 +1078,7 @@ root.addEventListener('touchstart',ev=>{
  if(ev.touches.length!==1||state.dialog||state.panel||state.festivalDetail||state.crowdedGroup!==null)return;
  // Page-changing swipes belong to the calendar, not scrollable agendas,
  // appointment cards, the navigation bar, or any editor control.
- const region=ev.target.closest('.month-section,.year-overview,.timeline,.list-page');
+ const region=ev.target.closest('.month-continuum,.year-overview,.timeline,.list-page');
  if(!region||ev.target.closest('.timeline-event,.timeline-crowded,.event-row-shell,.upcoming-day,input,select,textarea,[role="dialog"]'))return;
  gesture={x:ev.touches[0].clientX,y:ev.touches[0].clientY,view:state.view};
 },{passive:true});
@@ -1021,7 +1086,7 @@ root.addEventListener('touchend',ev=>{
  if(!gesture||!ev.changedTouches.length)return;
  const dx=ev.changedTouches[0].clientX-gesture.x,dy=ev.changedTouches[0].clientY-gesture.y;
  const view=gesture.view;gesture=null;
- if(state.view===view&&Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5){
+ if(state.view===view&&view!=='month'&&Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5){
   navigate((document.documentElement.dir==='rtl'?1:-1)*(dx>0?1:-1));
  }
 },{passive:true});
@@ -1033,7 +1098,7 @@ async function init(){
   if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;if(typeof savedPrefs.reminders==='boolean')prefs.reminders=savedPrefs.reminders;}
   void requestPersistentStorage().catch(console.warn);
   const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog(data);
-  state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
+  state.focus=clamp(state.focus);updateAmbientLight();setInterval(updateAmbientLight,60000);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
