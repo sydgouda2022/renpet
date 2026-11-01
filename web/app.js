@@ -814,7 +814,7 @@ root.addEventListener('click',async ev=>{
   closeTimeEditor(root.querySelector('#event-editor'),b.hasAttribute('data-time-confirm'),lang());
   return;
  }
- if(b.hasAttribute('data-hour')){state.saveNotice=false;state.dialog={kind:'event',hour:Number(b.dataset.hour)};render();return;}
+ if(b.hasAttribute('data-hour')){state.focus=Number(b.closest('[data-focus-day]')?.dataset.focusDay??state.focus);state.saveNotice=false;state.dialog={kind:'event',hour:Number(b.dataset.hour)};render();return;}
  if(b.hasAttribute('data-new')){
   state.saveNotice=false;state.dialog={kind:'event'};render();
   // On phones, keep the whole form reachable at first opening. Auto-focus
@@ -842,36 +842,34 @@ root.addEventListener('click',async ev=>{
   state.saveNotice=false;
   // A day tap opens its timeline on every screen size.
   state.focus=clamp(Number(b.dataset.date));
-  state.view='day';
+  state.view='day';forceStreamJump=true;
   render();return;
  }
  if(b.hasAttribute('data-open-month')){
-  const y=egy(state.focus).year,m=Number(b.dataset.openMonth);
+  const y=Number(b.dataset.year||egy(state.focus).year),m=Number(b.dataset.openMonth);
+  forceStreamJump=true;
   state.focus=clamp(monthStart({year:y,month:m})+Math.min(egy(state.focus).day,monthDays({year:y,month:m}))-1);
   state.view='month';render();return;
  }
- if(b.hasAttribute('data-open-year')){state.view='year';render();return;}
+ if(b.hasAttribute('data-up-level')||b.hasAttribute('data-open-year')){state.view=state.view==='day'?'month':'year';forceStreamJump=true;render();return;}
  if(b.hasAttribute('data-result')){
   const target=schedule.items.find(item=>item.id===b.dataset.searchId);
-  state.focus=clamp(Number(b.dataset.result));state.view='day';state.search=false;
+  state.focus=clamp(Number(b.dataset.result));state.view='day';state.search=false;forceStreamJump=true;
   // Hidden calendars remain hidden by user choice, but the found item opens directly.
   if(target&&!schedule.calendars.some(c=>c.id===target.calendarId&&c.visible!==false))
    state.dialog={id:target.id,occurrenceDay:target.startDay};
   render();return;
  }
- if(b.hasAttribute('data-prev')){navigate(-1);return;}
  if(b.hasAttribute('data-next')){navigate(1);return;}
- if(b.hasAttribute('data-back')){state.saveNotice=false;state.view='month';render();return;}
+ if(b.hasAttribute('data-back')){state.saveNotice=false;state.view='month';forceStreamJump=true;render();return;}
  if(b.hasAttribute('data-primary-view')){
-  const v=b.dataset.primaryView;
   state.panel=null;state.search=false;
-  if(v==='today'){
-   state.focus=clamp(today());
-   // Today is the direct return to Month from List or Year; in Day and
-   // Month it moves only the date, preserving the current view.
-   if(state.view==='list'||state.view==='year')state.view='month';
-  }else if(v==='list')state.view='list';
+  state.focus=clamp(today());forceStreamJump=true;
+  if(state.view==='list')state.view='month';
   render();return;
+ }
+ if(b.hasAttribute('data-appointments')){
+  state.panel=state.panel==='appointments'?null:'appointments';render();return;
  }
  if(b.hasAttribute('data-open-panel')){
   if(['settings','calendars','festivals'].includes(b.dataset.openPanel)){state.panel=b.dataset.openPanel;render();}
@@ -1081,24 +1079,6 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
   else if(state.panel){state.panel=null;render();}
   else if(state.search){state.search=false;render();}
  }});
-let gesture=null;
-root.addEventListener('touchstart',ev=>{
- gesture=null;
- if(ev.touches.length!==1||state.dialog||state.panel||state.festivalDetail||state.crowdedGroup!==null)return;
- // Page-changing swipes belong to the calendar, not scrollable agendas,
- // appointment cards, the navigation bar, or any editor control.
- const region=ev.target.closest('.month-section,.year-overview,.timeline,.list-page');
- if(!region||ev.target.closest('.timeline-event,.timeline-crowded,.event-row-shell,.upcoming-day,input,select,textarea,[role="dialog"]'))return;
- gesture={x:ev.touches[0].clientX,y:ev.touches[0].clientY,view:state.view};
-},{passive:true});
-root.addEventListener('touchend',ev=>{
- if(!gesture||!ev.changedTouches.length)return;
- const dx=ev.changedTouches[0].clientX-gesture.x,dy=ev.changedTouches[0].clientY-gesture.y;
- const view=gesture.view;gesture=null;
- if(state.view===view&&Math.abs(dx)>65&&Math.abs(dx)>Math.abs(dy)*1.5){
-  navigate((document.documentElement.dir==='rtl'?1:-1)*(dx>0?1:-1));
- }
-},{passive:true});
 async function init(){
  try{
   const persisted=await readRecord('scheduler');
@@ -1107,7 +1087,7 @@ async function init(){
   if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;if(typeof savedPrefs.reminders==='boolean')prefs.reminders=savedPrefs.reminders;}
   void requestPersistentStorage().catch(console.warn);
   const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog(data);
-  state.focus=clamp(state.focus);render();globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
+  state.focus=clamp(state.focus);render();setInterval(updateAmbientLight,60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
