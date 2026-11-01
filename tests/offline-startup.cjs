@@ -56,6 +56,8 @@ async function scenario(engine,name){
    await page.route('**/app.js?v=*',route=>route.abort('failed'));
    await page.reload({waitUntil:'domcontentloaded'});
    await page.locator('.renpet-startup-failed').waitFor({timeout:20000});
+   assert.equal(await page.locator('.renpet-startup-failed').getAttribute('id'),'main-content');
+   assert.equal(await page.locator('.renpet-startup-failed').getAttribute('tabindex'),'-1');
    assert.equal(await page.locator('#renpet-status').textContent(),'تعذّر تشغيل تقويم رنبت');
    await page.unroute('**/app.js?v=*');
    await page.locator('[data-retry]').click();
