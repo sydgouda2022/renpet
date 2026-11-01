@@ -23,15 +23,15 @@ async function scenario(engine,name){
     });
     assert.ok(cache.worker.length&&cache.app&&cache.stored,'Missing packaged offline resources or appointment');
     await context.setOffline(true);
-    if(name==='chromium'){
-     await page.reload({waitUntil:'domcontentloaded'});
-     await page.locator('.time-rail').waitFor({timeout:18000});
-     assert.ok((await record(page,'scheduler')).items.some(i=>i.id===event.id),'Offline reload lost IndexedDB appointment');
-    }else{
-     const state=await record(page,'scheduler');
-     assert.ok(state.items.some(i=>i.id===event.id),'WebKit offline lost IndexedDB data');
-    }
-    results.push({engine:name,width,offlineAssets:true,localAppointment:true,offlineNavigation:name==='chromium'});
+    // Safari must be able to *open* an offline page. Previously this test
+    // only checked IndexedDB on the already-open WebKit page, masking
+    // redirected cached navigation responses rejected by Safari.
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('.time-rail').waitFor({timeout:18000});
+    assert.ok((await record(page,'scheduler')).items.some(i=>i.id===event.id),
+      name+' offline reload lost IndexedDB appointment');
+    assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+    results.push({engine:name,width,offlineAssets:true,localAppointment:true,offlineNavigation:true});
    }finally{await context.close();}
   }
   // The raw document must remain understandable without JavaScript.
