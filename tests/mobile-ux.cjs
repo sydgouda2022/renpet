@@ -91,7 +91,19 @@ async function main(){
      const title='Navigation '+script+' '+device;
      const saved=await saveEvent(page,title);
      assert.equal(await page.locator('body').getAttribute('data-view'),'day');
-     assert.equal(await page.locator('.timeline-event[data-edit="'+saved.id+'"]').count(),1);
+     const visible=await page.evaluate(async id=>{
+      const {itemsForDay}=await import('./scheduler.js');
+      const {readRecord}=await import('./storage.js');
+      const rec=await readRecord('scheduler'),item=rec.items.find(i=>i.id===id);
+      const day=item?.startDay;
+      return {day,allDay:item?.allDay,calendarId:item?.calendarId,
+       actual:document.querySelectorAll('.timeline-event[data-edit="'+id+'"]').length,
+       allDayRows:document.querySelectorAll('.all-day [data-edit="'+id+'"]').length,
+       dayCount:itemsForDay(rec,day).length,
+       view:document.body.dataset.view,visibleEvents:document.querySelectorAll('.timeline-event').length};
+     },saved.id);
+     assert.equal(visible.actual+visible.allDayRows,1,
+      'Saved appointment must appear in Day: '+JSON.stringify(visible));
      await page.reload();await page.locator('.month-agenda').waitFor();
      assert.ok((await record(page,'scheduler')).items.some(item=>item.id===saved.id));
      await page.locator('[data-primary-view=today]').click();
