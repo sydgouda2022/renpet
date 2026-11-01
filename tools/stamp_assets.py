@@ -23,7 +23,7 @@ for asset in assets:
 # image bytes change, rather than carrying a manually dated cache query.
 def stamp_reference(document: str, asset: str) -> str:
     digest = hashlib.sha256((root / asset).read_bytes()).hexdigest()[:12]
-    pattern = re.compile(r'(?P<name>(?<![a-zA-Z0-9_-])' + re.escape(asset) + r')\\?v=[a-zA-Z0-9._-]+')
+    pattern = re.compile(r'(?P<name>(?<![a-zA-Z0-9_-])' + re.escape(asset) + r')\?v=[a-zA-Z0-9._-]+')
     updated, count = pattern.subn(lambda m: m.group("name") + "?v=" + version + "-" + digest, document)
     if count != 1:
         raise SystemExit(f"Expected one icon/manifest URL for {asset}, found {count}")
