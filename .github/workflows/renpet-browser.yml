@@ -48,6 +48,7 @@ jobs:
           node tests/mobile-ux.cjs
           node tests/calendar-integrity.cjs
           node tests/season-theme.cjs
+          node tests/real-user-journeys.cjs
       - name: Verify Safari WebKit editing, persistence and offline recovery
         env:
           NODE_PATH: /tmp/renpet-pw/node_modules
