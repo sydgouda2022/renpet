@@ -193,11 +193,11 @@ async function main(){
      const [jsonExport]=await Promise.all([
       page.waitForEvent('download'),panel.locator('[data-backup=export]').click()
      ]);
-     assert.match(jsonExport.suggestedFilename(),/^renpet-\\d{4}-\\d{2}-\\d{2}\\.json$/,'Local JSON backup should download');
+     assert.match(jsonExport.suggestedFilename(),/^renpet-\d{4}-\d{2}-\d{2}\.json$/,'Local JSON backup should download');
      const [calendarExport]=await Promise.all([
       page.waitForEvent('download'),panel.locator('[data-backup=ics]').click()
      ]);
-     assert.match(calendarExport.suggestedFilename(),/\\.ics$/,'Local ICS export should download');
+     assert.match(calendarExport.suggestedFilename(),/\.ics$/,'Local ICS export should download');
      await page.locator('.renpet-backup-overlay').click({position:{x:4,y:4}});
      assert.equal(await page.locator('.renpet-backup-panel').count(),0,'Backup popover should close on outside tap');
     });
