@@ -47,6 +47,13 @@ const LIGHTING_POINTS=[
  [16,.99,1.04],[18,.83,1.06],[20,.66,.88],[24,.57,.78]
 ];
 function updateSceneLighting(){
+ if(!prefs.dynamicLighting){
+  // Off means normal, unfiltered seasonal artwork in every view.
+  document.body.style.setProperty('--night-opacity','0');
+  document.body.style.setProperty('--scene-brightness','1');
+  document.body.style.setProperty('--scene-saturation','1');
+  return;
+ }
  const now=new Date();
  let hour=now.getHours()+now.getMinutes()/60;
  if(state.view==='day'){
@@ -80,7 +87,7 @@ async function saveScheduler(next){
 let previousRenderKey=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
-let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,festivalSources:null,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
+let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,dynamicLighting:true,festivalSources:null,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
 const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
@@ -356,7 +363,7 @@ function listView(){
 }
 
 function settingsView(){
- return '<section class="page preferences-page"><div class="settings-group"><label>'+safe(T().language)+'<select name="language">'+Object.entries(LOCALES).map(([id,v])=>'<option value="'+id+'" '+(id===lang()?'selected':'')+'>'+safe(v.name)+'</option>').join('')+'</select></label><label>'+safe(T().gregorian)+'<input type="checkbox" name="gregorian" '+(prefs.gregorian?'checked':'')+'></label><label>'+safe(T().weekLength)+'<select name="week">'+[7,10].map(n=>'<option value="'+n+'" '+(n===week()?'selected':'')+'>'+N(n)+'</option>').join('')+'</select></label></div><div class="settings-actions"><button data-open-panel="festivals">'+safe(T().festivals)+' <span>'+safe(N(selectedFestivalIds().length))+' / '+safe(N(festivalCatalog.sources.length))+' ›</span></button><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button><button data-backup>'+safe(T().dataAndBackup)+' <span>›</span></button></div><p class="build-label">'+safe(T().version)+' '+safe(data.version)+'</p></section>';
+ return '<section class="page preferences-page"><div class="settings-group"><label>'+safe(T().language)+'<select name="language">'+Object.entries(LOCALES).map(([id,v])=>'<option value="'+id+'" '+(id===lang()?'selected':'')+'>'+safe(v.name)+'</option>').join('')+'</select></label><label>'+safe(T().gregorian)+'<input type="checkbox" name="gregorian" '+(prefs.gregorian?'checked':'')+'></label><label>'+safe(T().dynamicLighting)+'<input type="checkbox" name="dynamicLighting" '+(prefs.dynamicLighting?'checked':'')+'></label><label>'+safe(T().weekLength)+'<select name="week">'+[7,10].map(n=>'<option value="'+n+'" '+(n===week()?'selected':'')+'>'+N(n)+'</option>').join('')+'</select></label></div><div class="settings-actions"><button data-open-panel="festivals">'+safe(T().festivals)+' <span>'+safe(N(selectedFestivalIds().length))+' / '+safe(N(festivalCatalog.sources.length))+' ›</span></button><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button><button data-backup>'+safe(T().dataAndBackup)+' <span>›</span></button></div><p class="build-label">'+safe(T().version)+' '+safe(data.version)+'</p></section>';
 }
 function festivalsView(){
  const options=festivalCatalog.sources.map(source=>{
@@ -948,6 +955,7 @@ root.addEventListener('change',async ev=>{
  if(['repeatEvery','repeatUnit'].includes(el.name)&&el.closest('#event-editor')){syncRepeatPreview(el.form);return;}
  if(el.name==='language'&&LOCALES[el.value])prefs.language=el.value;
  else if(el.name==='gregorian')prefs.gregorian=el.checked;
+ else if(el.name==='dynamicLighting')prefs.dynamicLighting=el.checked;
   else if(el.hasAttribute('data-festival-source-id')){
   const sourceId=el.dataset.festivalSourceId;
   const enabled=new Set(selectedFestivalIds());
@@ -1122,7 +1130,7 @@ async function init(){
   const persisted=await readRecord('scheduler');
   if(persisted!==undefined){if(!validateSchedulerData(persisted))throw Error('Invalid saved appointments');schedule=persisted;}
   const savedPrefs=await readRecord('preferences');
-  if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;}
+  if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(typeof savedPrefs.dynamicLighting==='boolean')prefs.dynamicLighting=savedPrefs.dynamicLighting;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;}
   void requestPersistentStorage().catch(console.warn);
   const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog(data);
   state.focus=clamp(state.focus);render();setInterval(()=>{updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
