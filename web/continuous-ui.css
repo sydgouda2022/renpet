@@ -67,6 +67,13 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .time-panel-header h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:720;color:var(--deep-green)}
 .time-season-name{flex:0 0 auto;color:#8d692d;font-size:15px;font-weight:700}
 .time-panel[data-stream-kind="month"]>.month-section{max-width:1150px;width:100%;margin:auto}
+/* The landscape is painted once by the scrolling time panel. The calendar
+   writing surface must be opaque, otherwise the same landscape reads as a
+   second, ghosted image beneath its dates on iPhone and iPad. */
+.time-panel[data-stream-kind="month"]>.month-section{
+ background:#fff5e5!important;
+}
+
 .time-panel[data-stream-kind="month"] .month-section,
 html[data-renpet-layout="phone"] .time-panel .month-section,
 html[data-renpet-layout^="tablet"] .time-panel .month-section,
