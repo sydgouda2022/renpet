@@ -34,6 +34,16 @@ async function scenario(engine,name){
     results.push({engine:name,width,offlineAssets:true,localAppointment:true,offlineNavigation:name==='chromium'});
    }finally{await context.close();}
   }
+  // The raw document must remain understandable without JavaScript.
+  const noScriptContext=await browser.newContext({javaScriptEnabled:false,viewport:{width:375,height:667},serviceWorkers:'block'});
+  const noScriptPage=await noScriptContext.newPage();
+  try{
+   await noScriptPage.goto(ROOT,{waitUntil:'domcontentloaded'});
+   assert.ok(await noScriptPage.locator('.nojs-fallback').isVisible(),'No-script explanation is not visible');
+   assert.equal(await noScriptPage.locator('#app>.loading').isVisible(),false,'No-script visitors still see the loading splash');
+   assert.match(await noScriptPage.locator('.nojs-fallback h1').textContent(),/رنبت/);
+   results.push({engine:name,noScript:true});
+  }finally{await noScriptContext.close();}
   // A startup failure must display a retry action, not an empty page.
   const context=await browser.newContext({viewport:{width:375,height:667},isMobile:true,hasTouch:true,serviceWorkers:'block'});
   const page=await context.newPage();page.setDefaultTimeout(22000);
