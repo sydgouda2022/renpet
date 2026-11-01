@@ -91,7 +91,7 @@ async function main(){
     const currentYear=page.locator('.time-panel[data-stream-kind=year]').nth(1);
     assert.equal(await currentYear.locator('.year-month').count(),12);
     const columns=await currentYear.locator('.year-months').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
-    assert.equal(columns,width<700?2:width<1024?3:4,'Responsive full year mini-calendars');
+    assert.equal(columns,width<1024?2:4,'Year uses two readable month columns on phones/portrait tablets, four on landscape');
     assert.equal(await currentYear.locator('.year-mini-day.year-mini-today').count(),1);
     await currentYear.locator('[data-open-month="3"]').click();
     assert.equal(await page.locator('body').getAttribute('data-view'),'month');
