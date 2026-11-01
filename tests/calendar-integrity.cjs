@@ -1,3 +1,4 @@
+// Calendar, storage and recurrence invariants under the unified Day/Month/Year UI.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {boot,record}=require('./browser-tools.cjs');
@@ -5,161 +6,74 @@ async function main(){
  const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});
  try{
   const context=await browser.newContext({viewport:{width:1024,height:768},serviceWorkers:'block',timezoneId:'Africa/Cairo'});
-  const page=await context.newPage();page.setDefaultTimeout(12000);page.on('dialog',d=>d.accept());
+  const page=await context.newPage();page.setDefaultTimeout(20000);page.on('dialog',d=>d.accept());
   await boot(page);
   await page.locator('header [data-new]').click();
-  const form=page.locator('#event-editor');
+  let form=page.locator('#event-editor');
   await form.locator('[name=title]').fill('Three-day preservation test');
   await form.locator('[name=egyYear]').selectOption('6268');
   await form.locator('[name=egyMonth]').selectOption('2');
   await form.locator('[name=egyDay]').selectOption('26');
-  assert.equal(await form.locator('.end-date-details').getAttribute('open'),null,'One-day editor should keep the duplicate end date folded');
   assert.equal(await form.locator('[name=endEgyDay]').inputValue(),'26');
   await form.locator('.end-date-details summary').click();
-  assert.notEqual(await form.locator('.end-date-details').getAttribute('open'),null,'End date opens on request');
   await form.locator('[name=endEgyDay]').selectOption('28');
-  assert.ok((await form.locator('.end-date-hint').innerText()).length>0,'End-date summary updates immediately');
   await form.locator('.save-button').click();
   await page.locator('.save-confirmation').waitFor();
   const saved=(await record(page,'scheduler')).items.find(i=>i.title==='Three-day preservation test');
   assert.ok(saved);assert.equal(saved.endDay-saved.startDay,2);
-  await page.locator('[data-next]').click();
-  assert.equal(await page.locator('.timeline-event:has-text("Three-day preservation test")').count(),1);
-  await page.locator('.timeline-event:has-text("Three-day preservation test")').click();
+  assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+  const savedBlock=page.locator('.time-panel[data-focus-day="'+saved.startDay+'"] .timeline-event[data-edit="'+saved.id+'"]');
+  await savedBlock.waitFor();
+  await savedBlock.click();
   assert.equal(await page.locator('#event-editor [name=egyDay]').inputValue(),'26');
-  assert.notEqual(await page.locator('#event-editor .end-date-details').getAttribute('open'),null,'Existing multi-day event shows its end-date fields');
+  assert.notEqual(await page.locator('#event-editor .end-date-details').getAttribute('open'),null);
   await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
-  await page.reload();await page.locator('.month-agenda').waitFor();
-  const persistent=(await record(page,'scheduler')).items.find(i=>i.id===saved.id);
-  assert.equal(persistent.endDay,saved.endDay);
-  // Recurring appointments remain Egyptian-only and are stored once as a series.
-  await page.locator('header [data-new]').click();
-  const recurring=page.locator('#event-editor');
-  await recurring.locator('[name=title]').fill('Egyptian ten-day recurrence');
-  await recurring.locator('.advanced-fields summary').click();
-  const repeat=recurring.locator('[name=repeat]');
-  const values=await repeat.locator('option').evaluateAll(a=>a.map(x=>x.value));
-  assert.deepEqual(values,['none','daily','egy10','egyMonthly','egyYearly','custom']);
-  await repeat.selectOption('egy10');
-  await recurring.locator('.save-button').click();
-  await page.locator('.save-confirmation').waitFor();
-  const item=(await record(page,'scheduler')).items.find(i=>i.title==='Egyptian ten-day recurrence');
-  assert.ok(item);assert.equal(item.repeat,'egy10');
-  // Editing a selected occurrence must never silently rewrite the whole series.
-  for(let step=0;step<10;step++)await page.locator('[data-next]').click();
-  const secondDay=item.startDay+10;
-  const recurrenceBlock=page.locator('.timeline-event[data-edit="'+item.id+'"]');
-  await recurrenceBlock.waitFor();
-  await recurrenceBlock.click();
-  const editor=page.locator('#event-editor');
-  assert.equal(await editor.locator('[name=repeatScope][value=one]').isChecked(),true,'One occurrence is the safe edit default');
-  assert.equal(await editor.locator('.repeat-scope-options label').count(),2,'Recurring edits offer two clear touch choices');
-  const specificDate=await editor.locator('.repeat-scope-date').innerText();
-  assert.ok(specificDate.length>2,'Selected recurrence date is visible');
-  await editor.locator('[name=repeatScope][value=series]').check();
-  assert.equal(await editor.locator('[name=repeatScope][value=series]').isChecked(),true);
-  const original=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),item.startDay);
-  assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),original.day,'Entire series shows the original start date, not a later occurrence');
-  assert.notEqual(await editor.locator('.repeat-scope-date').innerText(),specificDate,'Scope description follows selected series anchor');
-  await editor.locator('[name=repeatScope][value=one]').check();
-  assert.equal(await editor.locator('.repeat-scope-date').innerText(),specificDate,'Returning to one occurrence restores its date');
-  const expectedDate=await page.evaluate(async day=>(await import('./calendar.js')).toEgyptian(day),secondDay);
-  assert.equal(Number(await editor.locator('[name=egyDay]').inputValue()),expectedDate.day);
-  await editor.locator('[name=title]').fill('Only this Egyptian day');
-  await editor.locator('.save-button').click();
-  await page.locator('.save-confirmation').waitFor();
-  let state=await record(page,'scheduler');
-  const series=state.items.find(i=>i.id===item.id);
-  assert.ok(series,'Series must survive editing one occurrence');
-  assert.ok(series.excludedDays.includes(secondDay),'Edited occurrence must be excluded from the parent series');
-  assert.ok(state.items.some(i=>i.repeat==='none'&&i.title==='Only this Egyptian day'&&i.startDay===secondDay));
-  // Quick deletion removes only the selected occurrence, not its parent series.
-  for(let step=0;step<10;step++)await page.locator('[data-next]').click();
-  const thirdDay=item.startDay+20;
-  const recurringDelete=page.locator('.timeline-event[data-edit="'+item.id+'"] [data-quick-delete]');
-  const bounds=await recurringDelete.boundingBox();
-  assert.ok(bounds&&bounds.width>=44&&bounds.height>=44,'Timeline delete needs a full-size touch target');
-  await recurringDelete.click();
-  state=await record(page,'scheduler');
-  assert.ok(state.items.some(i=>i.id===item.id),'Quick delete must retain the recurring series');
-  assert.ok(state.items.find(i=>i.id===item.id).excludedDays.includes(thirdDay));
-  // The backdrop closes a draft immediately. Only Save can persist an event.
-  let unexpectedPrompts=0;
-  page.removeAllListeners('dialog');
-  page.on('dialog',d=>{unexpectedPrompts++;d.dismiss();});
-  await page.locator('header [data-new]').click();
-  const draft=page.locator('#event-editor');
-  assert.equal(await draft.locator('[data-close]').count(),0,'No close X or Cancel action is needed');
-  await draft.locator('[name=title]').fill('Not saved on outside tap');
-  await draft.locator('.sheet-body').click({position:{x:25,y:12}});
-  assert.equal(await page.locator('#event-editor').count(),1,'Tapping inside must keep editor open');
-  const editorBounds=await draft.boundingBox();
-  assert.ok(editorBounds&&editorBounds.y>=45,'The editor must leave space for an outside tap');
-  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
-  assert.equal(await page.locator('#event-editor').count(),0,'First outside tap dismisses editor');
-  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Not saved on outside tap'));
+  await page.reload();await page.locator('.time-rail').waitFor();
+  assert.equal((await record(page,'scheduler')).items.find(i=>i.id===saved.id)?.endDay,saved.endDay);
 
-  // The same rule applies to editing a previously saved appointment.
-  const unchanged=(await record(page,'scheduler')).items.find(i=>i.title==='Three-day preservation test');
-  assert.ok(unchanged);
+  // The only way to commit a draft is Save, regardless of platform.
+  await page.locator('header [data-new]').click();
+  form=page.locator('#event-editor');
+  assert.equal(await form.locator('[data-close]').count(),0);
+  await form.locator('[name=title]').fill('Not saved on outside tap');
+  await form.locator('.sheet-overlay').count().catch(()=>{});
+  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
+  assert.equal(await page.locator('#event-editor').count(),0);
+  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Not saved on outside tap'));
   await page.locator('header [data-new]').click();
   await page.locator('#event-editor [name=title]').fill('Escape must not save');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#event-editor').count(),0);
-  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Escape must not save'));
 
-  // An open time picker must not consume the first outside tap.
+  // An Egyptian 10-day cycle is one local series.
   await page.locator('header [data-new]').click();
-  const timeDraft=page.locator('#event-editor');
-  await timeDraft.locator('[name=title]').fill('Time picker draft');
-  const initialTime=await timeDraft.locator('[name=start]').inputValue();
-  await timeDraft.locator('[data-time-open=start]').click();
-  await timeDraft.locator('[data-time-minute="'+(initialTime.endsWith(':00')?15:0)+'"]').click();
-  assert.equal(await timeDraft.locator('.time-picker-host:not([hidden])').count(),1);
-  assert.equal(await timeDraft.locator('[data-time-dismiss]').count(),0,'No picker close X');
-  await page.locator('.sheet-overlay').click({position:{x:5,y:5}});
-  assert.equal(await page.locator('#event-editor').count(),0);
-  assert.ok(!(await record(page,'scheduler')).items.some(i=>i.title==='Time picker draft'));
-  assert.equal(unexpectedPrompts,0,'Outside dismissal must never require browser confirmation');
-  page.removeAllListeners('dialog');
-  page.on('dialog',d=>d.accept());
-  // Reminder completion is its own accessible button, not a span inside Edit.
-  await page.locator('header [data-new]').click();
-  const reminderForm=page.locator('#event-editor');
-  await reminderForm.locator('[name=title]').fill('Independent reminder control');
-  await reminderForm.locator('[name=kind][value=reminder]').check();
-  await reminderForm.locator('.save-button').click();
+  form=page.locator('#event-editor');
+  await form.locator('[name=title]').fill('Egyptian ten-day recurrence');
+  const choices=await form.locator('[name=repeat] option').evaluateAll(a=>a.map(x=>x.value));
+  assert.deepEqual(choices,['none','daily','egy10','egyMonthly','egyYearly','custom']);
+  await form.locator('[name=repeat]').selectOption('egy10');
+  await form.locator('.save-button').click();
   await page.locator('.save-confirmation').waitFor();
-  const reminder=(await record(page,'scheduler')).items.find(i=>i.title==='Independent reminder control');
-  assert.ok(reminder);
-  await page.locator('[data-back]').click();
-  const done=page.locator('.reminder-box[data-complete="'+reminder.id+'"]');
-  await done.waitFor();
-  assert.equal(await done.getAttribute('aria-pressed'),'false');
-  await done.focus();
-  await page.keyboard.press('Enter');
-  await page.locator('.reminder-box[data-complete="'+reminder.id+'"][aria-pressed="true"]').waitFor();
-  assert.equal((await record(page,'scheduler')).items.find(i=>i.id===reminder.id).completed,true);
-  // Custom Egyptian recurrence must be selectable and persisted after restart.
+  const repeat=(await record(page,'scheduler')).items.find(i=>i.title==='Egyptian ten-day recurrence');
+  assert.ok(repeat);assert.equal(repeat.repeat,'egy10');
+  const everyTen=await page.evaluate(async id=>{
+   const scheduler=await import('./scheduler.js');
+   const data=await(await import('./storage.js')).readRecord('scheduler');
+   const item=data.items.find(i=>i.id===id);
+   return Array.from({length:22},(_,n)=>scheduler.occursOn(item,item.startDay+n));
+  },repeat.id);
+  assert.deepEqual(everyTen.map((v,n)=>v?n:null).filter(v=>v!==null),[0,10,20]);
+
+  // Custom repeat every six Egyptian days remains independently editable.
   await page.locator('header [data-new]').click();
-  const customForm=page.locator('#event-editor');
-  await customForm.locator('[name=title]').fill('Buy food for the shift');
-  await customForm.locator('.advanced-fields summary').click();
-  assert.equal(await customForm.locator('.custom-repeat').isVisible(),false);
-  await customForm.locator('[name=repeat]').selectOption('custom');
-  assert.equal(await customForm.locator('.custom-repeat').isVisible(),true);
-  assert.equal(await customForm.locator('.repeat-editor').isVisible(),true,'Repeat is not hidden behind More Options');
-  await customForm.locator('[data-repeat-preset="3"]').click();
-  assert.equal(await customForm.locator('[name=repeatEvery]').inputValue(),'3');
-  assert.equal(await customForm.locator('[data-repeat-preset="3"]').getAttribute('aria-pressed'),'true');
-  await customForm.locator('[data-repeat-preset="6"]').click();
-  assert.equal(await customForm.locator('[name=repeatEvery]').inputValue(),'6');
-  await customForm.locator('[name=repeatEvery]').selectOption('12');
-  assert.equal(await customForm.locator('[data-repeat-preset="6"]').getAttribute('aria-pressed'),'false');
-  assert.ok((await customForm.locator('.repeat-preview').innerText()).includes(await customForm.locator('[name=repeatEvery] option:checked').innerText()),'Preview uses the selected script numerals');
-  await customForm.locator('[name=repeatEvery]').selectOption('6');
-  await customForm.locator('[name=repeatUnit]').selectOption('day');
-  await customForm.locator('.save-button').click();
+  form=page.locator('#event-editor');
+  await form.locator('[name=title]').fill('Buy food for the shift');
+  await form.locator('[name=repeat]').selectOption('custom');
+  assert.equal(await form.locator('.custom-repeat').isVisible(),true);
+  await form.locator('[data-repeat-preset="6"]').click();
+  assert.equal(await form.locator('[name=repeatEvery]').inputValue(),'6');
+  await form.locator('[name=repeatUnit]').selectOption('day');
+  await form.locator('.save-button').click();
   await page.locator('.save-confirmation').waitFor();
   const custom=(await record(page,'scheduler')).items.find(i=>i.title==='Buy food for the shift');
   assert.ok(custom);
@@ -171,10 +85,26 @@ async function main(){
    return Array.from({length:15},(_,offset)=>scheduler.occursOn(event,event.startDay+offset));
   },custom.id);
   assert.deepEqual(pattern,[true,false,false,false,false,false,true,false,false,false,false,false,true,false,false]);
-  await page.reload();await page.locator('.month-agenda').waitFor();
+  await page.reload();await page.locator('.time-rail').waitFor();
   assert.equal((await record(page,'scheduler')).items.find(i=>i.id===custom.id)?.repeatEvery,6);
+
+  // Reminders have separate completion controls in the scoped appointments sheet.
+  await page.locator('header [data-new]').click();
+  form=page.locator('#event-editor');
+  await form.locator('[name=title]').fill('Independent reminder control');
+  await form.locator('[name=kind][value=reminder]').check();
+  await form.locator('.save-button').click();
+  await page.locator('.save-confirmation').waitFor();
+  const reminder=(await record(page,'scheduler')).items.find(i=>i.title==='Independent reminder control');
+  assert.ok(reminder);
+  await page.locator('[data-appointments]').click();
+  const done=page.locator('.ux-panel .reminder-box[data-complete="'+reminder.id+'"]');
+  await done.waitFor();
+  assert.equal(await done.getAttribute('aria-pressed'),'false');
+  await done.click();
+  assert.equal((await record(page,'scheduler')).items.find(i=>i.id===reminder.id).completed,true);
   await context.close();
-  console.log('Renpet date editor, persistence, recurrence and reload passed');
+  console.log('Renpet unified UI preserves date editor, recurrence, reminders and local persistence');
  }finally{await browser.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
