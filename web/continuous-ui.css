@@ -110,35 +110,53 @@ html[data-renpet-layout="tablet-stacked"] body[data-language="egy"] .time-panel 
 .time-panel .week-band .date:hover{background:#fff6dd6e!important}
 body[data-language="egy"] .time-panel .date .day-number{font-weight:800}
 body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11px}
-.time-panel[data-stream-kind="year"] .year-overview{max-width:1200px;padding:0!important;margin:auto!important;width:100%}
-/* Each Year season group paints exactly one of the three landscapes.
-   The same day/night shading applies here without dimming the mini calendars. */
+/* Year is one full, readable surface per Egyptian year, not a narrow
+   strip of tiny cards. Each of the three seasons owns four months and its
+   actual landscape. The next and previous years remain in the scroll rail. */
+.time-panel[data-stream-kind="year"]{
+ box-sizing:border-box;
+ display:flex;
+ flex-direction:column;
+ height:calc(100dvh - 134px);
+ min-height:calc(100dvh - 134px);
+ padding:clamp(7px,1.25vh,14px) clamp(10px,2.25vw,38px) clamp(8px,1.1vh,13px);
+}
+.time-panel[data-stream-kind="year"]>.time-panel-header{display:none}
+.time-panel[data-stream-kind="year"] .year-overview{
+ box-sizing:border-box;
+ display:grid;
+ grid-template-rows:repeat(3,minmax(0,1fr)) auto;
+ gap:clamp(6px,1.3vh,13px);
+ flex:1 1 auto;
+ min-height:0;
+ max-width:none!important;
+ width:100%!important;
+ padding:0!important;
+ margin:0!important;
+}
 .time-panel[data-stream-kind="year"] .year-season[data-season]{
+ box-sizing:border-box;
  position:relative;
  isolation:isolate;
  overflow:hidden;
- display:block!important;
- background:#fbf1df!important;
- border:1px solid #c9b58a9e!important;
- border-radius:16px!important;
- padding:12px 12px 17px!important;
- margin:0 0 13px!important;
- box-shadow:0 3px 14px #443c2a1c!important;
+ display:flex!important;
+ flex-direction:column!important;
+ min-height:0;
+ height:100%;
+ gap:clamp(5px,.7vh,9px);
+ /* Paint the image on the section itself, not an invisible pseudo-layer. */
+ background-color:var(--group-fill)!important;
+ background-image:linear-gradient(180deg,#fff9e822,#fff7e32b),var(--group-art)!important;
+ background-size:cover!important;
+ background-position:center 65%!important;
+ background-repeat:no-repeat!important;
+ border:1px solid #c9b58aa8!important;
+ border-radius:clamp(12px,1.5vw,20px)!important;
+ padding:clamp(8px,1.2vh,15px) clamp(8px,1vw,16px)!important;
+ margin:0!important;
+ box-shadow:0 4px 18px #443c2a24!important;
 }
-.time-panel[data-stream-kind="year"] .year-season::before{
- content:''!important;
- position:absolute;
- inset:0;
- z-index:0;
- pointer-events:none;
- opacity:1;
- background-image:linear-gradient(180deg,#fff9e829,#fff7e338),var(--group-art);
- background-size:cover;
- background-position:center 65%;
- background-repeat:no-repeat;
- filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
- transition:filter .5s linear;
-}
+.time-panel[data-stream-kind="year"] .year-season::before{content:none!important}
 .time-panel[data-stream-kind="year"] .year-season::after{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
  background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
@@ -147,22 +165,128 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
 }
 .time-panel[data-stream-kind="year"] .year-season>*{position:relative;z-index:1}
 .time-panel[data-stream-kind="year"] .year-season .season-plant{display:none}
-.time-panel[data-stream-kind="year"] .year-season .season-heading{margin:0 0 9px!important;min-height:31px;flex-direction:row!important;align-items:center!important}
-.time-panel[data-stream-kind="year"] .year-months{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important}
-.time-panel[data-stream-kind="year"] .year-month{
- background:#fff9e7dd!important;border:1px solid #d6c69c80!important;border-radius:12px!important;
- box-shadow:none!important;min-height:0!important;padding:10px 8px!important
+.time-panel[data-stream-kind="year"] .year-season .season-heading{
+ flex:0 0 auto;
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:flex-start!important;
+ min-height:clamp(23px,3vh,35px);
+ margin:0!important;
+ gap:10px;
+ color:#933a2c;
+ font-size:clamp(17px,1.55vw,23px);
+ text-align:start;
+ text-shadow:0 1px 2px #fff9ee;
 }
-.time-panel[data-stream-kind="year"] .year-mini-grid{width:100%;direction:inherit}
-/* Each Egyptian ten-day week occupies one row, including compact year tiles. */
-.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"]{grid-template-columns:repeat(10,minmax(0,1fr));column-gap:0;row-gap:5px}
+.time-panel[data-stream-kind="year"] .year-months{
+ flex:1 1 auto;
+ display:grid!important;
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ grid-template-rows:minmax(0,1fr);
+ min-height:0;
+ gap:clamp(6px,.9vw,13px)!important;
+}
+.time-panel[data-stream-kind="year"] .year-month{
+ min-height:0!important;
+ height:100%;
+ min-width:0;
+ display:flex!important;
+ flex-direction:column!important;
+ gap:clamp(3px,.65vh,8px);
+ padding:clamp(5px,.8vh,10px) clamp(5px,.7vw,11px)!important;
+ border:1px solid #d6c69c8a!important;
+ border-radius:12px!important;
+ background:#fff9e7cd!important;
+ box-shadow:0 1px 6px #3e34271a!important;
+}
+.time-panel[data-stream-kind="year"] .year-month.active-month{
+ border-color:#8f653e!important;
+ background:#fff7e6df!important;
+}
+.time-panel[data-stream-kind="year"] .year-mini-title{
+ flex:0 0 auto;
+ min-height:0;
+ justify-content:center;
+}
+.time-panel[data-stream-kind="year"] .year-month-name{
+ font-size:clamp(14px,1.16vw,19px);
+ line-height:1.2;
+}
+.time-panel[data-stream-kind="year"] .year-mini-grid{
+ flex:1 1 auto;
+ min-height:0;
+ display:grid;
+ align-content:stretch;
+ grid-auto-rows:minmax(0,1fr);
+ width:100%;
+ direction:inherit;
+ row-gap:2px;
+}
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"]{
+ grid-template-columns:repeat(10,minmax(0,1fr));
+ column-gap:0;
+ row-gap:4px;
+}
+.time-panel[data-stream-kind="year"] .year-mini-day,
+.time-panel[data-stream-kind="year"] .year-mini-blank{
+ min-height:0!important;
+ min-width:0!important;
+ font-size:clamp(11px,1vw,16px);
+ line-height:1.15;
+}
 .time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-day,
-.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-blank{min-width:0;font-size:clamp(8px,1.15vw,12px)}
-.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-day.year-mini-today{min-width:0;width:100%;min-height:18px;border-radius:7px}
-
-.time-panel[data-stream-kind="year"] .year-mini-day{line-height:1.2}
+.time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-blank{
+ font-size:clamp(9px,.85vw,14px);
+}
+.time-panel[data-stream-kind="year"] .year-mini-day.year-mini-today{
+ min-width:0!important;
+ min-height:0!important;
+ width:100%;
+ border-radius:7px;
+}
 .time-panel[data-stream-kind="year"] .year-mini-today{background:#b9413b!important}
-.time-panel[data-stream-kind="year"] .epagomenal-tile{margin-top:17px;border:0;background:#fff9e786}
+.time-panel[data-stream-kind="year"] .epagomenal-tile{
+ flex:0 0 auto;
+ min-height:clamp(27px,4vh,43px);
+ margin:0;
+ padding:4px 12px;
+ border:1px solid #d6ba8499;
+ background:#fff9e7d9;
+}
+@media(min-width:700px) and (max-width:1023px) and (min-height:560px){
+ .time-panel[data-stream-kind="year"] .year-months{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+ }
+ .time-panel[data-stream-kind="year"] .year-month-name{font-size:clamp(15px,2vw,19px)}
+ .time-panel[data-stream-kind="year"] .year-mini-day{font-size:clamp(12px,1.65vw,16px)}
+}
+@media(max-width:699px), (max-height:559px){
+ .time-panel[data-stream-kind="year"] .year-months{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:4px!important;
+ }
+ .time-panel[data-stream-kind="year"] .year-season[data-season]{
+  padding:6px!important;
+  gap:3px;
+ }
+ .time-panel[data-stream-kind="year"] .year-season .season-heading{
+  min-height:22px;
+  font-size:16px;
+ }
+ .time-panel[data-stream-kind="year"] .year-month{
+  padding:3px 5px!important;
+  gap:2px;
+ }
+ .time-panel[data-stream-kind="year"] .year-month-name{font-size:13px}
+ .time-panel[data-stream-kind="year"] .year-mini-day,
+ .time-panel[data-stream-kind="year"] .year-mini-blank{font-size:clamp(10px,2.6vw,13px)}
+ .time-panel[data-stream-kind="year"] .year-mini-grid[data-week="10"] .year-mini-day{
+  font-size:clamp(9px,2.35vw,12px);
+ }
+}
 .time-panel[data-stream-kind="day"]>.day-page{max-width:1100px!important;width:100%;margin:auto;padding:0!important}
 .time-panel[data-stream-kind="day"] .day-heading{display:none!important}
 .time-panel[data-stream-kind="day"] .timeline{
@@ -200,14 +324,11 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
 @media(min-width:700px) and (min-height:560px){
  .ux-toolbar,html[data-renpet-layout^="tablet"] .ux-toolbar{padding-inline:clamp(24px,4vw,58px)!important}
  .time-panel{padding-inline:clamp(30px,5vw,85px);padding-top:25px}
- .time-panel[data-stream-kind="year"] .year-months,
- html[data-renpet-layout="tablet-stacked"] .time-panel[data-stream-kind="year"] .year-months{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .time-panel[data-stream-kind="year"]{padding:clamp(7px,1.25vh,14px) clamp(10px,2.25vw,38px) clamp(8px,1.1vh,13px)}
  .time-panel[data-stream-kind="month"] .week-band .date{min-height:78px}
  .ux-bottom,html[data-renpet-layout^="tablet"] .ux-bottom{padding-inline:clamp(25px,5vw,80px)!important}
 }
 @media(min-width:1024px) and (min-height:560px){
- .time-panel[data-stream-kind="year"] .year-months,
- html[data-renpet-layout="tablet-split"] .time-panel[data-stream-kind="year"] .year-months{grid-template-columns:repeat(4,minmax(0,1fr))!important}
  .time-panel[data-stream-kind="day"]>.day-page{max-width:1100px!important}
 }
 @media(max-width:390px){
@@ -219,7 +340,6 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
 }
 @media(prefers-reduced-motion:reduce){
  .time-panel::before,.time-panel::after,
- .time-panel[data-stream-kind="year"] .year-season::before,
  .time-panel[data-stream-kind="year"] .year-season::after{transition:none}
 }
 
