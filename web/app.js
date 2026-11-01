@@ -48,6 +48,9 @@ const LIGHTING_POINTS=[
 ];
 function updateSceneLighting(){
  const now=new Date();
+ const clockHour=now.getHours()+now.getMinutes()/60;
+ const daylight=Math.max(0,Math.sin(Math.PI*(clockHour-5.5)/13));
+ document.body.style.setProperty('--night-opacity',String((.45-.41*daylight).toFixed(3)));
  let hour=now.getHours()+now.getMinutes()/60;
  if(state.view==='day'){
   const main=root.querySelector('#main-content'),timeline=main&&visibleRailPanel(main)?.querySelector('.timeline');
@@ -609,11 +612,6 @@ function extendRail(main){
   else if(index<panels.length-6)panels[panels.length-1].remove();
  }
 }
-function updateAmbientLight(){
- const now=new Date(),hour=now.getHours()+now.getMinutes()/60;
- const daylight=Math.max(0,Math.sin(Math.PI*(hour-5.5)/13));
- document.body.style.setProperty('--night-opacity',String((.45-.41*daylight).toFixed(3)));
-}
 function render(){
  if(!data)return;
  const before=root.querySelector('#main-content');
@@ -629,7 +627,7 @@ function render(){
  document.body.dataset.language=lang();
  document.body.dataset.season=seasonForMonth(egy(state.focus).month).id;
  document.body.dataset.view=state.view;
- updateAmbientLight();updateSceneLighting();
+ updateSceneLighting();
  const content=state.view==='list'?listView():railHTML(state.view);
  const savedText=lang()==='ar'?'تم حفظ الموعد':lang()==='cop'?'Ⲁϥⲥⲱⲛϩ':'𓏞 ✓';
  root.innerHTML='<div class="app-shell"><div class="season-art" aria-hidden="true"></div>'+toolbar()+
@@ -1105,7 +1103,7 @@ async function init(){
   if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;if(typeof savedPrefs.reminders==='boolean')prefs.reminders=savedPrefs.reminders;}
   void requestPersistentStorage().catch(console.warn);
   const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog(data);
-  state.focus=clamp(state.focus);render();setInterval(()=>{updateAmbientLight();updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
+  state.focus=clamp(state.focus);render();setInterval(()=>{updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());startForegroundAlerts(()=>loadScheduler(),()=>prefs.reminders);void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
