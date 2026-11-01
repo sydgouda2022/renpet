@@ -2,17 +2,43 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Renpet is an Egyptian calendar with Arabic, Coptic and hieroglyphic views, appointments, seasons and festivals.">
+<meta name="description" content="رنبت — تقويم مصري محلي للمواعيد والأعياد والفصول، بالعربية والقبطية والهيروغليفية. Renpet Egyptian calendar.">
 <meta name="theme-color" content="#176C59"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Renpet">
-<title>Renpet</title><link rel="manifest" href="manifest.webmanifest?v=build">
+<title>Renpet · التقويم المصري</title>
+<link rel="canonical" href="https://renpet.sydgouda.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_EG">
+<meta property="og:site_name" content="Renpet">
+<meta property="og:title" content="Renpet · التقويم المصري">
+<meta property="og:description" content="تقويم مصري محلي للمواعيد والأعياد والفصول، بالعربية والقبطية والهيروغليفية.">
+<meta property="og:url" content="https://renpet.sydgouda.workers.dev/">
+<meta property="og:image" content="https://renpet.sydgouda.workers.dev/assets/icon-512.png">
+<meta property="og:image:alt" content="شعار رنبت المصري الذهبي">
+<meta name="twitter:card" content="summary">
+<link rel="manifest" href="manifest.webmanifest?v=build">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png?v=build"><link rel="icon" type="image/svg+xml" href="assets/shen-rope.svg?v=build"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=build">
 <link rel="stylesheet" href="ui.css?v=7.2.1-75cd9059fdaa"><link rel="stylesheet" href="calendar-layout.css?v=7.2.1-5f3b3c401a12"><link rel="stylesheet" href="season-theme.css?v=7.2.1-1c2fd7cec0c4"><link rel="stylesheet" href="backup.css?v=7.2.1-fb194ea6ca62"><link rel="stylesheet" href="keyboard.css?v=7.2.1-7077d57cb757"><link rel="stylesheet" href="time-editor.css?v=7.2.1-293057e13060"><link rel="stylesheet" href="continuous-ui.css?v=8.0.0">
 <style>
 /* Boot CSS is inline deliberately: render a useful recovery page even if
    an external stylesheet or the JavaScript module graph cannot load. */
-#app>.loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;
- font:26px/1.3 system-ui,sans-serif;color:#176c59;background:#f9faf6}
+#app>.loading{box-sizing:border-box;position:absolute;inset:0;display:flex;
+ flex-direction:column;align-items:center;justify-content:center;gap:12px;
+ padding:28px;text-align:center;margin:0;font:16px/1.5 system-ui,sans-serif;
+ color:#176c59;background:#f9faf6}
+.loading-mark{font-size:38px;line-height:1.2}
+.loading h1{font-size:clamp(20px,4vw,25px);line-height:1.3;margin:0;color:#96372e}
+.loading p{font-size:14px;line-height:1.65;max-width:360px;margin:0;color:#465d52}
+.skip-to-calendar{position:fixed;inset-block-start:8px;inset-inline-start:-9999px;
+ z-index:9999;background:#f9faf6;color:#176c59;padding:12px 18px;border:2px solid currentColor;
+ border-radius:10px;font:bold 16px/1.4 system-ui,sans-serif}
+.skip-to-calendar:focus{inset-inline-start:8px}
+.nojs-fallback{box-sizing:border-box;position:fixed;inset:0;z-index:30;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ padding:28px;text-align:center;gap:14px;background:#f9faf6;color:#283e33;
+ font:16px/1.6 system-ui,sans-serif}
+.nojs-fallback h1{color:#96372e;margin:0;font-size:25px}
+.nojs-fallback p{max-width:380px;margin:0}
 .loading-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .renpet-startup-failed{box-sizing:border-box;min-height:100%;padding:36px 24px 70px;
  background:#f9faf6;color:#202a25;display:flex;flex-direction:column;
@@ -117,5 +143,14 @@
 </script>
 <script type="module" src="app.js?v=7.2.1-9958e94e06fc"></script>
 </head>
-<body><div id="app"><p class="loading" role="status"><span aria-hidden="true">𓆳𓏏𓏤</span><span class="loading-sr">جارٍ تحميل تقويم رنبت · Loading Renpet calendar</span></p></div><noscript>يحتاج تقويم رنبت إلى تفعيل JavaScript. Renpet calendar requires JavaScript to be enabled.</noscript></body>
+<body>
+<a class="skip-to-calendar" href="#main-content" lang="ar">تجاوز إلى التقويم</a>
+<div id="app"><main class="loading" aria-busy="true">
+<span class="loading-mark" aria-hidden="true">𓆳𓏏𓏤</span>
+<h1>رنبت — التقويم المصري</h1>
+<p>تقويم للمواعيد والأعياد والفصول المصرية، بالعربية والقبطية والهيروغليفية. يعمل محليًا على جهازك.</p>
+<span class="loading-sr" role="status" aria-live="polite">جارٍ تحميل تقويم رنبت</span>
+</main></div>
+<noscript><main class="nojs-fallback" lang="ar"><h1>رنبت — التقويم المصري</h1><p>لتشغيل التقويم وعرض المواعيد، فعّل JavaScript في المتصفح ثم افتح الصفحة مجددًا.</p><p>تبقى مواعيدك محفوظة محليًا على جهازك.</p></main></noscript>
+</body>
 </html>
