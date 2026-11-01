@@ -23,8 +23,39 @@ async function main(){
      return {id,ok:response.ok,size:(await response.arrayBuffer()).byteLength};
     })));
     assert.ok(assets.every(a=>a.ok&&a.size>20000),'All local Egyptian botanical landscapes ship with PWA');
-    assert.equal(await page.locator('.season-art').evaluate(el=>getComputedStyle(el).pointerEvents),'none');
+    // The old hidden background had all the lighting but was never painted.
+    // The actual scroll panel must own the rendered, light-reactive artwork.
+    assert.equal(await page.locator('.season-art').count(),0,'No hidden duplicate scenery');
+    const activeMonth=page.locator('.time-panel[data-stream-kind=month]').nth(2);
+    const art=await activeMonth.evaluate(el=>({
+     image:getComputedStyle(el,'::before').backgroundImage,
+     pointer:getComputedStyle(el,'::before').pointerEvents,
+     shade:getComputedStyle(el,'::after').opacity,
+     surface:getComputedStyle(el.querySelector('.month-section')).backgroundImage
+    }));
+    assert.ok(art.image.includes('akhet.webp'),'Month renders Akhet landscape: '+art.image);
+    assert.equal(art.pointer,'none','Artwork cannot intercept calendar taps');
+    assert.ok(art.surface.includes('gradient'),'Month has a translucent writing surface');
+    assert.ok(Number(art.shade)>0,'Visible month artwork receives night shading');
     const lighting=await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue('--night-opacity').trim());
+    // Setting the local time must visibly affect the *painted* landscape.
+    await page.clock.setFixedTime(new Date('2026-10-25T00:00:00Z'));
+    await page.locator('[data-primary-view=today]').click();
+    const night=await page.evaluate(()=>({
+     opacity:Number(document.body.style.getPropertyValue('--night-opacity')),
+     brightness:Number(document.body.style.getPropertyValue('--scene-brightness')),
+     saturation:Number(document.body.style.getPropertyValue('--scene-saturation'))
+    }));
+    await page.clock.setFixedTime(new Date('2026-10-25T10:00:00Z'));
+    await page.locator('[data-primary-view=today]').click();
+    const noon=await page.evaluate(()=>({
+     opacity:Number(document.body.style.getPropertyValue('--night-opacity')),
+     brightness:Number(document.body.style.getPropertyValue('--scene-brightness')),
+     saturation:Number(document.body.style.getPropertyValue('--scene-saturation'))
+    }));
+    assert.ok(night.opacity>noon.opacity+.30,'Night visibly darkens the seasonal artwork');
+    assert.ok(night.brightness<noon.brightness-.25,'Day brightens the same artwork');
+    assert.notEqual(night.saturation,noon.saturation,'Color warmth follows local hour');
     assert.ok(Number(lighting)>0&&Number(lighting)<1,'Day-night lighting is a continuous opacity');
     // Each four-month season gets its own landscape, not one repeated year skin.
     await page.locator('header [data-up-level]').click();
@@ -34,12 +65,14 @@ async function main(){
      const card=yearPanel.locator('.year-season[data-season="'+season+'"]');
      assert.equal(await card.locator('.year-month').count(),4,season+' contains four months');
      const style=await card.evaluate(el=>({
-      image:getComputedStyle(el).backgroundImage,
+      image:getComputedStyle(el,'::before').backgroundImage,
       pseudo:getComputedStyle(el,'::before').content,
+      shade:getComputedStyle(el,'::after').opacity,
       border:getComputedStyle(el).borderTopWidth
      }));
      assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must belong to section: '+style.image);
-     assert.equal(style.pseudo,'none',season+' artwork must not double-paint');
+     assert.notEqual(style.pseudo,'none',season+' paints exactly one art layer');
+     assert.ok(Number(style.shade)>0,season+' card is subject to real lighting');
      assert.notEqual(style.border,'0px',season+' remains a visible section');
     }
     await page.screenshot({path:path.join(out,name+'-year-season-cards.png'),fullPage:false});
@@ -51,6 +84,10 @@ async function main(){
      await year.locator('[data-open-month="'+month+'"]').click();
      assert.equal(await page.locator('body').getAttribute('data-season'),season);
      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+     const monthPanel=page.locator('.time-panel[data-stream-kind="month"]').nth(2);
+     const panelStyle=await monthPanel.evaluate(el=>getComputedStyle(el,'::before').backgroundImage);
+     assert.ok(panelStyle.includes('/assets/seasons/'+season+'.webp'),
+      season+' Month uses its own landscape: '+panelStyle);
     }
     await page.locator('.time-panel[data-stream-kind=month]').nth(2).locator('.date[data-date]').nth(5).click();
     assert.equal(await page.locator('body').getAttribute('data-view'),'day');
@@ -60,6 +97,9 @@ async function main(){
     assert.equal((await dayMonth.textContent()).trim(),names[0]);
     assert.equal((await page.locator('header [data-up-level]').getAttribute('aria-label')).trim(),names[0]);
     assert.equal(await page.locator('.month-section').count(),0,'iPad Day is independent, without Month panel');
+    const dayScene=page.locator('.time-panel[data-stream-kind="day"]').nth(2);
+    const dayArt=await dayScene.evaluate(el=>getComputedStyle(el,'::before').backgroundImage);
+    assert.ok(dayArt.includes('akhet.webp'),'Day uses same seasonal landscape as its Egyptian month');
     const rect=await page.evaluate(()=>{
      const main=document.querySelector('#main-content').getBoundingClientRect();
      const rail=document.querySelector('.time-rail').getBoundingClientRect();
