@@ -356,7 +356,7 @@ function listView(){
  const length=annual?360+monthDays({year:e.year,month:13}):monthDays(e);
  const groups=[];
  for(let d=Math.max(min(),start);d<=Math.min(max(),start+length-1);d++)
-  if(items(d).length||festivalsOn(d).length||hiddenItemsForDay(schedule,d).length)
+  if(items(d).length||hiddenItemsForDay(schedule,d).length)
    groups.push(agenda(d));
  return '<div class="list-page">'+(groups.length?groups.join(''):
   '<div class="schedule-empty"><div class="empty-art" aria-hidden="true">▤</div><h2>'+
@@ -394,7 +394,7 @@ function toolbar(){
  const e=egy(state.focus),year=state.view==='year',month=state.view==='month',
   day=state.view==='day',isList=state.view==='list';
  const origin=state.listOrigin==='year'?'year':'month';
- const heading=year?'':month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day)+' '+safe(monthName(e.month));
+ const heading=year?'':month?safe(monthName(e.month)):isList?safe(T().list):numHtml(e.day);
  const higher=day?
   '<button type="button" data-back aria-label="'+safe(spoken('month'))+' · '+safe(monthName(e.month))+'">'+safe(monthName(e.month))+'</button>':
   month?'<button type="button" class="year-shortcut" data-open-year aria-label="'+safe(LOCALES[lang()].year)+' '+safe(N(e.year))+'"><span class="year-shortcut-value">'+numHtml(e.year)+'</span></button>':
