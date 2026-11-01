@@ -36,8 +36,8 @@ async function main(){
      assert.equal(layout.columns,stacked?3:4,'iPad Year cards: '+JSON.stringify(layout));
      assert.ok(layout.cardWidth>=155,'iPad mini calendars must remain legible');
      assert.equal(layout.direction,'rtl','Arabic Year must match RTL Month on iPad');
-     if(stacked)assert.ok(layout.railWidth>=70&&layout.railWidth<=82,
-      'iPad portrait rail should preserve calendar width');
+     if(stacked)assert.ok(layout.railWidth>=width-5,
+      'iPad bottom controls span the screen, not a desktop sidebar');
      await page.locator('[data-open-month="11"]').click();
      await page.locator('header [data-open-year]').click();
      const jump=await page.locator('#main-content').evaluate(main=>{
@@ -84,6 +84,12 @@ async function main(){
      const prefs=await record(page,'preferences');
      assert.equal(prefs.language,lang);
      await page.locator('[data-primary-view=today]').click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'day',
+      'Today descends from Month to the current Day');
+     await page.locator('[data-primary-view=list]').click();
+     assert.equal(await page.locator('body').getAttribute('data-view'),'day',
+      'Day already shows appointments; no separate List screen');
+     await page.locator('[data-back]').click();
      if(width>=700){
       const panes=await page.evaluate(()=>{
        const month=document.querySelector('.month-section').getBoundingClientRect();
@@ -97,8 +103,8 @@ async function main(){
          const r=el.getBoundingClientRect();return {width:r.width,height:r.height};
         })};
       });
-      assert.ok(panes.targets.every(t=>t.width>=44&&t.height>=64),
-       'iPad touch rail retains >=44px targets: '+lang+' '+JSON.stringify(panes));
+      assert.ok(panes.targets.every(t=>t.width>=44&&t.height>=44),
+       'iPad bottom Today and Appointments remain touch accessible: '+lang+' '+JSON.stringify(panes));
       if(width<1024){
        assert.equal(panes.mode,'flex');
        assert.ok(panes.month.bottom<=panes.agenda.top+2&&panes.agenda.width>=500,
@@ -119,13 +125,14 @@ async function main(){
       assert.equal(await page.locator('body').getAttribute('data-view'),'month');
      }
      if(width<700){
-      // Today must be the direct return from List to Month. It should not
-      // silently keep the List view open after changing its starting date.
+      // Today descends from a contextual Month appointment list into
+      // the current Day, whose timeline already includes appointments.
       await page.locator('[data-primary-view=list]').click();
       assert.equal(await page.locator('body').getAttribute('data-view'),'list');
       await page.locator('[data-primary-view=today]').click();
-      assert.equal(await page.locator('body').getAttribute('data-view'),'month',
-       'Today from List must return to the default Month in '+lang);
+      assert.equal(await page.locator('body').getAttribute('data-view'),'day',
+       'Today from the Month list descends to the current day in '+lang);
+      await page.locator('[data-back]').click();
       const titleBases={
        ar:'تجهيز مستلزمات الوردية وشراء الطعام ومراجعة مواعيد العمل',
        cop:'Ⲡⲓⲉⲣⲅⲟⲛ ⲛ̀ⲧⲉ ⲡⲓϩⲟⲟⲩ ⲛⲉⲙ ⲛⲓⲙⲉⲩⲓ ⲛ̀ⲧⲉ ⲡⲓⲣⲟⲙⲡⲓ',
@@ -135,7 +142,6 @@ async function main(){
       assert.ok(longTitle.length<=200,'Long-title fixture exceeds input limit');
       const longItem=await saveEvent(page,longTitle);
       await page.reload();await page.locator('.month-agenda').waitFor();
-      await page.locator('[data-primary-view=today]').click();
       const monthRow=page.locator('.month-agenda .event-row[data-edit="'+longItem.id+'"]');
       await monthRow.waitFor();
       const preview=await monthRow.locator('.event-copy strong').evaluate(el=>{
@@ -171,7 +177,8 @@ async function main(){
       assert.equal((await record(page,'scheduler')).items.some(item=>item.id===longItem.id),false,
        'Deleting a long-title appointment in List must remove only that item');
       await page.locator('[data-primary-view=today]').click();
-      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
+      assert.equal(await page.locator('body').getAttribute('data-view'),'day');
+      await page.locator('[data-back]').click();
       // Actual 320–430px phone widths, every script. Keep both bottom
       // shortcuts visible without wasting the extra height of a tab bar.
       const nav=await page.locator('.ux-bottom').evaluate(el=>{
@@ -202,6 +209,9 @@ async function main(){
       assert.ok(listLayout.hasContent&&listLayout.width>=width-24&&listLayout.inset<=12&&
        listLayout.contentWidth<=listLayout.clientWidth+2,
        'List page keeps the same useful width as the Month agenda: '+lang+' '+width+' '+JSON.stringify(listLayout));
+      await page.locator('[data-primary-view=list]').click();
+      assert.equal(await page.locator('body').getAttribute('data-view'),'month',
+       'Appointments closes back to the same Month');
       await page.locator('header [data-open-year]').click();
       assert.equal(await page.locator('body').getAttribute('data-view'),'year');
       const yearTargets=await page.locator('.year-month').evaluateAll(cards=>cards.map(el=>{
