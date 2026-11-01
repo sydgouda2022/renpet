@@ -16,14 +16,16 @@ test('no old storage scheduler is embedded in the UI',async()=>{
 
 test('server HTML describes Renpet before JavaScript runs',async()=>{
  const html=await readFile(new URL('../web/index.html',import.meta.url),'utf8');
- assert.match(html,/<main class="loading" aria-busy="true">/);
+ assert.match(html,/<main class="loading" id="main-content" tabindex="-1" aria-busy="true">/);
  assert.match(html,/<h1>رنبت — التقويم المصري<\/h1>/);
- assert.match(html,/class="loading-sr" role="status" aria-live="polite"/);
- assert.match(html,/<noscript><style>#app>\.loading\{display:none\}<\/style><main class="nojs-fallback"/);
+ assert.match(html,/<div id="renpet-status" class="loading-sr" role="status" aria-live="polite" aria-atomic="true" lang="ar">/);
+ assert.match(html,/<noscript><style>#app>\.loading,#renpet-status,\.skip-to-calendar\{display:none\}<\/style><main class="nojs-fallback"/);
  assert.match(html,/class="skip-to-calendar" href="#main-content"/);
+ assert.doesNotMatch(html,/class="skip-to-calendar"[^>]*lang="ar"/);
  for(const property of ['og:title','og:description','og:image','og:url']){
   assert.ok(html.includes('property="'+property+'"'),'missing '+property);
  }
  assert.match(html,/<link rel="canonical" href="https:\/\/renpet\.sydgouda\.workers\.dev\/">/);
  assert.match(html,/<meta name="description"/);
+ assert.match(html,/type="image\/svg\+xml" sizes="any"/);
 });
