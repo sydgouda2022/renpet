@@ -348,6 +348,14 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  text-shadow:0 1px 2px #fff8e8e0;
 }
 .time-panel[data-stream-kind="day"] .timeline-event{border-radius:10px}
+body[data-language="ar"] .time-panel[data-stream-kind="day"] .timeline-event .event-drag strong{
+ font-size:14px;
+ line-height:1.25;
+}
+body[data-language="ar"] .time-panel[data-stream-kind="day"] .timeline-event .event-drag small{
+ font-size:12px;
+ line-height:1.25;
+}
 .ux-bottom,html[data-renpet-layout^="tablet"] .ux-bottom,
 html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child){
  position:relative!important;z-index:5!important;grid-column:auto!important;grid-row:auto!important;
