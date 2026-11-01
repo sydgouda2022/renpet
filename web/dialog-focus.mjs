@@ -10,7 +10,7 @@ export function syncModalFocus(){
  if(dialog){
   if(!activeDialog)previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
   activeDialog=dialog;
-  if(!dialog.contains(document.activeElement))targets(dialog)[0]?.focus({preventScroll:true});
+  if(!dialog.contains(document.activeElement))(dialog.querySelector('[data-panel-heading]')||targets(dialog)[0])?.focus({preventScroll:true});
  }else if(activeDialog){
   activeDialog=null;
   const back=previous?.isConnected?previous:document.querySelector('[data-new],.ux-nav-item');
