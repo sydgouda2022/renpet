@@ -87,6 +87,7 @@ async function saveScheduler(next){
 let previousRenderKey=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
+// Existing installations keep dynamic lighting enabled until switched off.
 let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,dynamicLighting:true,festivalSources:null,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
