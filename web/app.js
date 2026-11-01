@@ -263,7 +263,6 @@ function dayView(d=state.focus){
   current.push(item);lastBottom=Math.max(lastBottom,item._visualBottom);
  }
  if(current.length)clusters.push(current);
- crowdedDayGroups=[];
  const crowdedKeys=new Set(),groupRects=[];
  const maxVisibleColumns=window.matchMedia?.('(max-width:700px)').matches?2:3;
  for(const cluster of clusters){
