@@ -38,7 +38,7 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .ux-timeframe{min-width:0;display:flex;justify-content:flex-end;align-items:center;order:1;font-weight:720}
 .ux-timeframe button{min-width:58px;font-size:16px;padding-inline:7px}
 .ux-timeframe button span{white-space:nowrap}
-.ux-timeframe .ux-year-value{font-size:clamp(18px,3.5vw,27px)}
+.ux-timeframe .ux-year-value{font-size:clamp(18px,3.5vw,27px);font-weight:800;color:#9b352b}
 .ux-timeframe .ux-year-value .glyph{height:1em}
 .ux-toolbar-head{padding:0 7px 11px!important;min-height:57px}
 .ux-heading{min-width:0}
@@ -64,8 +64,8 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 }
 .time-panel::before{content:none}
 .time-panel-header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 auto 18px;max-width:1150px;border:0}
-.time-panel-header h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:720;color:var(--deep-green)}
-.time-season-name{flex:0 0 auto;color:#8d692d;font-size:15px;font-weight:700}
+.time-panel-header h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:800;color:#9b352b}
+.time-season-name{flex:0 0 auto;color:#9b352b;font-size:15px;font-weight:800}
 .time-panel[data-stream-kind="month"]>.month-section{max-width:1150px;width:100%;margin:auto}
 /* The landscape is painted once by the scrolling time panel. The calendar
    writing surface must be opaque, otherwise the same landscape reads as a
