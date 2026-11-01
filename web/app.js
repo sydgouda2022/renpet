@@ -526,7 +526,7 @@ function panelContent(){
  const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals,appointments:lang()==='ar'?'المواعيد':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏏𓏥'};
  const body=panels[state.panel]?.();
  if(!body)return '';
- return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
+ return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong tabindex="-1" data-panel-heading>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
 }
 // One time rail serves every screen. Panels are sections of a continuous scroll
 // surface, not nested scroll containers or page-sized snap cards.
