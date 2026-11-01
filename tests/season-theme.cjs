@@ -137,6 +137,68 @@ async function main(){
     });
     assert.ok(rect.railWidth>=rect.mainWidth*.94,'Day fills available landscape width');
     assert.ok(rect.scrollWidth<=width+3,'No horizontal overrun');
+    // Dynamic lighting is an optional persistent visual effect. The
+    // Egyptian season artwork must not disappear when it is turned off.
+    async function chooseLighting(enabled){
+     await page.locator('header [data-open-panel="settings"]').click();
+     const input=page.locator('.ux-panel [name="dynamicLighting"]');
+     assert.equal(await input.isChecked(),!enabled,'Current lighting setting should match previous choice');
+     await input.setChecked(enabled);
+     assert.equal(await page.locator('.ux-panel [name="dynamicLighting"]').isChecked(),enabled);
+     await page.locator('.ux-panel-backdrop').click({position:{x:5,y:5}});
+    }
+    async function neutralLighting(){
+     const values=await page.evaluate(()=>({
+      night:Number(document.body.style.getPropertyValue('--night-opacity')),
+      brightness:Number(document.body.style.getPropertyValue('--scene-brightness')),
+      saturation:Number(document.body.style.getPropertyValue('--scene-saturation'))
+     }));
+     assert.deepEqual(values,{night:0,brightness:1,saturation:1},
+      'Static seasonal lighting must not depend on clock time');
+    }
+    await chooseLighting(false);
+    const persistedOff=await page.evaluate(async()=>(
+     await(await import('./storage.js')).readRecord('preferences')).dynamicLighting);
+    assert.equal(persistedOff,false,'Lighting off must be stored in IndexedDB');
+    await neutralLighting();
+    const staticDayArt=await dayScene.evaluate(el=>({
+     image:getComputedStyle(el,'::before').backgroundImage,
+     night:getComputedStyle(el,'::after').opacity
+    }));
+    assert.ok(staticDayArt.image.includes('akhet.webp'),'Day keeps its season background with lighting off');
+    assert.equal(Number(staticDayArt.night),0,'Day overlay is invisible when lighting is off');
+    // The same global preference applies to Month and all three Year skins.
+    await page.locator('header [data-up-level]').click();
+    await neutralLighting();
+    const staticMonth=page.locator('.time-panel[data-stream-kind="month"]').nth(2);
+    assert.ok((await staticMonth.evaluate(el=>getComputedStyle(el,'::before').backgroundImage)).includes('akhet.webp'));
+    assert.equal(Number(await staticMonth.evaluate(el=>getComputedStyle(el,'::after').opacity)),0);
+    await page.locator('header [data-up-level]').click();
+    await neutralLighting();
+    const staticYear=page.locator('.time-panel[data-stream-kind="year"]').nth(1);
+    for(const season of ['akhet','peret','shemu']){
+     const card=staticYear.locator('.year-season[data-season="'+season+'"]');
+     assert.ok((await card.evaluate(el=>getComputedStyle(el).backgroundImage)).includes(season+'.webp'));
+     assert.equal(Number(await card.evaluate(el=>getComputedStyle(el,'::after').opacity)),0,
+      season+' must not receive a night overlay when lighting is off');
+    }
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('.time-rail').waitFor();
+    await neutralLighting();
+    await page.locator('header [data-open-panel="settings"]').click();
+    assert.equal(await page.locator('.ux-panel [name="dynamicLighting"]').isChecked(),false,
+     'Off setting survives a reload');
+    await page.locator('.ux-panel [name="dynamicLighting"]').check();
+    assert.equal(await page.locator('.ux-panel [name="dynamicLighting"]').isChecked(),true);
+    await page.locator('.ux-panel-backdrop').click({position:{x:5,y:5}});
+    const restored=await page.evaluate(()=>({
+     night:Number(document.body.style.getPropertyValue('--night-opacity')),
+     brightness:Number(document.body.style.getPropertyValue('--scene-brightness'))
+    }));
+    assert.ok(restored.night>0,'Re-enabled lighting restores day/night shading');
+    assert.ok(restored.brightness>1,'Re-enabled lighting restores time-dependent brightness');
+    assert.equal(await page.evaluate(async()=>(
+     await(await import('./storage.js')).readRecord('preferences')).dynamicLighting),true);
     await page.screenshot({path:path.join(out,name+'-season.png'),fullPage:false});
     results.push({name,width,height,assets:assets.map(x=>x.id),lighting,fullWidthDay:true});
    }finally{await context.close();}
