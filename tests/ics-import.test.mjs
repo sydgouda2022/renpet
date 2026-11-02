@@ -30,8 +30,8 @@ assert.equal(zoned.imported,1);
 const unknownZone=tzEvent.replaceAll('America/New_York','Not_A_Real_Zone');
 assert.equal(parseICS(unknownZone).invalid,1,'Unknown IANA timezones cannot shift appointment times');
 
-// Renpet does not translate Gregorian repeat rules into Egyptian cycles.
-for(const rule of ['FREQ=MONTHLY','FREQ=YEARLY','FREQ=WEEKLY']){
+// Renpet supports basic Gregorian yearly rules, but never guesses complex BYDAY schedules.
+for(const rule of ['FREQ=MONTHLY','FREQ=YEARLY;BYDAY=MO','FREQ=WEEKLY']){
  const entry=['BEGIN:VCALENDAR','BEGIN:VEVENT','UID=never','DTSTART:20260115T090000','DTEND:20260115T100000','RRULE:'+rule,'SUMMARY:Unsupported recurrence','END:VEVENT','END:VCALENDAR'].join('\r\n').replace('UID=never','UID:never');
  assert.equal(parseICS(entry).unsupported,1);
 }

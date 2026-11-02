@@ -1,6 +1,8 @@
 // RFC 5545 export for Apple Calendar, Google Calendar and other calendar apps.
 // All recurrence expansion is local and uses the native Egyptian calendar engine.
 const DAY_MS = 86400000;
+// X-RENPET-* namespaced properties preserve native information while other
+// calendar applications can still read the standard VEVENT fields.
 const stamp = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
 const ymd = day => new Date(day*DAY_MS).toISOString().slice(0,10).replace(/-/g,'');
 const dateTime = (day,minutes) => ymd(day)+'T'+String(Math.floor(minutes/60)).padStart(2,'0')+String(minutes%60).padStart(2,'0')+'00';
@@ -31,6 +33,7 @@ function calendarEvents(state,occursOn,today,maxOccurrences=100000){
     // Standard iCalendar interval recurrence rules are exported directly.
     // Egyptian month/year recurrence dates are expanded separately.
     const rule=repeat==='daily'?'FREQ=DAILY':repeat==='egy10'?'FREQ=DAILY;INTERVAL=10':
+      repeat==='gregYearly'?'FREQ=YEARLY':
       repeat==='custom'&&['day','decan'].includes(item.repeatUnit)?
        'FREQ=DAILY;INTERVAL='+(item.repeatEvery*(item.repeatUnit==='decan'?10:1)):null;
     if(repeat==='none'||rule){starts=[item.startDay];}
@@ -69,6 +72,8 @@ function calendarEvents(state,occursOn,today,maxOccurrences=100000){
         location:String(item.location||''),notes:String(item.notes||''),
         calendar:String(cal?.name?.ar||cal?.name||'Renpet'),
         kind:item.kind||'event',alert:ALARMS[item.alert]||null,completed:Boolean(item.completed),
+        occasionType:item.occasionType||null,occasionCalendar:item.occasionCalendar||null,
+        repeatUnit:repeat==='custom'&&rule?item.repeatUnit:null,
         createdAt:item.createdAt,updatedAt:item.updatedAt
       });
     }
@@ -86,9 +91,13 @@ export function exportICS(state,occursOn,{today=Math.floor(Date.now()/DAY_MS),no
     if(e.rrule)lines.push('RRULE:'+e.rrule);
     if(e.exdates?.length)lines.push('EXDATE'+(e.allDay?';VALUE=DATE':'')+':'+e.exdates.join(','));
     if(e.location)lines.push('LOCATION:'+escape(e.location));
-    const notes=[e.notes,'Renpet calendar: '+e.calendar].filter(Boolean).join('\n');
-    if(notes)lines.push('DESCRIPTION:'+escape(notes));
-    if(e.kind==='reminder')lines.push('CATEGORIES:REMINDER');
+    if(e.notes)lines.push('DESCRIPTION:'+escape(e.notes));
+    if(e.kind==='reminder')lines.push('CATEGORIES:REMINDER','X-RENPET-KIND:REMINDER');
+    if(e.occasionType&&e.occasionCalendar){
+      lines.push('X-RENPET-OCCASION-TYPE:'+e.occasionType.toUpperCase());
+      lines.push('X-RENPET-OCCASION-CALENDAR:'+e.occasionCalendar.toUpperCase());
+    }
+    if(e.repeatUnit)lines.push('X-RENPET-REPEAT-UNIT:'+e.repeatUnit.toUpperCase());
     if(e.alert)lines.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+escape(e.summary),'TRIGGER:'+e.alert,'END:VALARM');
     lines.push('END:VEVENT');
   }
