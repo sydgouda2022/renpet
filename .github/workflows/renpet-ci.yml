@@ -88,5 +88,17 @@ jobs:
         run: |
           set -euo pipefail
           wrangler deploy --config wrangler.worker.toml
-          curl --fail --silent --show-error --retry 5 https://renpet.sydgouda.workers.dev/ > /tmp/renpet-production-check.html
-          test -s /tmp/renpet-production-check.html
+          # HTTP 200 alone can still mean that an older PWA was served.
+          # Compare the deployed shell, application, calendar data and worker
+          # byte-for-byte against the artifacts that passed this CI run.
+          for asset in index.html app.js data.json sw.js; do
+            expected="$(sha256sum "web/$asset" | cut -d ' ' -f1)"
+            actual="$(curl --fail --location --silent --show-error --retry 5 --retry-delay 2 \\
+              -H 'Cache-Control: no-cache' \\
+              "https://renpet.sydgouda.workers.dev/$asset?build=$GITHUB_SHA" \\
+              | sha256sum | cut -d ' ' -f1)"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error file=$asset::Cloudflare is not serving the verified Renpet release"
+              exit 1
+            fi
+          done
