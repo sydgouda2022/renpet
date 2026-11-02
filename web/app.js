@@ -743,7 +743,62 @@ function showEditorError(form,message){
  if(!el){el=document.createElement('p');el.className='event-error';el.setAttribute('role','alert');form.querySelector('.sheet-head')?.after(el);}
  el.textContent=message;
 }
+async function submitOccasion(form){
+ const f=new FormData(form),calendar=f.get('occasionCalendar'),category=f.get('occasionType');
+ if(!['gregorian','egyptian'].includes(calendar)||!['birthday','anniversary','other'].includes(category)){
+  showEditorError(form,lang()==='ar'?'نوع المناسبة غير صحيح':T().occasionType);return;
+ }
+ let day;
+ try{
+  if(calendar==='gregorian'){
+   const iso=String(f.get('gregDate')||'');
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))throw Error('Date required');
+   day=dayNumber(iso);
+   if(!Number.isInteger(day)||isoDate(day)!==iso)throw Error('Invalid date');
+  }else{
+   const y=Number(f.get('egyYear')),m=Number(f.get('egyMonth')),d=Number(f.get('egyDay'));
+   if(!supportedYear(y)||m<1||m>13||d<1||d>monthDays({year:y,month:m}))throw Error('Invalid date');
+   day=toGregorian({year:y,month:m,day:d});
+  }
+ }catch{
+  showEditorError(form,lang()==='ar'?'راجع تاريخ المناسبة':T().date);return;
+ }
+ if(day<min()||day>max()){
+  showEditorError(form,lang()==='ar'?'تاريخ المناسبة خارج نطاق التقويم':T().date);return;
+ }
+ const title=String(f.get('title')||'').trim();
+ if(!title){showEditorError(form,lang()==='ar'?'اكتب اسم المناسبة':T().title);return;}
+ const repeat=f.get('occasionRepeat')==='yearly'?(calendar==='gregorian'?'gregYearly':'egyYearly'):'none';
+ const notes=String(f.get('notes')||'').trim();
+ if(notes.length>4000){showEditorError(form,T().notes);return;}
+ const sched=loadScheduler(),existing=state.dialog?.id?sched.items.find(i=>i.id===state.dialog.id):null;
+ const vals={kind:'event',title,occasionType:category,occasionCalendar:calendar,
+  startDay:day,endDay:day,startMinutes:0,endMinutes:1440,allDay:true,
+  location:'',notes,calendarId:existing?.calendarId||'personal',repeat,alert:'none'};
+ let item;
+ if(existing&&existing.repeat!=='none'&&f.get('repeatScope')==='one'){
+  const oldStart=occurrenceStartForDay(existing,state.dialog?.occurrenceDay??existing.startDay);
+  if(oldStart===null){showEditorError(form,T().date);return;}
+  excludeOccurrence(existing,oldStart);
+  item=createItem({...vals,repeat:'none'});
+ }else{
+  item=existing?{...existing,...vals,updatedAt:new Date().toISOString()}:createItem(vals);
+  delete item.repeatEvery;delete item.repeatUnit;
+ }
+ ensureSavedItemVisible(sched,item);upsertItem(sched,item);
+ if(!await saveScheduler(sched)){
+  showEditorError(form,lang()==='ar'?'تعذر حفظ المناسبة على هذا الجهاز':T().save);return;
+ }
+ const saved=loadScheduler(),savedItem=saved.items.find(i=>i.id===item.id&&i.title===title);
+ const showDay=repeat==='none'?day:(nextOccurrence(item,today(),366*5)??day);
+ if(!savedItem||!itemsForDay(saved,showDay).some(i=>i.id===item.id)){
+  showEditorError(form,lang()==='ar'?'لم يتم تأكيد حفظ المناسبة':T().save);return;
+ }
+ closeKeyboard();state.dialog=null;suppressEditUntil=0;
+ state.focus=clamp(showDay);state.view='day';state.revealItemId=item.id;state.saveNotice=true;render();
+}
 async function submitEvent(form){
+ if(form.classList.contains('occasion-editor'))return submitOccasion(form);
  const f=new FormData(form),y=Number(f.get('egyYear')),m=Number(f.get('egyMonth')),d=Number(f.get('egyDay'));
  if(!supportedYear(y)||m<1||m>13||d<1||d>monthDays({year:y,month:m})){showEditorError(form,lang()==='ar'?'التاريخ غير صحيح':lang()==='cop'?'Ⲡⲓⲉϩⲟⲟⲩ':'𓆳');return;}
  const startDay=toGregorian({year:y,month:m,day:d});
@@ -965,6 +1020,25 @@ root.addEventListener('click',async ev=>{
 
 root.addEventListener('change',async ev=>{
  const el=ev.target;
+ if(el.name==='kind'&&el.closest('#event-editor')){
+  state.dialog={...state.dialog,kind:el.value};render();return;
+ }
+ if(el.name==='occasionCalendar'&&el.closest('.occasion-editor')){
+  const form=el.form;
+  const greg=form.querySelector('[data-occasion-greg]'),egyptian=form.querySelector('[data-occasion-egy]');
+  if(greg)greg.hidden=el.value!=='gregorian';
+  if(egyptian)egyptian.hidden=el.value!=='egyptian';
+  return;
+ }
+ if(el.name==='repeatScope'&&el.closest('.occasion-editor')){
+  const form=el.form,item=schedule.items.find(i=>i.id===state.dialog?.id);
+  if(!item)return;
+  const day=el.value==='one'?
+   occurrenceStartForDay(item,state.dialog?.occurrenceDay??item.startDay)??item.startDay:item.startDay;
+  form.elements.namedItem('gregDate').value=isoDate(day);
+  fillEditorDate(form,'',day);
+  return;
+ }
  if(el.name==='repeatScope'&&state.dialog?.id){
   const form=el.form,item=schedule.items.find(i=>i.id===state.dialog.id);
   if(item&&item.repeat!=='none'){
