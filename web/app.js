@@ -752,7 +752,7 @@ async function submitOccasion(form){
  try{
   if(calendar==='gregorian'){
    const iso=String(f.get('gregDate')||'');
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))throw Error('Date required');
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))throw Error('Date required');
    day=dayNumber(iso);
    if(!Number.isInteger(day)||isoDate(day)!==iso)throw Error('Invalid date');
   }else{
