@@ -17,3 +17,20 @@ test('reject malformed data and obsolete schemas',()=>{
  JSON.stringify({format:BACKUP_FORMAT,scheduler:{items:[]},preferences:{}})])
   assert.throws(()=>parseBackup(input));
 });
+
+test('reject invalid language, preference values and recurrence settings in backups',()=>{
+ const scheduler=emptyState();
+ const defaults={language:'ar',gregorian:true,dynamicLighting:true,showHolidays:true,weeks:{ar:7}};
+ const invalid=[
+  {...defaults,language:'english'},
+  {...defaults,gregorian:'false'},
+  {...defaults,weeks:{ar:9}},
+  {...defaults,weeks:{unknown:7}},
+  {...defaults,unexpected:true},
+  {...defaults,weeks:[]}
+ ];
+ for(const preferences of invalid){
+  assert.throws(()=>createBackup({scheduler,preferences}),/preferences/i);
+  assert.throws(()=>parseBackup(JSON.stringify({format:BACKUP_FORMAT,scheduler,preferences})),/backup/i);
+ }
+});
