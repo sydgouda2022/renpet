@@ -17,11 +17,26 @@ servers, or remote APIs for personal information.
 ## ICS exchange
 
 ICS exchange is an optional bridge with standard calendar applications. Its
-Gregorian serialization is not Renpet's internal recurrence system. The native
-Egyptian daily and 10-day intervals are exported as standard calendar rules;
-Egyptian monthly/yearly recurrences are expanded over a defined ten-year
-export horizon. Unsupported external recurrence and time-zone definitions
-are rejected by the importer rather than inferred.
+Gregorian serialization is not Renpet's internal recurrence system.
+Gregorian yearly birthdays and anniversaries, daily and 10-day intervals,
+and compatible custom daily/decan intervals are exported as standard RRULEs.
+Renpet-specific optional X-RENPET fields preserve occasion/reminder type and
+the original custom daily/decan unit when reimported into Renpet; other calendar
+applications can safely ignore these fields. Standard CATEGORIES:REMINDER is
+also imported. Descriptions contain the user's notes without injected metadata.
+
+Egyptian monthly/yearly and custom monthly/yearly occurrences are expanded
+as individual events over a declared ten-year horizon; importing them from
+ICS cannot reconstruct the complete original series. The local JSON backup
+remains the only complete lossless round-trip for Egyptian recurrence and
+calendar preferences. Floating DTSTART/DTEND values retain local wall-clock
+hours but not a global instant. Recurring events tied to foreign IANA zones
+or UTC are rejected instead of being silently shifted through DST changes.
+Unsupported external recurrence rules are also counted and skipped.
+
+ICS import displays counts for imported, duplicate, unsupported, invalid,
+and matched/unmatched cancellations before the user confirms changes. A local
+rollback snapshot is committed atomically with the import.
 
 ## Reminders and offline operation
 
