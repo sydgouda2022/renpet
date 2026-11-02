@@ -23,9 +23,19 @@ assert "registration.update()" in html, "Installed PWAs must proactively check f
 assert "document.addEventListener('visibilitychange'" in html, "Resumed iOS PWAs must check for new versions"
 assert "if (event.persisted) checkForUpdates();" in html, "Back-forward restored app must refresh update status"
 assert "document.querySelector('#event-editor')" in html, "An in-progress appointment must not be discarded"
-registry = json.loads((root / "festival-sources.json").read_text(encoding="utf-8"))
-ids = [source["id"] for source in registry["sources"]]
-assert ids == ["amun-theban", "national-egypt", "esna-khnum", "isis-philae"], "Retired festival catalogs were shipped"
+# Only contemporary Egyptian occasions are bundled; religious temple
+# calendars do not belong in the daily app or its offline asset graph.
+for retired in [
+    "festival-sources.json",
+    "festival-packs/esna-khnum.json",
+    "festival-packs/isis-philae.json",
+]:
+    assert not (root / retired).exists(), "Retired religious catalog still shipped: " + retired
+public = json.loads((root / "festival-packs/national-egypt.json").read_text(encoding="utf-8"))
+assert public["sourceId"] == "national-egypt"
+assert len(public["events"]) == 7
+assert '"./festival-packs/national-egypt.json"' in s, "Modern occasions must work offline"
+assert not json.loads((root / "data.json").read_text(encoding="utf-8")).get("festivals"), "Embedded religious festivals remain"
 assert not (root / "festival-packs/christian-coptic.json").exists()
 assert not (root / "festival-packs/muslim-egypt.json").exists()
 
