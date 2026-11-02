@@ -3,7 +3,7 @@ import {layoutForViewport,isKeyboardDrivenResize} from './responsive-layout.js';
 import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
-import {AMUN_SOURCE,loadFestivalCatalog,enabledSourceIds,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
+import {loadFestivalCatalog,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
 import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {readRecord,writeRecord,requestPersistentStorage} from './storage.js';
 import {openBackup} from './backup.js';
@@ -88,7 +88,7 @@ let previousRenderKey=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
 // Existing installations keep dynamic lighting enabled until switched off.
-let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,dynamicLighting:true,festivalSources:null,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
+let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,dynamicLighting:true,showHolidays:true,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
 const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
@@ -97,9 +97,8 @@ const week=()=>[7,10].includes(prefs.weeks[lang()])?prefs.weeks[lang()]:(lang()=
 const min=()=>dayNumber(data.min_date),max=()=>dayNumber(data.max_date),clamp=d=>Math.min(max(),Math.max(min(),d));
 const supportedYear=y=>Number.isInteger(y)&&y>=toEgyptian(min()).year&&y<=toEgyptian(max()).year;
 const savePrefs=async()=>writeRecord('preferences',prefs);
-const selectedFestivalIds=()=>enabledSourceIds(prefs.festivalSources,festivalCatalog);
 const itemCache=new Map(),festivalCache=new Map();
-const festivalsOn=day=>{if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,festivalCatalog,prefs.festivalSources));return festivalCache.get(day);};
+const festivalsOn=day=>{if(!prefs.showHolidays)return [];if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,festivalCatalog));return festivalCache.get(day);};
 
 const egy=d=>toEgyptian(d);
 const monthName=m=>m===13?LOCALES[lang()].epagomenal:lang()==='egy'?('𓇹 '+N(m)):data.months[lang()][m-1];
@@ -138,9 +137,9 @@ function hiddenCalendarNotice(day){
 const festivalText=(f,field)=>lang()==='ar'?(field==='title'?f.ar:f.description_ar||''):
  (field==='title'?f[lang()]||'':f['description_'+lang()]||'');
 const FESTIVAL_UI={
- ar:{details:'تفاصيل العيد',close:'إغلاق',sources:'المصادر',ancient:'إسقاط سكندري حديث لتاريخ مصري قديم',dated:'تاريخ معتمد للسنة المذكورة فقط',annual:'مناسبة سنوية حديثة',orthodox:'تاريخ محسوب من الفصح القبطي',notice:'قائمة جزئية، والتواريخ القديمة ليست ثابتة ميلادياً عبر جميع العصور.',translation:'',sourceIntro:'اختر قوائم الأعياد التي تريد عرضها. يمكن اختيار أكثر من قائمة.',personalIntro:'مواعيدك وأعياد الميلاد التي تضيفها بنفسك تظل مستقلة عن هذه القوائم.'},
- cop:{details:'Ⲡⲓϣⲁⲓ',close:'Ϣⲑⲁⲙ',sources:'Ⲛⲓⲡⲏⲅⲏ',ancient:'Ⲟⲩⲙⲉⲧⲉⲣⲙⲏⲛⲓⲁ ⲛ̀ⲁⲗⲉⲝⲁⲛⲇⲣⲓⲛⲏ ⲛ̀ⲃⲉⲣⲓ',dated:'Ⲡⲓⲉϩⲟⲟⲩ ⲛ̀ⲧⲉ ⲡⲓⲣⲟⲙⲡⲓ ⲛ̀ⲟⲩⲱⲧ',annual:'Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲣⲟⲙⲡⲓ ⲛ̀ⲃⲉⲣⲓ',orthodox:'Ⲡⲓⲉϩⲟⲟⲩ ⲙ̀ⲫⲟⲣⲙⲏ ⲛ̀ⲧⲉ ⲡⲓⲡⲁⲥⲭⲁ',notice:'Ⲡⲓⲕⲁⲧⲁⲗⲟⲅⲟⲥ ⲙ̀ⲡⲉϥϫⲱⲕ ⲉ̀ⲃⲟⲗ. Ⲛⲓⲉϩⲟⲟⲩ ⲛ̀ⲁⲣⲭⲁⲓⲟⲥ ⲙ̀ⲡⲟⲩⲥⲙⲟⲛⲧ ⲉ̀ⲡⲓⲣⲟⲙⲡⲓ ⲛ̀ⲃⲉⲣⲓ.',translation:'Ⲡⲓⲉⲣⲙⲏⲛⲓⲁ ⲛ̀ⲃⲉⲣⲓ',sourceIntro:'Ⲥⲱⲧⲡ ⲛ̀ⲛⲓⲕⲁⲧⲁⲗⲟⲅⲟⲥ ⲛ̀ⲛⲓϣⲁⲓ. Ⲥⲱⲧⲡ ⲛ̀ⲟⲩⲙⲏϣ.',personalIntro:'Ⲛⲓⲉⲣⲅⲟⲛ ⲛ̀ⲧⲁⲕ ⲥⲉⲟⲩⲟⲛϧ ⲥⲁⲃⲟⲗ ⲛ̀ⲛⲓϣⲁⲓ.'},
- egy:{details:'𓎛𓃀𓎱',close:'𓐍𓏏𓅓',sources:'𓏞𓏤',ancient:'𓆳𓏺 𓏞𓏤 𓎛𓃀𓎱',dated:'𓆳𓏺 𓏺',annual:'𓎛𓃀𓎱 𓆳𓏺',orthodox:'𓆳𓏺 𓋹𓏤',notice:'𓏞𓏤 · 𓆳𓏺 · 𓎛𓃀𓎱',translation:'𓏞𓏤',sourceIntro:'𓎛𓃀𓎱 𓏞𓏤 𓏥',personalIntro:'𓏞𓏤 𓉐𓏤 𓎛𓃀𓎱'}
+ ar:{details:'تفاصيل المناسبة',sources:'المراجع',annual:'ذكرى أو مناسبة مصرية معاصرة',orthodox:'شم النسيم — الاثنين التالي للقيامة القبطية',notice:'المناسبة تُعرض في تاريخها السنوي، وقد يختلف يوم الإجازة الرسمية.'},
+ cop:{details:'Ⲡⲓϣⲁⲓ',sources:'Ⲛⲓⲡⲏⲅⲏ',annual:'Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲣⲟⲙⲡⲓ ⲛ̀ⲃⲉⲣⲓ',orthodox:'Ⲡⲓϣⲁⲓ ⲛ̀Ϣⲱⲙ ⲛ̀Ⲛⲓⲥⲓⲙ',notice:'Ⲡⲓⲙⲉⲩⲓ ⲛ̀ⲣⲟⲙⲡⲓ.'},
+ egy:{details:'𓎛𓃀𓎱',sources:'𓏞𓏤',annual:'𓎛𓃀𓎱 𓆳𓏺',orthodox:'𓎛𓃀𓎱 𓇳𓏺',notice:'𓎛𓃀𓎱 𓈉𓏤'}
 };
 function festivalMarkup(events,day=state.focus){
  return events.map(f=>{
@@ -158,7 +157,7 @@ function festivalDetails(){
  // A historical Arabic research note often contains bare external URLs.
  // Present those only as safe, short links; never dump them inside prose.
  const note=lang()==='ar'?scriptNote.replace(/(^|\n)\s*المراجع\s*:[^\n]*/g,'').trim():scriptNote;
- const rule=f.calendarRule,type=rule==='dated'?ui.dated:rule==='egyptian-fixed'?ui.ancient:rule==='orthodox-easter'?ui.orthodox:ui.annual;
+ const rule=f.calendarRule,type=rule==='orthodox-easter'?ui.orthodox:ui.annual;
  const sources=[...new Set([f.sourceUrl,...(original.match(/https:\/\/[^\s|]+/g)||[])].filter(url=>{
   try{const u=new URL(url);return u.protocol==='https:'&&url.length<2048;}catch{return false;}
  }))].slice(0,8);
@@ -364,16 +363,15 @@ function listView(){
 }
 
 function settingsView(){
- return '<section class="page preferences-page"><div class="settings-group"><label>'+safe(T().language)+'<select name="language">'+Object.entries(LOCALES).map(([id,v])=>'<option value="'+id+'" '+(id===lang()?'selected':'')+'>'+safe(v.name)+'</option>').join('')+'</select></label><label>'+safe(T().gregorian)+'<input type="checkbox" name="gregorian" '+(prefs.gregorian?'checked':'')+'></label><label>'+safe(T().dynamicLighting)+'<input type="checkbox" name="dynamicLighting" '+(prefs.dynamicLighting?'checked':'')+'></label><label>'+safe(T().weekLength)+'<select name="week">'+[7,10].map(n=>'<option value="'+n+'" '+(n===week()?'selected':'')+'>'+N(n)+'</option>').join('')+'</select></label></div><div class="settings-actions"><button data-open-panel="festivals">'+safe(T().festivals)+' <span>'+safe(N(selectedFestivalIds().length))+' / '+safe(N(festivalCatalog.sources.length))+' ›</span></button><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button><button data-backup>'+safe(T().dataAndBackup)+' <span>›</span></button></div><p class="build-label">'+safe(T().version)+' '+safe(data.version)+'</p></section>';
-}
-function festivalsView(){
- const options=festivalCatalog.sources.map(source=>{
-  const checked=selectedFestivalIds().includes(source.id);
-  const name=festivalSourceName(source,lang());
-  const description=source.description?.[lang()]||source.description?.ar||'';
-  return '<label class="festival-source-row"><input type="checkbox" data-festival-source-id="'+safe(source.id)+'" '+(checked?'checked':'')+'><span class="festival-source-info"><strong>'+safe(name)+'</strong><small>'+safe(N(source.events.length))+' · '+safe(T().festivals)+'</small>'+(description?'<small>'+safe(description)+'</small>':'')+'</span></label>';
- }).join('');
- return '<section class="page festival-source-page"><p class="festival-source-intro">'+safe(FESTIVAL_UI[lang()].sourceIntro)+'</p><div class="festival-source-options">'+options+'</div><p class="festival-source-personal">'+safe(FESTIVAL_UI[lang()].personalIntro)+'</p></section>';
+ return '<section class="page preferences-page"><div class="settings-group">'+
+ '<label>'+safe(T().language)+'<select name="language">'+Object.entries(LOCALES).map(([id,v])=>'<option value="'+id+'" '+(id===lang()?'selected':'')+'>'+safe(v.name)+'</option>').join('')+'</select></label>'+
+ '<label>'+safe(T().gregorian)+'<input type="checkbox" name="gregorian" '+(prefs.gregorian?'checked':'')+'></label>'+
+ '<label>'+safe(T().dynamicLighting)+'<input type="checkbox" name="dynamicLighting" '+(prefs.dynamicLighting?'checked':'')+'></label>'+
+ '<label>'+safe(T().publicHolidays)+'<input type="checkbox" name="showHolidays" '+(prefs.showHolidays?'checked':'')+'></label>'+
+ '<label>'+safe(T().weekLength)+'<select name="week">'+[7,10].map(n=>'<option value="'+n+'" '+(n===week()?'selected':'')+'>'+N(n)+'</option>').join('')+'</select></label>'+
+ '</div><div class="settings-actions"><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button>'+
+ '<button data-backup>'+safe(T().dataAndBackup)+' <span>›</span></button></div>'+
+ '<p class="build-label">'+safe(T().version)+' '+safe(data.version)+'</p></section>';
 }
 function managerView(){
  const a=schedule;
@@ -542,8 +540,8 @@ function editor(){
 
 function panelContent(){
  if(!state.panel)return '';
- const panels={settings:settingsView,calendars:managerView,festivals:festivalsView,appointments:appointmentsView};
- const title={settings:T().settings,calendars:T().calendars,festivals:T().festivals,appointments:lang()==='ar'?'المواعيد':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏏𓏥'};
+ const panels={settings:settingsView,calendars:managerView,appointments:appointmentsView};
+ const title={settings:T().settings,calendars:T().calendars,appointments:lang()==='ar'?'المواعيد':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏏𓏥'};
  const body=panels[state.panel]?.();
  if(!body)return '';
  return '<div class="ux-panel-backdrop" data-dismiss-panel></div><section class="ux-panel" data-panel="'+safe(state.panel)+'" role="dialog" aria-modal="true" aria-label="'+safe(title[state.panel])+'"><div class="ux-panel-head"><strong tabindex="-1" data-panel-heading>'+safe(title[state.panel])+'</strong></div><div class="ux-panel-body">'+body+'</div></section>';
@@ -919,7 +917,7 @@ root.addEventListener('click',async ev=>{
   state.panel=state.panel==='appointments'?null:'appointments';render();return;
  }
  if(b.hasAttribute('data-open-panel')){
-  if(['settings','calendars','festivals'].includes(b.dataset.openPanel)){state.panel=b.dataset.openPanel;render();}
+  if(['settings','calendars'].includes(b.dataset.openPanel)){state.panel=b.dataset.openPanel;render();}
   return;
  }
  if(b.hasAttribute('data-backup')){state.panel=null;render();openBackup();return;}
@@ -957,12 +955,7 @@ root.addEventListener('change',async ev=>{
  if(el.name==='language'&&LOCALES[el.value])prefs.language=el.value;
  else if(el.name==='gregorian')prefs.gregorian=el.checked;
  else if(el.name==='dynamicLighting')prefs.dynamicLighting=el.checked;
-  else if(el.hasAttribute('data-festival-source-id')){
-  const sourceId=el.dataset.festivalSourceId;
-  const enabled=new Set(selectedFestivalIds());
-  if(el.checked)enabled.add(sourceId);else enabled.delete(sourceId);
-  prefs.festivalSources=[...enabled];await savePrefs();render();return;
- }
+  else if(el.name==='showHolidays')prefs.showHolidays=el.checked;
  else if(el.name==='week')prefs.weeks[lang()]=Number(el.value);
  else if(el.hasAttribute('data-visible')){const s=loadScheduler();updateCalendar(s,el.dataset.visible,{visible:el.checked});if(!await saveScheduler(s))alert(lang()==='ar'?'تعذر حفظ التقاويم':'Could not save calendars');render();return;}
  else if(el.closest('#event-editor')&&['egyYear','egyMonth','egyDay','endEgyYear','endEgyMonth','endEgyDay'].includes(el.name)){
@@ -1131,9 +1124,9 @@ async function init(){
   const persisted=await readRecord('scheduler');
   if(persisted!==undefined){if(!validateSchedulerData(persisted))throw Error('Invalid saved appointments');schedule=persisted;}
   const savedPrefs=await readRecord('preferences');
-  if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(typeof savedPrefs.dynamicLighting==='boolean')prefs.dynamicLighting=savedPrefs.dynamicLighting;if(Array.isArray(savedPrefs.festivalSources))prefs.festivalSources=savedPrefs.festivalSources;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;}
+  if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(typeof savedPrefs.dynamicLighting==='boolean')prefs.dynamicLighting=savedPrefs.dynamicLighting;if(typeof savedPrefs.showHolidays==='boolean')prefs.showHolidays=savedPrefs.showHolidays;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;}
   void requestPersistentStorage().catch(console.warn);
-  const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog(data);
+  const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog();
   state.focus=clamp(state.focus);render();setInterval(()=>{updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
