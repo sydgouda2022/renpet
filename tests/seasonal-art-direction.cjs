@@ -34,7 +34,7 @@ async function run(engine,engineName){
       monthBackground:getComputedStyle(el.querySelector('.year-month')).backgroundColor
      }));
      assert.ok(group.background.includes(season+'.webp'),season+' seasonal group uses its own art');
-     assert.ok(group.size.includes('100% auto'),season+' group keeps all scenery width: '+JSON.stringify(group));
+     assert.ok(['100%','100% auto'].includes(group.size.split(',').at(-1).trim()),season+' group keeps all scenery width: '+JSON.stringify(group));
      assert.equal(group.border,'0px','year seasons are not separately framed cards');
      assert.ok(group.radius!=='0px','year groups keep subtle rounded surface');
      assert.ok(group.monthBackground.startsWith('rgba('),'miniature months should show softened scenery');
@@ -53,7 +53,7 @@ async function run(engine,engineName){
       };
      });
      assert.ok(art.image.includes(season+'.webp'),season+' background is visible in month');
-     assert.equal(art.size,'100% auto',name+' scenery avoids horizontal center-cropping');
+     assert.ok(['100%','100% auto'].includes(art.size.trim()),name+' scenery avoids horizontal center-cropping: '+art.size);
      assert.ok(art.mask.includes('gradient'),'blend artwork edges between continuous calendar months');
      assert.ok(art.surface.includes('gradient'),'dates retain a high-contrast parchment layer');
      assert.ok(art.scrollWidth<=art.clientWidth+2,'seasonal art does not create horizontal overflow');
@@ -71,7 +71,7 @@ async function run(engine,engineName){
     }));
     assert.deepEqual(afterLight,initialLight,'switching from Month to Day must not change actual ambient lighting');
     const dayPanel=page.locator('.time-panel[data-stream-kind=day]').nth(1);
-    assert.equal(await dayPanel.evaluate(el=>getComputedStyle(el,'::before').backgroundSize),'100% auto');
+    assert.ok(['100%','100% auto'].includes((await dayPanel.evaluate(el=>getComputedStyle(el,'::before').backgroundSize)).trim()));
     await page.screenshot({path:path.join(out,engineName+'-'+name+'-day-landscape.png'),fullPage:false});
     console.log('RENPET_ART_DIRECTION',JSON.stringify({engine:engineName,screen:name,seasons:[...observed],consistentLighting:true}));
    }finally{await context.close();}
