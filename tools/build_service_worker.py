@@ -128,7 +128,7 @@ self.addEventListener('fetch', event => {
   const cached = await cache.match(canonical.href) ||
     await cache.match(event.request, {ignoreSearch: true});
   // Executable resources must belong to this cached release, never a prior one.
-  const executable=/\\.(?:js|mjs|css)$/.test(url.pathname);
+  const executable=/\.(?:js|mjs|css)$/.test(url.pathname);
   if (executable) {
    try { const fresh=await fetch(event.request,{cache:'no-store'});if(fresh.ok)return fresh; }
    catch{}
