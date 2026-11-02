@@ -1,4 +1,4 @@
-import {DAY,dayNumber,toEgyptian,toGregorian,monthGrid,nativeNumber,monthLength,yearStart} from './calendar.js';
+import {DAY,dayNumber,isoDate,toEgyptian,toGregorian,monthGrid,nativeNumber,monthLength,yearStart} from './calendar.js';
 import {layoutForViewport,isKeyboardDrivenResize} from './responsive-layout.js';
 import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
@@ -489,7 +489,7 @@ function maintainCurrentTimeLine(){
 function repeatEditor(item){
  const repeat=item?.repeat||'none',every=item?.repeatEvery??6,unit=item?.repeatUnit||'day';
  const unitOptions=[['day',T().repeatDays],['decan',T().repeatDecades],['month',T().repeatMonths],['year',T().repeatYears]];
- const options=[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['custom',T().customRepeat]];
+ const options=[['none',T().none],['daily',T().daily],['egy10',T().decan],['egyMonthly',T().monthly],['egyYearly',T().yearly],['gregYearly',T().arYear+' · '+T().gregorianDate],['custom',T().customRepeat]];
  const presets=[1,2,3,6,10];
  return '<section class="repeat-editor"><label>'+safe(T().repeat)+
  '<select name="repeat">'+options.map(([v,n])=>'<option value="'+v+'" '+(repeat===v?'selected':'')+'>'+safe(n)+'</option>').join('')+'</select></label>'+
@@ -522,10 +522,45 @@ function crowdedSheet(){
    '</strong><small>'+timeHtml(i._dayStart,lang())+' – '+timeHtml(i._dayEnd,lang())+
    '</small></button>').join('')+'</div></section>';
 }
+// A personal occasion is just a locally stored all-day event, not another
+// calendar database. It may recur on either the Gregorian or Egyptian date.
+function occasionEditor(item,occurrence){
+ const d=item?.startDay??state.focus;
+ const calendar=item?.occasionCalendar||'gregorian';
+ const category=item?.occasionType||'birthday';
+ const yearly=!item||item.repeat!=='none';
+ const sameYear=yearly?(calendar==='gregorian'?'gregYearly':'egyYearly'):'none';
+ const scope=item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(T().repeat)+'</legend>'+
+ '<div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="series" checked>'+safe(T().arYear)+'</label>'+
+ '<label><input type="radio" name="repeatScope" value="one">'+safe(lang()==='ar'?'هذه المرة فقط':T().once)+'</label></div></fieldset>':'';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet occasion-editor" role="dialog" aria-modal="true" novalidate>'+
+ '<div class="sheet-head"><strong>'+safe(item?T().occasion:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div>'+
+ '<div class="sheet-body"><div class="kind-toggle">'+
+ '<label><input type="radio" name="kind" value="event">'+safe(T().event)+'</label>'+
+ '<label><input type="radio" name="kind" value="reminder">'+safe(T().reminder)+'</label>'+
+ '<label><input type="radio" name="kind" value="occasion" checked>'+safe(T().occasion)+'</label></div>'+
+ '<label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label>'+
+ '<label>'+safe(T().occasionType)+'<select name="occasionType">'+
+ [['birthday',T().birthday],['anniversary',T().anniversary],['other',T().specialOccasion]].map(([id,name])=>
+ '<option value="'+id+'" '+(id===category?'selected':'')+'>'+safe(name)+'</option>').join('')+'</select></label>'+
+ '<label>'+safe(T().dateSystem)+'<select name="occasionCalendar"><option value="gregorian" '+(calendar==='gregorian'?'selected':'')+'>'+
+ safe(T().gregorianDate)+'</option><option value="egyptian" '+(calendar==='egyptian'?'selected':'')+'>'+safe(T().egyptianDate)+'</option></select></label>'+
+ '<label data-occasion-greg '+(calendar==='gregorian'?'':'hidden')+'>'+safe(T().gregorianDate)+
+ '<input name="gregDate" type="date" value="'+isoDate(d)+'" min="'+isoDate(min())+'" max="'+isoDate(max())+'"></label>'+
+ '<div data-occasion-egy '+(calendar==='egyptian'?'':'hidden')+'><label>'+safe(T().egyptianDate)+
+ dateFields(d)+'</label></div>'+
+ '<label>'+safe(T().repeat)+'<select name="occasionRepeat"><option value="yearly" '+(yearly?'selected':'')+'>'+
+ safe(T().annualOccasion)+'</option><option value="none" '+(!yearly?'selected':'')+'>'+safe(T().once)+'</option></select></label>'+
+ scope+
+ '<label>'+safe(T().notes)+'<textarea name="notes" rows="3" maxlength="4000">'+safe(item?.notes||'')+'</textarea></label>'+
+ (item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+
+ '</div></form></div>';
+}
 function editor(){
  const item=state.dialog?.id?schedule.items.find(i=>i.id===state.dialog.id):null;
  const occurrence=item?.repeat!=='none'&&Number.isInteger(state.dialog?.occurrenceDay)?occurrenceStartForDay(item,state.dialog.occurrenceDay):null;
- const d=occurrence??item?.startDay??state.focus,kind=item?.kind||state.dialog?.kind||'event';
+ const d=occurrence??item?.startDay??state.focus,kind=state.dialog?.kind||(item?.occasionType?'occasion':item?.kind||'event');
+ if(kind==='occasion')return occasionEditor(item,occurrence);
  const sched=schedule;
  // Start near the user's current time; the old 9 AM default made an
  // afternoon appointment appear to vanish when Day auto-scrolled to now.
@@ -535,7 +570,7 @@ function editor(){
  const initialEnd=state.dialog?.draftEnd??item?.endMinutes??Math.min(1440,initialStart+60);
  const finish=item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d;
  const spansDays=finish!==d;
- return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'</legend><div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="one" checked><span>'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</span></label><label><input type="radio" name="repeatScope" value="series"><span>'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</span></label></div><p class="repeat-scope-date" aria-live="polite">'+safe(T().date)+' · '+safe(N(egy(d).day)+' '+monthName(egy(d).month)+' '+N(egy(d).year))+'</p></fieldset>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label><label><input type="radio" name="kind" value="occasion" '+(kind==='occasion'?'checked':'')+'>'+safe(T().occasion)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'</legend><div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="one" checked><span>'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</span></label><label><input type="radio" name="repeatScope" value="series"><span>'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</span></label></div><p class="repeat-scope-date" aria-live="polite">'+safe(T().date)+' · '+safe(N(egy(d).day)+' '+monthName(egy(d).month)+' '+N(egy(d).year))+'</p></fieldset>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
 }
 
 function panelContent(){
