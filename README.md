@@ -1,6 +1,6 @@
 # Renpet — Egyptian Calendar
 
-Independent Egyptian calendar, appointments, and festivals PWA. Arabic, Coptic
+Independent Egyptian calendar, appointments, personal occasions, and contemporary Egyptian commemorations PWA. Arabic, Coptic
 and hieroglyphic user interfaces, Alexandrian year system, season artwork,
 offline first-run setup, calendar backup/restore and ICS exchange.
 
