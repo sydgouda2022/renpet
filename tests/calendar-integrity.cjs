@@ -50,7 +50,7 @@ async function main(){
   form=page.locator('#event-editor');
   await form.locator('[name=title]').fill('Egyptian ten-day recurrence');
   const choices=await form.locator('[name=repeat] option').evaluateAll(a=>a.map(x=>x.value));
-  assert.deepEqual(choices,['none','daily','egy10','egyMonthly','egyYearly','custom']);
+  assert.deepEqual(choices,['none','daily','egy10','egyMonthly','egyYearly','gregYearly','custom']);
   await form.locator('[name=repeat]').selectOption('egy10');
   await form.locator('.save-button').click();
   await page.locator('.save-confirmation').waitFor();
