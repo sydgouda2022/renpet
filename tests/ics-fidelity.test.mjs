@@ -79,3 +79,16 @@ test('invalid native metadata is reported as unsupported, not imported inaccurat
  assert.equal(parsed.imported,0);
  assert.equal(parsed.unsupported,1);
 });
+
+test('recurring foreign timezone and UTC schedules cannot silently change at DST',()=>{
+ const calendar=body=>['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT','UID:external-dst',
+  ...body,'SUMMARY:Weekly foreign event','END:VEVENT','END:VCALENDAR'].join('\r\n');
+ const zoned=calendar(['DTSTART;TZID=America/New_York:20260115T090000',
+  'DTEND;TZID=America/New_York:20260115T100000','RRULE:FREQ=DAILY']);
+ assert.equal(parseICS(zoned).unsupported,1);
+ assert.equal(parseICS(zoned.replace('\r\nRRULE:FREQ=DAILY','')).imported,1,
+  'One-off foreign timezones remain supported');
+ const utc=calendar(['DTSTART:20260115T090000Z','DTEND:20260115T100000Z',
+  'RRULE:FREQ=YEARLY']);
+ assert.equal(parseICS(utc).unsupported,1);
+});
