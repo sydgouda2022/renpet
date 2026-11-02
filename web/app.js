@@ -5,7 +5,7 @@ import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {loadFestivalCatalog,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
 import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
-import {readRecord,writeRecord,requestPersistentStorage,StorageConflictError} from './storage.js';
+import {readRecord,writeRecord,requestPersistentStorage,recordRevision,StorageConflictError} from './storage.js';
 import {showSchedulerRecovery} from './recovery.js';
 import {openBackup} from './backup.js';
 import {syncModalFocus} from './dialog-focus.mjs';
@@ -76,13 +76,14 @@ function updateSceneLighting(){
  document.body.style.setProperty('--scene-saturation',String(first[2]+(last[2]-first[2])*t));
 }
 
-let schedule=emptyState();
+let schedule=emptyState(),scheduleRevision=0,preferencesRevision=0;
 let crowdedDayGroups=[];
 const loadScheduler=()=>structuredClone(schedule);
 async function saveScheduler(next){
  if(!validateSchedulerData(next))throw new Error('Invalid appointment data');
  try{
-  await writeRecord('scheduler',next);
+  await writeRecord('scheduler',next,scheduleRevision);
+  scheduleRevision++;
   schedule=next;
   return true;
  }catch(error){
@@ -104,7 +105,7 @@ const spoken=key=>lang()==='egy'?WORDS.ar[key]:T()[key];
 const week=()=>[7,10].includes(prefs.weeks[lang()])?prefs.weeks[lang()]:(lang()==='ar'?7:10);
 const min=()=>dayNumber(data.min_date),max=()=>dayNumber(data.max_date),clamp=d=>Math.min(max(),Math.max(min(),d));
 const supportedYear=y=>Number.isInteger(y)&&y>=toEgyptian(min()).year&&y<=toEgyptian(max()).year;
-const savePrefs=async()=>writeRecord('preferences',prefs);
+const savePrefs=async()=>{await writeRecord('preferences',prefs,preferencesRevision);preferencesRevision++;};
 const itemCache=new Map(),festivalCache=new Map();
 const festivalsOn=day=>{if(!prefs.showHolidays)return [];if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,festivalCatalog));return festivalCache.get(day);};
 
@@ -1263,7 +1264,9 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
 async function init(){
  try{
   const persisted=await readRecord('scheduler');
+  scheduleRevision=recordRevision('scheduler');
   const savedPrefs=await readRecord('preferences');
+  preferencesRevision=recordRevision('preferences');
   if(persisted!==undefined){
    if(!validateSchedulerData(persisted)){
     showSchedulerRecovery(root,persisted);
