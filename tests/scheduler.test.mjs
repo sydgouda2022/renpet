@@ -12,7 +12,7 @@ test('empty local calendar state is valid',()=>{
  assert.equal(state.calendars.length,3);
  assert.equal(state.items.length,0);
  assert.equal(validateSchedulerData(state),true);
- assert.deepEqual(REPEAT_RULES,['none','daily','egy10','egyMonthly','egyYearly','custom']);
+ assert.deepEqual(REPEAT_RULES,['none','daily','egy10','egyMonthly','egyYearly','gregYearly','custom']);
 });
 test('appointments and calendars are edited without persistence side effects',()=>{
  const s=emptyState(),a=createItem({title:'Egyptian appointment',startDay:day,calendarId:'personal'});
@@ -55,7 +55,7 @@ test('reminder completion and invalid data',()=>{
  assert.equal(isCompleted(e,day),true);
  assert.equal(isCompleted(e,day+10),false);
  assert.equal(validateSchedulerData(s),true);
- e.repeat='gregYearly';
+ e.repeat='invalid-rule';
  assert.equal(validateSchedulerData(s),false);
 });
 
@@ -88,4 +88,21 @@ test('invalid custom intervals are rejected without silently changing the schedu
   const item=createItem({title:'Invalid',startDay:day,repeat:'custom',repeatEvery,repeatUnit});
   assert.equal(validateSchedulerData({...emptyState(),items:[item]}),false);
  }
+});
+
+test('personal occasions recur in their selected calendar and retain their type',()=>{
+ const birthday=createItem({title:'Birthday',kind:'event',occasionType:'birthday',occasionCalendar:'gregorian',
+  startDay:dayNumber('2026-02-28'),endDay:dayNumber('2026-02-28'),allDay:true,repeat:'gregYearly'});
+ const anniversary=createItem({title:'Anniversary',occasionType:'anniversary',occasionCalendar:'egyptian',
+  startDay:toGregorian({year:6268,month:4,day:20}),repeat:'egyYearly',allDay:true});
+ const state=emptyState();state.items.push(birthday,anniversary);
+ assert.equal(validateSchedulerData(state),true);
+ assert.equal(nextOccurrence(birthday,birthday.startDay+1),dayNumber('2027-02-28'));
+ assert.equal(nextOccurrence(anniversary,anniversary.startDay+1),toGregorian({year:6269,month:4,day:20}));
+ assert.equal(itemsForDay(state,dayNumber('2027-02-28'))[0].occasionType,'birthday');
+ const feb29=createItem({title:'Leap day',occasionType:'birthday',occasionCalendar:'gregorian',
+  startDay:dayNumber('2024-02-29'),repeat:'gregYearly',allDay:true});
+ assert.equal(nextOccurrence(feb29,dayNumber('2025-01-01'),365*5),dayNumber('2028-02-29'));
+ const wrong=createItem({title:'Invalid',occasionType:'birthday',occasionCalendar:'ancient',startDay:day});
+ assert.equal(validateSchedulerData({...emptyState(),items:[wrong]}),false);
 });
