@@ -28,7 +28,7 @@ function close(){
 }
 async function records(){
  const [scheduler,preferences]=await Promise.all([readRecord('scheduler'),readRecord('preferences')]);
- return {scheduler:scheduler??emptyState(),preferences:preferences??{language:'ar',gregorian:true,festivalSources:null,weeks:{},reminders:false}};
+ return {scheduler:scheduler??emptyState(),preferences:preferences??{language:'ar',gregorian:true,showHolidays:true,dynamicLighting:true,weeks:{}}};
 }
 async function backup(){
  download(createBackup(await records()),'renpet-'+stamp()+'.json');
