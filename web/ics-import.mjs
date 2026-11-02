@@ -101,23 +101,30 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
    if(a.day<minDay||last>maxDay||last<a.day||(!allDay&&(b.day<a.day||(b.day===a.day&&b.minutes<=a.minutes)))){
     counts.invalid++;continue;
    }
-   const rule=prop('RRULE')?.value,parts=Object.fromEntries((rule||'').split(';').filter(Boolean).map(s=>s.split('=')));
+   const rule=prop('RRULE')?.value;
+   const parts=Object.fromEntries((rule||'').split(';').filter(Boolean).map(s=>s.split('=')));
    let repeat='none',customInterval=null;
+   const customUnit=prop('X-RENPET-REPEAT-UNIT')?.value;
    if(rule){
     const fields=Object.keys(parts);
     const interval=parts.INTERVAL===undefined?1:Number(parts.INTERVAL);
-    if(fields.some(k=>!['FREQ','INTERVAL'].includes(k))||parts.FREQ!=='DAILY'||
-      !/^[1-9][0-9]*$/.test(String(parts.INTERVAL??'1'))||!Number.isSafeInteger(interval)||
-      interval<1||interval>3650){counts.unsupported++;continue;}
-    if(interval===1)repeat='daily';
-    else if(interval===10)repeat='egy10';
-    else{
-     const decan=interval>365&&interval%10===0;
-     if(interval>365&&!decan){counts.unsupported++;continue;}
-     repeat='custom';
-     customInterval={repeatEvery:decan?interval/10:interval,repeatUnit:decan?'decan':'day'};
-    }
+    if(fields.some(k=>!['FREQ','INTERVAL'].includes(k))||
+      !/^[1-9][0-9]*$/.test(String(parts.INTERVAL??'1'))||
+      !Number.isSafeInteger(interval)||interval<1||interval>3650){counts.unsupported++;continue;}
+    if(parts.FREQ==='YEARLY'&&interval===1){repeat='gregYearly';}
+    else if(parts.FREQ==='DAILY'){
+     if(interval===1)repeat='daily';
+     else if(interval===10&&customUnit===undefined)repeat='egy10';
+     else{
+      const decan=customUnit==='DECAN'||(customUnit===undefined&&interval>365&&interval%10===0);
+      if((customUnit!==undefined&&!['DAY','DECAN'].includes(customUnit))||
+         (decan&&interval%10!==0)||interval/(decan?10:1)>365){counts.unsupported++;continue;}
+      repeat='custom';
+      customInterval={repeatEvery:interval/(decan?10:1),repeatUnit:decan?'decan':'day'};
+     }
+    }else{counts.unsupported++;continue;}
    }
+   if(customUnit!==undefined&&repeat!=='custom'){counts.unsupported++;continue;}
    const alarmCount=components.filter(line=>line==='BEGIN:VALARM').length;
    let alert='none';
    if(alarmCount){
@@ -140,8 +147,26 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
    }
    if(invalidExclusion){counts.unsupported++;continue;}
    const title=unescapeICS(prop('SUMMARY')?.value||'Imported event').slice(0,200).trim()||'Imported event';
-   found.push({importUID:uid,title,startDay:a.day,endDay:last,startMinutes:allDay?540:a.minutes,
-    endMinutes:allDay?600:midnightEnd?1440:b.minutes,allDay,location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
+   const nativeKind=prop('X-RENPET-KIND')?.value;
+   if(nativeKind!==undefined&&nativeKind!=='REMINDER'){counts.unsupported++;continue;}
+   const categories=(p.get('CATEGORIES')||[]).flatMap(field=>field.value.split(','))
+    .map(category=>unescapeICS(category).trim().toUpperCase());
+   const kind=nativeKind==='REMINDER'||categories.includes('REMINDER')?'reminder':'event';
+   const occasionType=prop('X-RENPET-OCCASION-TYPE')?.value?.toLowerCase();
+   const occasionCalendar=prop('X-RENPET-OCCASION-CALENDAR')?.value?.toLowerCase();
+   if(Boolean(occasionType)!==Boolean(occasionCalendar)||
+    (occasionType&&!['birthday','anniversary','other'].includes(occasionType))||
+    (occasionCalendar&&!['gregorian','egyptian'].includes(occasionCalendar))){
+    counts.unsupported++;continue;
+   }
+   if(occasionType&&(kind==='reminder'||!allDay||
+    (repeat!=='none'&&(occasionCalendar==='gregorian'?repeat!=='gregYearly':repeat!=='egyYearly')))){
+    counts.unsupported++;continue;
+   }
+   found.push({importUID:uid,title,startDay:a.day,endDay:last,startMinutes:allDay?0:a.minutes,
+    endMinutes:allDay?1440:midnightEnd?1440:b.minutes,allDay,kind,
+    ...(occasionType?{occasionType,occasionCalendar}:{}),
+    location:unescapeICS(prop('LOCATION')?.value||'').slice(0,300),
     notes:unescapeICS(prop('DESCRIPTION')?.value||'').slice(0,4000),repeat,...(customInterval||{}),alert,excludedDays:[...new Set(excludedDays)]});
    counts.imported++;known.add(uid);continue;
   }
