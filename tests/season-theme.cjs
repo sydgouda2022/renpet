@@ -73,9 +73,9 @@ async function main(){
      }));
      assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must be directly visible: '+style.image);
      assert.equal(style.pseudo,'none',season+' artwork must not be hidden in pseudo-element');
-     assert.ok(style.imageSize.includes('cover'),season+' landscape must fill section');
+     assert.ok(style.imageSize.includes('100% auto'),season+' must show whole-width plants rather than crop the scene');
      assert.ok(Number(style.shade)>0,season+' card keeps dynamic night shading');
-     assert.notEqual(style.border,'0px',season+' remains a visible section');
+     assert.equal(style.border,'0px',season+' has no redundant frame around its natural landscape');
     }
     // The actual Year writing surface must occupy its viewport rather than
     // leave wide decorative margins or undersized month strips.
