@@ -176,6 +176,59 @@ async function main(){
      assert.ok(await page.locator('.time-panel[data-focus-day="'+seeded.next+'"] .timeline-event[data-edit="'+seeded.id+'"]').count(),
       'Upcoming recurring event is missing after search navigation');
     });
+    await step(device,'create a Gregorian birthday that recurs every year and survives reload',async()=>{
+     await page.locator('header [data-new]').click();
+     await page.locator('#event-editor input[name=kind][value=occasion]').check();
+     const editor=page.locator('#event-editor.occasion-editor');
+     assert.ok(await editor.isVisible(),'Personal occasion editor should open');
+     await editor.locator('[name=title]').fill('Birthday '+device);
+     await editor.locator('[name=occasionType]').selectOption('birthday');
+     await editor.locator('[name=occasionCalendar]').selectOption('gregorian');
+     await editor.locator('[name=gregDate]').fill('1991-05-10');
+     await editor.locator('[name=occasionRepeat]').selectOption('yearly');
+     await editor.locator('.save-button').click();
+     await editor.waitFor({state:'detached'});
+     const item=(await record(page,'scheduler')).items.find(x=>x.title==='Birthday '+device);
+     assert.ok(item,'Birthday was not persisted');
+     assert.equal(item.repeat,'gregYearly');
+     assert.equal(item.occasionType,'birthday');
+     assert.equal(item.occasionCalendar,'gregorian');
+     assert.equal(item.allDay,true);
+     assert.equal(item.startDay,await page.evaluate(async()=> (await import('./calendar.js')).dayNumber('1991-05-10')));
+     assert.ok(await page.locator('.all-day [data-edit="'+item.id+'"]').count(),'New birthday must be visible on its next occurrence');
+     await page.reload();await page.locator('.time-rail').waitFor();
+     assert.ok((await record(page,'scheduler')).items.some(x=>x.id===item.id),'Birthday not restored after reload');
+     await page.locator('header [data-open-panel=settings]').click();
+     await page.locator('.ux-panel [name=showHolidays]').uncheck();
+     assert.equal((await record(page,'preferences')).showHolidays,false);
+     await page.locator('.ux-panel-backdrop').click({position:{x:5,y:5}});
+     assert.ok((await record(page,'scheduler')).items.some(x=>x.id===item.id),
+      'Hiding national occasions must not hide or remove personal birthdays');
+     await page.locator('header [data-open-panel=settings]').click();
+     await page.locator('.ux-panel [name=showHolidays]').check();
+     await page.locator('.ux-panel-backdrop').click({position:{x:5,y:5}});
+    });
+    await step(device,'create and edit Egyptian-year wedding anniversary',async()=>{
+     await page.locator('header [data-new]').click();
+     await page.locator('#event-editor input[name=kind][value=occasion]').check();
+     const form=page.locator('#event-editor.occasion-editor');
+     await form.locator('[name=title]').fill('Wedding anniversary '+device);
+     await form.locator('[name=occasionType]').selectOption('anniversary');
+     await form.locator('[name=occasionCalendar]').selectOption('egyptian');
+     assert.ok(await form.locator('[data-occasion-egy]').isVisible(),'Egyptian date editor must appear');
+     assert.equal(await form.locator('[data-occasion-greg]').isVisible(),false);
+     await form.locator('.save-button').click();
+     await form.waitFor({state:'detached'});
+     const item=(await record(page,'scheduler')).items.find(x=>x.title==='Wedding anniversary '+device);
+     assert.ok(item&&item.repeat==='egyYearly'&&item.occasionType==='anniversary',
+      'Egyptian anniversary must use Egyptian year recurrence');
+     await page.locator('.all-day [data-edit="'+item.id+'"]').click();
+     const editor=page.locator('#event-editor.occasion-editor');
+     await editor.locator('[name=title]').fill('Anniversary updated '+device);
+     await editor.locator('.save-button').click();
+     assert.equal((await record(page,'scheduler')).items.find(x=>x.id===item.id).title,
+      'Anniversary updated '+device);
+    });
     await step(device,'Today returns to the current timeframe',async()=>{
      await page.locator('header [data-up-level]').click();
      assert.equal(await page.locator('body').getAttribute('data-view'),'month');
