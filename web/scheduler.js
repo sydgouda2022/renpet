@@ -9,7 +9,7 @@ export const DEFAULT_CALENDARS=[
 const copy=value=>structuredClone(value);
 const uid=()=>crypto.randomUUID();
 export function emptyState(){return {calendars:copy(DEFAULT_CALENDARS),items:[]};}
-export const REPEAT_RULES=Object.freeze(['none','daily','egy10','egyMonthly','egyYearly','custom']);
+export const REPEAT_RULES=Object.freeze(['none','daily','egy10','egyMonthly','egyYearly','gregYearly','custom']);
 export const CUSTOM_UNITS=Object.freeze(['day','decan','month','year']);
 export const MAX_REPEAT_INTERVAL=365;
 export function validateSchedulerData(state){
@@ -24,6 +24,7 @@ export function validateSchedulerData(state){
   if(!Number.isInteger(i.startDay)||!Number.isInteger(i.endDay)||i.endDay<i.startDay||i.endDay-i.startDay>3660)return false;
   if(!Number.isInteger(i.startMinutes)||i.startMinutes<0||i.startMinutes>=1440||!Number.isInteger(i.endMinutes)||i.endMinutes<0||i.endMinutes>1440)return false;
   if(!REPEAT_RULES.includes(i.repeat)||!['none','atTime','5min','15min','1hour','1day'].includes(i.alert))return false;
+  if(i.occasionType!==undefined&&(!['birthday','anniversary','other'].includes(i.occasionType)||!['gregorian','egyptian'].includes(i.occasionCalendar)))return false;
   if(i.repeat==='custom'&&(!Number.isInteger(i.repeatEvery)||i.repeatEvery<1||i.repeatEvery>MAX_REPEAT_INTERVAL||!CUSTOM_UNITS.includes(i.repeatUnit)))return false;
   if(typeof i.location!=='string'||i.location.length>300||typeof i.notes!=='string'||i.notes.length>4000)return false;
   if(!Array.isArray(i.excludedDays||[])||!Array.isArray(i.completedDays||[]))return false;
@@ -40,6 +41,7 @@ export function createItem(values){
   endMinutes:Number.isInteger(values.endMinutes)?values.endMinutes:600,
   allDay:Boolean(values.allDay),location:String(values.location||'').trim(),notes:String(values.notes||'').trim(),
   calendarId:String(values.calendarId||'personal'),alert:String(values.alert||'none'),repeat:String(values.repeat||'none'),
+  ...(values.occasionType?{occasionType:String(values.occasionType),occasionCalendar:String(values.occasionCalendar||'gregorian')}:{}),
   ...(values.repeat==='custom'?{repeatEvery:Number(values.repeatEvery),repeatUnit:String(values.repeatUnit)}:{}),
   completed:Boolean(values.completed),completedDays:Array.isArray(values.completedDays)?values.completedDays:[],createdAt:now,updatedAt:now
  };
@@ -121,6 +123,12 @@ function isStartOccurrence(item,day){
  }
  if(item.repeat==='egyMonthly')return candidate.day===base.day&&monthSerial(candidate)>=monthSerial(base);
  if(item.repeat==='egyYearly')return candidate.year>=base.year&&candidate.month===base.month&&candidate.day===base.day;
+ if(item.repeat==='gregYearly'){
+  // Civil birthdays and anniversaries follow their Gregorian month/day.
+  // 29 February is observed only in leap years, never silently moved.
+  const original=new Date(item.startDay*86400000),current=new Date(day*86400000);
+  return current.getUTCMonth()===original.getUTCMonth()&&current.getUTCDate()===original.getUTCDate();
+ }
  return false;
 }
 // A concrete recurrence start is identified separately from a day within
