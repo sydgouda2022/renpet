@@ -60,6 +60,7 @@ jobs:
           node tests/offline-redirect.cjs
           node tests/phase-one-data-safety.cjs
           node tests/midnight-rollover.cjs
+          node tests/ics-roundtrip-browser.cjs
       - name: Preserve screenshots and failures for audit
         if: always()
         uses: actions/upload-artifact@v4
