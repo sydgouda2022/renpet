@@ -7,9 +7,9 @@ import {dayNumber} from './calendar.js';
 import {syncModalFocus} from './dialog-focus.mjs';
 
 const WORDS={
- ar:{title:'بيانات رنبت',info:'كل المواعيد والإعدادات محفوظة على جهازك فقط.',export:'تصدير نسخة محلية',restore:'استعادة نسخة',undo:'التراجع عن آخر استعادة أو استيراد',ics:'تصدير تقويم ICS',importICS:'استيراد ICS',close:'إغلاق',confirm:'ستُستبدل المواعيد والإعدادات الحالية. سيتم حفظ نسخة محلية منها يمكن الرجوع إليها. هل تريد المتابعة؟',done:'تم حفظ البيانات. سيعاد تشغيل رنبت.'},
- cop:{undo:'Ⲧⲁϩⲟ ⲛ̀ⲥⲁ',title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ',info:'Ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ ϧⲉⲛ ⲡⲉⲕⲥⲱⲙⲁ.',export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',restore:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',ics:'ICS ↓',importICS:'ICS ↑',close:'Ϣⲧⲁⲙ',confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?',done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.'},
- egy:{undo:'𓏞 ↶',title:'𓆳𓏏𓏤 · 𓏞',info:'𓏞 𓆳𓏏 𓉐𓏤',export:'𓏞 ↓',restore:'𓏞 ↑',ics:'ICS ↓',importICS:'ICS ↑',close:'𓐍𓏏𓅓',confirm:'𓏞 ↑ ?',done:'𓏞 ✓'}
+ ar:{title:'بيانات رنبت',info:'كل المواعيد والإعدادات محفوظة على جهازك فقط.',export:'تصدير نسخة محلية',restore:'استعادة نسخة',undo:'التراجع عن آخر استعادة أو استيراد',ics:'تصدير تقويم ICS',importICS:'استيراد ICS',close:'إغلاق',icsConfirm:'سيتم إضافة المواعيد المستوردة إلى التقويم الحالي دون حذف المواعيد الموجودة. أي تعديل يمكن التراجع عنه من هذه الشاشة. هل تريد الاستمرار؟',confirm:'ستُستبدل المواعيد والإعدادات الحالية. سيتم حفظ نسخة محلية منها يمكن الرجوع إليها. هل تريد المتابعة؟',done:'تم حفظ البيانات. سيعاد تشغيل رنبت.'},
+ cop:{undo:'Ⲧⲁϩⲟ ⲛ̀ⲥⲁ',title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ',info:'Ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ ϧⲉⲛ ⲡⲉⲕⲥⲱⲙⲁ.',export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',restore:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',ics:'ICS ↓',importICS:'ICS ↑',close:'Ϣⲧⲁⲙ',icsConfirm:'ⲒⲤⲤ ⲉ̀ϧⲟⲩⲛ? ',confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?',done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.'},
+ egy:{undo:'𓏞 ↶',title:'𓆳𓏏𓏤 · 𓏞',info:'𓏞 𓆳𓏏 𓉐𓏤',export:'𓏞 ↓',restore:'𓏞 ↑',ics:'ICS ↓',importICS:'ICS ↑',close:'𓐍𓏏𓅓',icsConfirm:'ICS 𓏞 ↑ ?',confirm:'𓏞 ↑ ?',done:'𓏞 ✓'}
 };
 let overlay=null,previousFocus=null;
 const language=()=>WORDS[document.body.dataset.language]||WORDS.ar;
@@ -70,6 +70,26 @@ async function exportCalendar(){
  if(!result.count)throw Error('No events to export');
  download(result.text,'renpet-'+stamp()+'.ics','text/calendar;charset=utf-8');
 }
+// Never claim a partial ICS import is complete. Distinguish files parsed,
+// duplicates, unsupported recurrence/time zones, malformed events, and actual
+// cancellations in the user-facing confirmation BEFORE changing storage.
+export function icsImportSummary(result,matchedCancellations,lang='ar'){
+ const c=Number(matchedCancellations)||0;
+ if(lang==='ar')return [
+  'نتيجة قراءة ملف ICS:',
+  'مواعيد جاهزة للإضافة: '+result.imported,
+  'مواعيد مكررة: '+result.duplicate,
+  'مواعيد غير مدعومة: '+result.unsupported,
+  'مواعيد غير صالحة: '+result.invalid,
+  'إلغاءات مطابقة: '+c,
+  ...(result.cancelled>c?['إلغاءات غير مطابقة: '+(result.cancelled-c)]:[])
+ ].join('\n');
+ return [
+  'ICS · +'+result.imported+' · ='+result.duplicate,
+  '⚠ '+result.unsupported+' · ! '+result.invalid,
+  '−'+c+(result.cancelled>c?' · ?'+(result.cancelled-c):'')
+ ].join('\n');
+}
 async function importCalendar(){
  const picker=document.createElement('input');picker.type='file';picker.accept='.ics,text/calendar';
  picker.addEventListener('change',async()=>{
@@ -85,17 +105,18 @@ async function importCalendar(){
     knownSeriesIds:state.items.map(item=>item.id)
    });
    const cancellations=result.cancellations.filter(uid=>state.items.some(item=>item.importUID===uid));
-   if(!result.imported&&!cancellations.length){alert('No supported events found');return;}
-   if(!confirm(language().confirm))return;
+   const summary=icsImportSummary(result,cancellations.length,document.body.dataset.language);
+   if(!result.imported&&!cancellations.length){alert(summary);return;}
+   if(!confirm(summary+'\n\n'+language().icsConfirm))return;
    for(const uid of cancellations)for(const item of state.items.filter(item=>item.importUID===uid))removeItem(state,item.id);
    for(const source of result.items){
-    const item={...createItem({...source,kind:'event',calendarId:'personal'}),importUID:source.importUID,excludedDays:source.excludedDays??[]};
+    const item={...createItem({...source,calendarId:'personal'}),importUID:source.importUID,excludedDays:source.excludedDays??[]};
     ensureSavedItemVisible(state,item);upsertItem(state,item);
    }
    if(!validateSchedulerData(state))throw Error('Calendar import includes unsupported events');
    await readRecord('restoreSnapshot');
    await writeRecords({scheduler:state,restoreSnapshot:{...current,scheduler:before,savedAt:new Date().toISOString()}});
-   alert(language().done);location.reload();
+   alert(summary+'\n\n'+language().done);location.reload();
   }catch(error){alert(error.message);}
  },{once:true});
  picker.click();
