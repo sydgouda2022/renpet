@@ -4,7 +4,7 @@ import {dayNumber,toGregorian} from '../web/calendar.js';
 import {
  emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,
  createCalendar,updateCalendar,removeCalendar,ensureSavedItemVisible,
- toggleCompleted,isCompleted,excludeOccurrence,occurrenceStartForDay,nextOccurrence,REPEAT_RULES
+ toggleCompleted,isCompleted,excludeOccurrence,occurrenceStartForDay,nextOccurrence,updateSeriesItem,REPEAT_RULES
 } from '../web/scheduler.js';
 const day=dayNumber('2026-10-14');
 test('empty local calendar state is valid',()=>{
@@ -105,4 +105,48 @@ test('personal occasions recur in their selected calendar and retain their type'
  assert.equal(nextOccurrence(feb29,dayNumber('2025-01-01'),365*5),dayNumber('2028-02-29'));
  const wrong=createItem({title:'Invalid',occasionType:'birthday',occasionCalendar:'ancient',startDay:day});
  assert.equal(validateSchedulerData({...emptyState(),items:[wrong]}),false);
+});
+
+test('default future search finds leap-day birthdays and leap epagomenal dates',()=>{
+ const born=dayNumber('2024-02-29'),birthday=createItem({title:'Leap birthday',startDay:born,repeat:'gregYearly'});
+ assert.equal(nextOccurrence(birthday,dayNumber('2025-03-01')),dayNumber('2028-02-29'));
+ excludeOccurrence(birthday,dayNumber('2028-02-29'));
+ assert.equal(nextOccurrence(birthday,dayNumber('2025-03-01')),dayNumber('2032-02-29'));
+ const sixth=toGregorian({year:6268,month:13,day:6});
+ const leapDay=createItem({title:'Year-end sixth day',startDay:sixth,repeat:'egyYearly'});
+ assert.equal(nextOccurrence(leapDay,sixth+1),toGregorian({year:6272,month:13,day:6}));
+ excludeOccurrence(leapDay,toGregorian({year:6272,month:13,day:6}));
+ assert.equal(nextOccurrence(leapDay,sixth+1),toGregorian({year:6276,month:13,day:6}));
+});
+
+test('custom repeat every several years searches without daily scanning',()=>{
+ const start=toGregorian({year:6268,month:13,day:6});
+ const years=createItem({title:'Every ten Egyptian years',startDay:start,repeat:'custom',repeatEvery:10,repeatUnit:'year'});
+ assert.equal(nextOccurrence(years,start+1),toGregorian({year:6288,month:13,day:6}));
+ assert.equal(nextOccurrence(years,start+1,365*5),null);
+ const days=createItem({title:'Every 360 days',startDay:day,repeat:'custom',repeatEvery:360,repeatUnit:'day'});
+ for(let index=1;index<=5;index++)excludeOccurrence(days,day+360*index);
+ assert.equal(nextOccurrence(days,day+1),day+360*6);
+ const months=createItem({title:'Every 13 Egyptian months',startDay:start,repeat:'custom',repeatEvery:13,repeatUnit:'month'});
+ assert.equal(nextOccurrence(months,start+1),toGregorian({year:6272,month:13,day:6}));
+});
+
+test('series edits clear only anchor-dependent exclusions and completion state',()=>{
+ const base=createItem({title:'Shift',startDay:day,repeat:'custom',repeatEvery:6,repeatUnit:'day',kind:'reminder'});
+ excludeOccurrence(base,day+6);
+ toggleCompleted(base,day+12);
+ const titleEdit=updateSeriesItem(base,{title:'Shift changed'});
+ assert.deepEqual(titleEdit.excludedDays,[day+6]);
+ assert.deepEqual(titleEdit.completedDays,[day+12]);
+ assert.equal(base.title,'Shift');
+ const rescheduled=updateSeriesItem(base,{repeatEvery:7});
+ assert.deepEqual(rescheduled.excludedDays,[]);
+ assert.deepEqual(rescheduled.completedDays,[]);
+ assert.equal(rescheduled.startDay,day);
+ assert.deepEqual(base.excludedDays,[day+6]);
+ const moved=updateSeriesItem(base,{startDay:day+1});
+ assert.deepEqual(moved.excludedDays,[]);
+ const changedKind=updateSeriesItem(base,{repeat:'none'});
+ assert.deepEqual(changedKind.excludedDays,[]);
+ assert.equal(nextOccurrence(rescheduled,day+7),day+7);
 });
