@@ -93,12 +93,17 @@ jobs:
           # byte-for-byte against the artifacts that passed this CI run.
           for asset in index.html app.js data.json sw.js; do
             expected="$(sha256sum "web/$asset" | cut -d ' ' -f1)"
-            actual="$(curl --fail --location --silent --show-error --retry 5 --retry-delay 2 \
-              -H 'Cache-Control: no-cache' \
-              "https://renpet.sydgouda.workers.dev/$asset?build=$GITHUB_SHA" \
-              | sha256sum | cut -d ' ' -f1)"
+            actual=''
+            # Workers assets can take a short time to propagate to the edge.
+            # Retry a successful-but-stale HTTP response, not just HTTP errors.
+            for attempt in 1 2 3 4 5 6 7; do
+              actual="$(curl --fail --location --silent --show-error --retry 5 --retry-delay 2 -H 'Cache-Control: no-cache' "https://renpet.sydgouda.workers.dev/$asset?build=$GITHUB_SHA" | sha256sum | cut -d ' ' -f1)"
+              if [ "$actual" = "$expected" ]; then break; fi
+              if [ "$attempt" -lt 7 ]; then sleep 3; fi
+            done
             if [ "$actual" != "$expected" ]; then
-              echo "::error file=$asset::Cloudflare is not serving the verified Renpet release"
+              echo "::error title=Renpet production mismatch::$asset: expected $expected, got $actual"
               exit 1
             fi
+            echo "Verified deployed $asset against CI build"
           done
