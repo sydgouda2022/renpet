@@ -102,6 +102,10 @@ export function parseICS(text,{minDay=-Infinity,maxDay=Infinity,knownUIDs=[],kno
     counts.invalid++;continue;
    }
    const rule=prop('RRULE')?.value;
+   // Recurring instants in another time zone move relative to local wall time
+   // when DST rules change. Renpet stores floating local hours, so importing
+   // them as local repeated events would silently change their meaning.
+   if(rule&&!allDay&&(zone||start.value.endsWith('Z'))){counts.unsupported++;continue;}
    const parts=Object.fromEntries((rule||'').split(';').filter(Boolean).map(s=>s.split('=')));
    let repeat='none',customInterval=null;
    const customUnit=prop('X-RENPET-REPEAT-UNIT')?.value;
