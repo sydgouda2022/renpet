@@ -50,6 +50,7 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .time-panel[data-stream-kind="day"]{min-height:0;padding-bottom:12px}
 .time-panel[data-season-id="akhet"]{--rail-art:url('assets/seasons/akhet.webp')}
 .time-panel[data-season-id="peret"]{--rail-art:url('assets/seasons/peret.webp')}
+.time-panel[data-season-id="shemu"]{--rail-art:url('assets/seasons/shemu.webp')}
 /* Seasonal landscapes are full-width botanical scenery rather than a
    cropped full-height picture. Their transparent fade hides the source
    artwork's repetitive top frieze, keeps the foliage at the bottom, and
