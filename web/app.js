@@ -4,7 +4,7 @@ import {LOCALES} from './locales.js';
 import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {loadFestivalCatalog,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
-import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
+import {emptyState,validateSchedulerData,createItem,updateSeriesItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
 import {readRecord,writeRecord,requestPersistentStorage,recordRevision,StorageConflictError} from './storage.js';
 import {showSchedulerRecovery} from './recovery.js';
 import {openBackup} from './backup.js';
@@ -96,6 +96,7 @@ async function saveScheduler(next){
 let previousRenderKey=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
+let lastRenderedToday=today();
 // Existing installations keep dynamic lighting enabled until switched off.
 let data=null,festivalCatalog={sources:[]},festivalLoadError=null,prefs={language:'ar',gregorian:true,dynamicLighting:true,showHolidays:true,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
@@ -432,7 +433,7 @@ function searchResults(){
   // A recurring result should take the user to the next live occurrence,
   // not to a distant original start date. Reuse the scheduler's calendar
   // recurrence engine so custom intervals and exclusions are respected.
-  const occurrence=i.repeat==='none'?null:nextOccurrence(i,today());
+  const occurrence=i.repeat==='none'?null:nextOccurrence(i,today(),Math.max(0,max()-today()+1));
   const target=occurrence??i.startDay,e=egy(target);
   const label=N(e.day)+' '+monthName(e.month)+' '+N(e.year)+(prefs.gregorian?' · '+greg(target):'');
   return '<button data-result="'+target+'" data-search-id="'+safe(i.id)+'"><strong>'+safe(i.title)+'</strong><small>'+safe(label)+'</small></button>';
@@ -680,8 +681,26 @@ function extendRail(main){
   else if(index<panels.length-6)panels[panels.length-1].remove();
  }
 }
+function hasUnfinishedInteraction(){
+ return Boolean(state.dialog||state.panel||state.search||state.festivalDetail||state.crowdedGroup!==null);
+}
+function reconcileLocalDay(){
+ const current=today();
+ if(current===lastRenderedToday||hasUnfinishedInteraction())return;
+ const previous=lastRenderedToday;
+ lastRenderedToday=current;
+ // Move forward only if the user was already following the real today.
+ // Browsing historical or future days must not jump at midnight.
+ if(state.focus===previous){state.focus=clamp(current);forceStreamJump=true;}
+}
+function tickCalendar(){
+ if(!data)return;
+ if(today()!==lastRenderedToday&&!hasUnfinishedInteraction())render();
+ else updateSceneLighting();
+}
 function render(){
  if(!data)return;
+ reconcileLocalDay();
  const before=root.querySelector('#main-content');
  const focusedMain=before&&document.activeElement===before;
  const oldView=previousRenderKey,oldPanel=before&&visibleRailPanel(before);
@@ -791,7 +810,7 @@ async function submitOccasion(form){
   excludeOccurrence(existing,oldStart);
   item=createItem({...vals,repeat:'none'});
  }else{
-  item=existing?{...existing,...vals,updatedAt:new Date().toISOString()}:createItem(vals);
+  item=existing?updateSeriesItem(existing,vals):createItem(vals);
   delete item.repeatEvery;delete item.repeatUnit;
  }
  ensureSavedItemVisible(sched,item);upsertItem(sched,item);
@@ -799,7 +818,7 @@ async function submitOccasion(form){
   showEditorError(form,lang()==='ar'?'تعذر حفظ المناسبة على هذا الجهاز':T().save);return;
  }
  const saved=loadScheduler(),savedItem=saved.items.find(i=>i.id===item.id&&i.title===title);
- const showDay=repeat==='none'?day:(nextOccurrence(item,today(),366*5)??day);
+ const showDay=repeat==='none'?day:(nextOccurrence(item,today(),Math.max(0,max()-today()+1))??day);
  if(!savedItem||!itemsForDay(saved,showDay).some(i=>i.id===item.id)){
   showEditorError(form,lang()==='ar'?'لم يتم تأكيد حفظ المناسبة':T().save);return;
  }
@@ -843,7 +862,7 @@ async function submitEvent(form){
   excludeOccurrence(existing,occurrence);
   item=createItem({...vals,repeat:'none'});
  }else{
-  item=existing?{...existing,...vals,updatedAt:new Date().toISOString()}:createItem(vals);
+  item=existing?updateSeriesItem(existing,vals):createItem(vals);
   if(!custom){delete item.repeatEvery;delete item.repeatUnit;}
  }
  // Converting a personal occasion to an ordinary appointment must remove its
@@ -1253,7 +1272,7 @@ document.addEventListener('click',ev=>{
   state.search=false;state.query='';render();
  }
 });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCurrentTimeLine();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){tickCalendar();syncCurrentTimeLine();}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
   if(state.festivalDetail){state.festivalDetail=null;render();}
   else if(state.dialog)dismissEditor();
@@ -1280,7 +1299,7 @@ async function init(){
   try{festivalCatalog=await loadFestivalCatalog();festivalLoadError=null;}
   catch(error){festivalCatalog={sources:[]};festivalLoadError=String(error?.message||error);
    console.warn('Renpet public occasions unavailable:',error);}
-  state.focus=clamp(state.focus);render();setInterval(()=>{updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
+  state.focus=clamp(state.focus);render();setInterval(tickCalendar,60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}
 }
