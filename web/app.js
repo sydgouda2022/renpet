@@ -538,7 +538,7 @@ function occasionEditor(item,occurrence){
  '<label><input type="radio" name="kind" value="event">'+safe(T().event)+'</label>'+
  '<label><input type="radio" name="kind" value="reminder">'+safe(T().reminder)+'</label>'+
  '<label><input type="radio" name="kind" value="occasion" checked>'+safe(T().occasion)+'</label></div>'+
- '<label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label>'+
+ '<label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(state.dialog?.draftTitle??item?.title??'')+'"></label>'+
  '<label>'+safe(T().occasionType)+'<select name="occasionType">'+
  [['birthday',T().birthday],['anniversary',T().anniversary],['other',T().specialOccasion]].map(([id,name])=>
  '<option value="'+id+'" '+(id===category?'selected':'')+'>'+safe(name)+'</option>').join('')+'</select></label>'+
@@ -551,7 +551,7 @@ function occasionEditor(item,occurrence){
  '<label>'+safe(T().repeat)+'<select name="occasionRepeat"><option value="yearly" '+(yearly?'selected':'')+'>'+
  safe(T().annualOccasion)+'</option><option value="none" '+(!yearly?'selected':'')+'>'+safe(T().once)+'</option></select></label>'+
  scope+
- '<label>'+safe(T().notes)+'<textarea name="notes" rows="3" maxlength="4000">'+safe(item?.notes||'')+'</textarea></label>'+
+ '<label>'+safe(T().notes)+'<textarea name="notes" rows="3" maxlength="4000">'+safe(state.dialog?.draftNotes??item?.notes??'')+'</textarea></label>'+
  (item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+
  '</div></form></div>';
 }
@@ -569,7 +569,7 @@ function editor(){
  const initialEnd=state.dialog?.draftEnd??item?.endMinutes??Math.min(1440,initialStart+60);
  const finish=item?Math.min(max(),d+Math.max(0,item.endDay-item.startDay)):d;
  const spansDays=finish!==d;
- return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label><label><input type="radio" name="kind" value="occasion" '+(kind==='occasion'?'checked':'')+'>'+safe(T().occasion)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(item?.title||'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'</legend><div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="one" checked><span>'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</span></label><label><input type="radio" name="repeatScope" value="series"><span>'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</span></label></div><p class="repeat-scope-date" aria-live="polite">'+safe(T().date)+' · '+safe(N(egy(d).day)+' '+monthName(egy(d).month)+' '+N(egy(d).year))+'</p></fieldset>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(item?.notes||'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
+ return '<div class="sheet-overlay"><form id="event-editor" class="sheet" role="dialog" aria-modal="true" data-original-start="'+d+'" data-original-end="'+(d+Math.max(0,(item?.endDay??d)-(item?.startDay??d)))+'" data-all-day="'+Boolean(item?.allDay)+'" novalidate><div class="sheet-head"><strong>'+safe(item?T().event:T().add)+'</strong><button class="save-button" type="submit">'+safe(T().save)+'</button></div><div class="sheet-body"><div class="kind-toggle"><label><input type="radio" name="kind" value="event" '+(kind==='event'?'checked':'')+'>'+safe(T().event)+'</label><label><input type="radio" name="kind" value="reminder" '+(kind==='reminder'?'checked':'')+'>'+safe(T().reminder)+'</label><label><input type="radio" name="kind" value="occasion" '+(kind==='occasion'?'checked':'')+'>'+safe(T().occasion)+'</label></div><label>'+safe(T().title)+'<input name="title" required maxlength="200" value="'+safe(state.dialog?.draftTitle??item?.title??'')+'"></label><label>'+safe(T().date)+dateFields(d)+'</label><details class="end-date-details" '+(spansDays?'open':'')+'><summary><span>'+safe(T().end)+' · '+safe(T().date)+'</span><span class="end-date-hint">'+safe(spansDays?N(egy(finish).day)+' '+monthName(egy(finish).month):T().sameDay)+'</span></summary><label>'+safe(T().date)+dateFields(finish,'end')+'</label></details><label class="check-row">'+safe(T().allDay)+'<input type="checkbox" name="allDay" '+(item?.allDay?'checked':'')+'></label>'+timeEditorFields(lang(),initialStart,initialEnd,T().start,T().end)+repeatEditor(item)+(item&&item.repeat!=='none'?'<fieldset class="repeat-scope"><legend>'+safe(lang()==='ar'?'نطاق تعديل التكرار':lang()==='cop'?'Ⲟⲩⲱⲧ ϩⲟⲟⲩ / ⲧⲏⲣⲟⲩ':'𓏺 / 𓏥')+'</legend><div class="repeat-scope-options"><label><input type="radio" name="repeatScope" value="one" checked><span>'+safe(lang()==='ar'?'هذا الموعد فقط':lang()==='cop'?'Ⲡⲁⲓϩⲟⲟⲩ ⲙ̀ⲙⲁⲩⲁⲧϥ':'𓏺 𓇳')+'</span></label><label><input type="radio" name="repeatScope" value="series"><span>'+safe(lang()==='ar'?'السلسلة كاملة':lang()==='cop'?'Ⲛⲓϩⲟⲟⲩ ⲧⲏⲣⲟⲩ':'𓏥 𓇳')+'</span></label></div><p class="repeat-scope-date" aria-live="polite">'+safe(T().date)+' · '+safe(N(egy(d).day)+' '+monthName(egy(d).month)+' '+N(egy(d).year))+'</p></fieldset>':'')+'<details class="advanced-fields" '+(item&&(item.location||item.notes||item.repeat!=='none'||item.calendarId!==sched.calendars[0].id)?'open':'')+'><summary>'+safe(T().moreOptions)+'</summary><label>'+safe(T().location)+'<input name="location" maxlength="300" value="'+safe(item?.location||'')+'"></label><label>'+safe(T().notes)+'<textarea name="notes" rows="3">'+safe(state.dialog?.draftNotes??item?.notes??'')+'</textarea></label><label>'+safe(T().calendars)+'<select name="calendarId">'+sched.calendars.map(c=>'<option value="'+safe(c.id)+'" '+(c.id===(item?.calendarId||sched.calendars[0].id)?'selected':'')+'>'+safe(calName(c))+'</option>').join('')+'</select></label></details>'+(item?'<button type="button" class="delete" data-delete="'+safe(item.id)+'">'+safe(T().delete)+'</button>':'')+'</div></form></div>';
 }
 
 function panelContent(){
@@ -1023,7 +1023,16 @@ root.addEventListener('click',async ev=>{
 root.addEventListener('change',async ev=>{
  const el=ev.target;
  if(el.name==='kind'&&el.closest('#event-editor')){
-  state.dialog={...state.dialog,kind:el.value};render();return;
+  // Switching between timed Event and Reminder does not rebuild the form:
+  // rebuilding discarded an already typed title and other unsaved fields.
+  // Only the dedicated personal-occasion editor needs a different layout.
+  if(el.value==='occasion'||el.form.classList.contains('occasion-editor')){
+   state.dialog={...state.dialog,kind:el.value,
+    draftTitle:el.form.elements.namedItem('title')?.value||'',
+    draftNotes:el.form.elements.namedItem('notes')?.value||''};
+   render();
+  }
+  return;
  }
  if(el.name==='occasionCalendar'&&el.closest('.occasion-editor')){
   const form=el.form;
