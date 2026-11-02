@@ -122,7 +122,7 @@ test('default future search finds leap-day birthdays and leap epagomenal dates',
 test('custom repeat every several years searches without daily scanning',()=>{
  const start=toGregorian({year:6268,month:13,day:6});
  const years=createItem({title:'Every ten Egyptian years',startDay:start,repeat:'custom',repeatEvery:10,repeatUnit:'year'});
- assert.equal(nextOccurrence(years,start+1),toGregorian({year:6280,month:13,day:6}));
+ assert.equal(nextOccurrence(years,start+1),toGregorian({year:6288,month:13,day:6}));
  assert.equal(nextOccurrence(years,start+1,365*5),null);
  const days=createItem({title:'Every 360 days',startDay:day,repeat:'custom',repeatEvery:360,repeatUnit:'day'});
  for(let index=1;index<=5;index++)excludeOccurrence(days,day+360*index);
