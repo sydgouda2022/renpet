@@ -27,14 +27,16 @@ async function run(engine,engineName){
      const currentYear=page.locator('.time-panel[data-stream-kind=year]').nth(1);
      const section=currentYear.locator('.year-season[data-season="'+season+'"]');
      const group=await section.evaluate(el=>({
-      background:getComputedStyle(el).backgroundImage,
-      size:getComputedStyle(el).backgroundSize,
+      background:getComputedStyle(el,'::before').backgroundImage,
+      size:getComputedStyle(el,'::before').backgroundSize,
+      mask:getComputedStyle(el,'::before').maskImage,
       border:getComputedStyle(el).borderTopWidth,
       radius:getComputedStyle(el).borderRadius,
       monthBackground:getComputedStyle(el.querySelector('.year-month')).backgroundColor
      }));
      assert.ok(group.background.includes(season+'.webp'),season+' seasonal group uses its own art');
-     assert.ok(['100%','100% auto'].includes(group.size.split(',').at(-1).trim()),season+' group keeps all scenery width: '+JSON.stringify(group));
+     assert.ok(['100%','100% auto'].includes(group.size.trim()),season+' group keeps all scenery width: '+JSON.stringify(group));
+     assert.ok(group.mask.includes('gradient'),season+' old printed border must fade from the year art');
      assert.equal(group.border,'0px','year seasons are not separately framed cards');
      assert.ok(group.radius!=='0px','year groups keep subtle rounded surface');
      assert.ok(group.monthBackground.startsWith('rgba('),'miniature months should show softened scenery');
