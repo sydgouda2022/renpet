@@ -131,9 +131,8 @@ function hiddenCalendarNotice(day){
  const prefix=lang()==='ar'?'مواعيد محفوظة في تقاويم مخفية':lang()==='cop'?'Ⲛⲓⲉⲣⲅⲟⲛ':'𓏞';
  return '<div class="hidden-calendar-notice" role="status"><span>'+safe(prefix)+' · '+safe(N(hidden.length))+'</span><button type="button" data-show-all-calendars>'+safe(T().manage)+'</button></div>';
 }
-// Festival names, notes and interface controls follow the *active script*.
-// Coptic and hieroglyphic fields are editorial language/script renderings;
-// modern dates are never represented as ancient textual attestations.
+// Public occasion names and short descriptions follow the selected script.
+// Personal birthdays and anniversaries are separate private calendar entries.
 const festivalText=(f,field)=>lang()==='ar'?(field==='title'?f.ar:f.description_ar||''):
  (field==='title'?f[lang()]||'':f['description_'+lang()]||'');
 const FESTIVAL_UI={
@@ -161,7 +160,7 @@ function festivalDetails(){
  const sources=[...new Set([f.sourceUrl,...(original.match(/https:\/\/[^\s|]+/g)||[])].filter(url=>{
   try{const u=new URL(url);return u.protocol==='https:'&&url.length<2048;}catch{return false;}
  }))].slice(0,8);
- return '<div class="festival-detail-overlay" data-close-festival-overlay><section class="festival-detail-sheet" role="dialog" aria-modal="true" aria-label="'+safe(ui.details)+'"><header><h2 lang="'+lang()+'">'+safe(title)+'</h2></header><p class="festival-type" lang="'+lang()+'">'+safe(type)+'</p><p class="festival-when">'+safe(N(egy(day).day))+' '+safe(monthName(egy(day).month))+(prefs.gregorian?' · '+safe(greg(day,{day:'numeric',month:'long',year:'numeric'})):'')+'</p>'+(note?'<p class="festival-evidence" lang="'+lang()+'" dir="'+(lang()==='ar'?'rtl':'ltr')+'">'+safe(note)+'</p>':'<p>'+safe(ui.notice)+'</p>')+(ui.translation?'<p class="festival-translation-note" lang="'+lang()+'">'+safe(ui.translation)+'</p>':'')+'<h3 lang="'+lang()+'">'+safe(ui.sources)+' · '+safe(festivalSourceName(src||{name:f.sourceName},lang()))+'</h3>'+(sources.length?'<div class="festival-sources-links">'+sources.map((url,i)=>'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer" lang="'+lang()+'" aria-label="'+safe(ui.sources)+' '+N(i+1)+'">'+safe(ui.sources)+' '+safe(N(i+1))+' ↗</a>').join('')+'</div>':'<p>'+safe(ui.notice)+'</p>')+'</section></div>';
+ return '<div class="festival-detail-overlay" data-close-festival-overlay><section class="festival-detail-sheet" role="dialog" aria-modal="true" aria-label="'+safe(ui.details)+'"><header><h2 lang="'+lang()+'">'+safe(title)+'</h2></header><p class="festival-type" lang="'+lang()+'">'+safe(type)+'</p><p class="festival-when">'+safe(N(egy(day).day))+' '+safe(monthName(egy(day).month))+(prefs.gregorian?' · '+safe(greg(day,{day:'numeric',month:'long',year:'numeric'})):'')+'</p>'+(note?'<p class="festival-evidence" lang="'+lang()+'" dir="'+(lang()==='ar'?'rtl':'ltr')+'">'+safe(note)+'</p>':'<p>'+safe(ui.notice)+'</p>')+'<h3 lang="'+lang()+'">'+safe(ui.sources)+' · '+safe(festivalSourceName(src||{name:f.sourceName},lang()))+'</h3>'+(sources.length?'<div class="festival-sources-links">'+sources.map((url,i)=>'<a href="'+safe(url)+'" target="_blank" rel="noopener noreferrer" lang="'+lang()+'" aria-label="'+safe(ui.sources)+' '+N(i+1)+'">'+safe(ui.sources)+' '+safe(N(i+1))+' ↗</a>').join('')+'</div>':'<p>'+safe(ui.notice)+'</p>')+'</section></div>';
 }
 function agenda(d){
  const a=items(d),festivals=festivalsOn(d);
@@ -837,6 +836,9 @@ async function submitEvent(form){
   item=existing?{...existing,...vals,updatedAt:new Date().toISOString()}:createItem(vals);
   if(!custom){delete item.repeatEvery;delete item.repeatUnit;}
  }
+ // Converting a personal occasion to an ordinary appointment must remove its
+ // personal-only metadata; otherwise it may reopen in the wrong editor.
+ delete item.occasionType;delete item.occasionCalendar;
  ensureSavedItemVisible(sched,item);
  upsertItem(sched,item);
  if(!await saveScheduler(sched)){
