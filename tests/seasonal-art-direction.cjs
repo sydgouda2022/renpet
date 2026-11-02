@@ -34,7 +34,7 @@ async function run(engine,engineName){
       monthBackground:getComputedStyle(el.querySelector('.year-month')).backgroundColor
      }));
      assert.ok(group.background.includes(season+'.webp'),season+' seasonal group uses its own art');
-     assert.ok(group.size.includes('100% auto'),season+' group keeps all scenery width');
+     assert.ok(group.size.includes('100% auto'),season+' group keeps all scenery width: '+JSON.stringify(group));
      assert.equal(group.border,'0px','year seasons are not separately framed cards');
      assert.ok(group.radius!=='0px','year groups keep subtle rounded surface');
      assert.ok(group.monthBackground.startsWith('rgba('),'miniature months should show softened scenery');
