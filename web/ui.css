@@ -572,3 +572,12 @@ body[data-language=egy] .end-date-hint{font-size:21px;line-height:1.4}
 .crowded-choice:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 body[data-language=egy] .crowded-sheet>header,body[data-language=egy] .timeline-crowded strong{font-size:23px}
 body[data-language=egy] .crowded-choice strong{font-size:23px}
+
+/* Personal occasions reuse the existing local appointment storage, but their
+   date and recurrence controls are intentionally simpler than timed events. */
+.occasion-editor .kind-toggle{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.occasion-editor .kind-toggle label{min-width:0;white-space:normal;text-align:center}
+.occasion-editor [data-occasion-greg][hidden],
+.occasion-editor [data-occasion-egy][hidden]{display:none!important}
+.occasion-editor [data-occasion-egy]>label{display:flex;flex-direction:column;gap:8px}
+.occasion-editor [name=gregDate]{direction:ltr;text-align:start}
