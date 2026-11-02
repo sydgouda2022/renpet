@@ -1,5 +1,5 @@
 import {createBackup,parseBackup} from './backup-core.mjs';
-import {readRecord,writeRecords,writeRecord} from './storage.js';
+import {readRecord,writeRecords} from './storage.js';
 import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,ensureSavedItemVisible,occursOn} from './scheduler.js';
 import {exportICS,eventUID} from './ics-core.mjs';
 import {parseICS} from './ics-import.mjs';
