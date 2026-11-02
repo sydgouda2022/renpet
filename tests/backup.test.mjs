@@ -5,7 +5,7 @@ import {emptyState,createItem,upsertItem} from '../web/scheduler.js';
 import {dayNumber} from '../web/calendar.js';
 test('backup is a standalone local-only document',()=>{
  const scheduler=emptyState();upsertItem(scheduler,createItem({title:'Home',startDay:dayNumber('2026-10-30')}));
- const preferences={language:'ar',gregorian:false,reminders:false,weeks:{ar:10},festivalSources:[]};
+ const preferences={language:'ar',gregorian:false,dynamicLighting:true,showHolidays:false,weeks:{ar:10}};
  const body=createBackup({scheduler,preferences},new Date('2026-10-30T00:00:00Z'));
  const raw=JSON.parse(body);
  assert.equal(raw.format,BACKUP_FORMAT);
