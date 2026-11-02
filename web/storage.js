@@ -1,9 +1,19 @@
-// Renpet stores personal data only in this device's IndexedDB.
-// One database, three records, one atomic transaction per committed change.
+// Local, transaction-safe Renpet records. Each tab tracks revisions read
+// from IndexedDB; a stale tab may not overwrite a newer saved appointment.
 const NAME='renpet';
 const STORE='records';
-const KEYS=new Set(['scheduler','preferences','alerts']);
+const KEYS=new Set(['scheduler','preferences','alerts','restoreSnapshot']);
+const REVISION=key=>'revision:'+key;
+const revisions=new Map();
 let opening=null;
+
+export class StorageConflictError extends Error {
+ constructor(key){
+  super('Renpet data changed in another tab: '+key+'. Reload before saving.');
+  this.name='StorageConflictError';
+ }
+}
+
 function database(){
  if(!opening){
   opening=new Promise((resolve,reject)=>{
@@ -25,36 +35,63 @@ function allowed(key){
  if(!KEYS.has(key))throw new TypeError('Unknown Renpet record: '+key);
  return key;
 }
-async function transaction(mode,operation){
- const db=await database();
- return new Promise((resolve,reject)=>{
-  const tx=db.transaction(STORE,mode);
-  const store=tx.objectStore(STORE);
-  let result;
-  tx.oncomplete=()=>resolve(result);
-  tx.onerror=()=>reject(tx.error||new Error('Renpet storage transaction failed'));
-  tx.onabort=()=>reject(tx.error||new Error('Renpet storage transaction aborted'));
-  try{
-   operation(store,value=>{result=value;});
-  }catch(error){tx.abort();reject(error);}
- });
-}
+
 export async function readRecord(key){
  allowed(key);
- return transaction('readonly',(store,done)=>{
-  const request=store.get(key);
-  request.onsuccess=()=>done(request.result);
+ const db=await database();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readonly'),store=tx.objectStore(STORE);
+  const valueRequest=store.get(key),revisionRequest=store.get(REVISION(key));
+  let value,revision=0;
+  valueRequest.onsuccess=()=>{value=valueRequest.result;};
+  revisionRequest.onsuccess=()=>{revision=revisionRequest.result??0;};
+  tx.oncomplete=()=>{revisions.set(key,revision);resolve(value);};
+  tx.onerror=()=>reject(tx.error||new Error('Unable to read Renpet data'));
+  tx.onabort=()=>reject(tx.error||new Error('Renpet data read aborted'));
  });
 }
+
 export async function writeRecords(records){
  if(!records||typeof records!=='object'||Array.isArray(records))throw new TypeError('Invalid Renpet records');
  const entries=Object.entries(records);
+ if(!entries.length)return;
  for(const [key] of entries)allowed(key);
- await transaction('readwrite',store=>{
-  for(const [key,value] of entries)store.put(value,key);
+ // Every writer must have read the version it intends to replace.
+ // This includes backups, imports, and preference changes.
+ const expected=entries.map(([key])=>{
+  if(!revisions.has(key))throw new Error('Read Renpet record before writing: '+key);
+  return revisions.get(key);
+ });
+ const db=await database();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+  let pending=entries.length,conflict=null,committed=false;
+  tx.oncomplete=()=>{
+   if(!committed){reject(new Error('Renpet write did not complete'));return;}
+   entries.forEach(([key],i)=>revisions.set(key,expected[i]+1));
+   resolve();
+  };
+  tx.onerror=()=>reject(tx.error||new Error('Renpet write failed'));
+  tx.onabort=()=>reject(conflict||tx.error||new Error('Renpet write aborted'));
+  entries.forEach(([key],i)=>{
+   const request=store.get(REVISION(key));
+   request.onsuccess=()=>{
+    if((request.result??0)!==expected[i])conflict=new StorageConflictError(key);
+    if(--pending!==0)return;
+    if(conflict){tx.abort();return;}
+    for(let index=0;index<entries.length;index++){
+     const [name,value]=entries[index];
+     store.put(value,name);
+     store.put(expected[index]+1,REVISION(name));
+    }
+    committed=true;
+   };
+  });
  });
 }
+
 export async function writeRecord(key,value){await writeRecords({[allowed(key)]:value});}
+
 export async function requestPersistentStorage(){
  if(!navigator.storage?.persist)return false;
  return navigator.storage.persist();
