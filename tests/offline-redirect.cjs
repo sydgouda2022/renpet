@@ -22,6 +22,7 @@ const MIME={
 };
 async function startServer(){
  let serverUnavailable=false;
+ let serveFreshExecutable=false;
  const server=http.createServer(async(req,res)=>{
   try{
    if(serverUnavailable){
@@ -31,6 +32,10 @@ async function startServer(){
     res.end('Origin unavailable');return;
    }
    const url=new URL(req.url,'http://127.0.0.1:8766');
+   if(url.pathname==='/app.js'&&serveFreshExecutable){
+    res.writeHead(200,{'Content-Type':MIME['.js'],'Cache-Control':'no-store'});
+    res.end('/* Renpet executable network-first probe */');return;
+   }
    if(url.pathname==='/index.html'){
     // The redirect is the regression trigger. The old SW stores its
     // final response under /index.html and Safari rejects it offline.
@@ -47,9 +52,9 @@ async function startServer(){
  });
  server.listen(8766,'127.0.0.1');
  await once(server,'listening');
- return {server,setUnavailable:value=>{serverUnavailable=value;}};
+ return {server,setUnavailable:value=>{serverUnavailable=value;},setFreshExecutable:value=>{serveFreshExecutable=value;}};
 }
-async function verify(engine,name,setUnavailable){
+async function verify(engine,name,setUnavailable,setFreshExecutable){
  const browser=await engine.launch(name==='chromium'?{channel:'chrome',headless:true,args:['--no-sandbox']}:{headless:true});
  try{
   const context=await browser.newContext({
@@ -74,6 +79,18 @@ async function verify(engine,name,setUnavailable){
    });
    assert.ok(cached.exists, name+' must cache an offline HTML shell');
    assert.equal(cached.redirected,false,name+' must not cache followed HTML redirects: '+JSON.stringify(cached));
+   // A running PWA must fetch updated executable code while online, rather
+   // than silently return the asset precached during installation.
+   setFreshExecutable(true);
+   try {
+    const fresh=await page.evaluate(async()=>{
+     const response=await fetch('./app.js?renpet-network-first-probe=1');
+     return {status:response.status,body:await response.text()};
+    });
+    assert.equal(fresh.status,200);
+    assert.equal(fresh.body,'/* Renpet executable network-first probe */',
+      name+' served stale cached app.js while origin was online');
+   } finally {setFreshExecutable(false);}
    // This is a fresh navigation: don't count the already-running app as
    // offline support (that was the previous WebKit test's blind spot).
    if(name==='webkit')setUnavailable(true);
@@ -98,8 +115,8 @@ async function verify(engine,name,setUnavailable){
  }finally{await browser.close();}
 }
 async function main(){
- const {server,setUnavailable}=await startServer();
- try{await verify(webkit,'webkit',setUnavailable);await verify(chromium,'chromium',setUnavailable);}
+ const {server,setUnavailable,setFreshExecutable}=await startServer();
+ try{await verify(webkit,'webkit',setUnavailable,setFreshExecutable);await verify(chromium,'chromium',setUnavailable,setFreshExecutable);}
  finally{await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
