@@ -9,7 +9,7 @@ test('no old storage scheduler is embedded in the UI',async()=>{
   assert.doesNotMatch(text,/localStorage|renpet\.scheduler\.v1|gregMonthly|SCHEDULER_RECOVERY_KEYS/,name);
  }
  assert.match(app,/readRecord\('scheduler'\)/);
- assert.match(app,/writeRecord\('scheduler',next\)/);
+ assert.match(app,/writeRecord\('scheduler',next,scheduleRevision\)/);
  assert.doesNotMatch(app,/name="reminders"|requestAlertPermission|startForegroundAlerts/);
 });
 

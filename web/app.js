@@ -5,7 +5,8 @@ import {WORDS} from './ui-words.js';
 import {SEASONS,seasonForMonth,seasonName,gregorianText} from './calendar-presentation.mjs';
 import {loadFestivalCatalog,festivalHitsForDay,festivalSourceName} from './festival-catalog.js';
 import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,itemsForDay,hiddenItemsForDay,ensureSavedItemVisible,revealSavedCalendars,searchItems,nextOccurrence,createCalendar,updateCalendar,removeCalendar,toggleCompleted,isCompleted,occurrenceStartForDay,excludeOccurrence} from './scheduler.js';
-import {readRecord,writeRecord,requestPersistentStorage} from './storage.js';
+import {readRecord,writeRecord,requestPersistentStorage,recordRevision,StorageConflictError} from './storage.js';
+import {showSchedulerRecovery} from './recovery.js';
 import {openBackup} from './backup.js';
 import {syncModalFocus} from './dialog-focus.mjs';
 import {initKeyboard,syncKeyboard,closeKeyboard,primeEgyptianLexicon,primeCopticLexicon} from './keyboard.js';
@@ -75,20 +76,28 @@ function updateSceneLighting(){
  document.body.style.setProperty('--scene-saturation',String(first[2]+(last[2]-first[2])*t));
 }
 
-let schedule=emptyState();
+let schedule=emptyState(),scheduleRevision=0,preferencesRevision=0;
 let crowdedDayGroups=[];
 const loadScheduler=()=>structuredClone(schedule);
 async function saveScheduler(next){
  if(!validateSchedulerData(next))throw new Error('Invalid appointment data');
- await writeRecord('scheduler',next);
- schedule=next;
- return true;
+ try{
+  await writeRecord('scheduler',next,scheduleRevision);
+  scheduleRevision++;
+  schedule=next;
+  return true;
+ }catch(error){
+  console.error('Renpet could not save appointments',error);
+  if(error instanceof StorageConflictError)
+   alert('تغيرت المواعيد في نافذة أخرى. لم تُستبدل بياناتك. احتفظ بالنص الذي كتبته ثم أعد تحميل رنبت.');
+  return false;
+ }
 }
 let previousRenderKey=null;
 let forceStreamJump=false;
 let currentTimeTicker=null;
 // Existing installations keep dynamic lighting enabled until switched off.
-let data=null,festivalCatalog={sources:[]},prefs={language:'ar',gregorian:true,dynamicLighting:true,showHolidays:true,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
+let data=null,festivalCatalog={sources:[]},festivalLoadError=null,prefs={language:'ar',gregorian:true,dynamicLighting:true,showHolidays:true,weeks:{}},state={view:'month',focus:today(),panel:null,search:false,query:'',dialog:null,festivalDetail:null,crowdedGroup:null,revealItemId:null,saveNotice:false};
 
 // Month is always the opening screen.
 const lang=()=>prefs.language,T=()=>WORDS[lang()],N=n=>nativeNumber(n,lang());
@@ -96,7 +105,7 @@ const spoken=key=>lang()==='egy'?WORDS.ar[key]:T()[key];
 const week=()=>[7,10].includes(prefs.weeks[lang()])?prefs.weeks[lang()]:(lang()==='ar'?7:10);
 const min=()=>dayNumber(data.min_date),max=()=>dayNumber(data.max_date),clamp=d=>Math.min(max(),Math.max(min(),d));
 const supportedYear=y=>Number.isInteger(y)&&y>=toEgyptian(min()).year&&y<=toEgyptian(max()).year;
-const savePrefs=async()=>writeRecord('preferences',prefs);
+const savePrefs=async()=>{await writeRecord('preferences',prefs,preferencesRevision);preferencesRevision++;};
 const itemCache=new Map(),festivalCache=new Map();
 const festivalsOn=day=>{if(!prefs.showHolidays)return [];if(!festivalCache.has(day))festivalCache.set(day,festivalHitsForDay(day,festivalCatalog));return festivalCache.get(day);};
 
@@ -368,7 +377,8 @@ function settingsView(){
  '<label>'+safe(T().dynamicLighting)+'<input type="checkbox" name="dynamicLighting" '+(prefs.dynamicLighting?'checked':'')+'></label>'+
  '<label>'+safe(T().publicHolidays)+'<input type="checkbox" name="showHolidays" '+(prefs.showHolidays?'checked':'')+'></label>'+
  '<label>'+safe(T().weekLength)+'<select name="week">'+[7,10].map(n=>'<option value="'+n+'" '+(n===week()?'selected':'')+'>'+N(n)+'</option>').join('')+'</select></label>'+
- '</div><div class="settings-actions"><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button>'+
+ '</div>'+(festivalLoadError?'<p class="festival-load-notice" role="status" lang="ar">تعذر تحميل قائمة المناسبات المصرية. التقويم والمواعيد يعملان بصورة طبيعية. <button type="button" data-retry-festivals>إعادة محاولة تحميل المناسبات</button></p>':'')+
+ '<div class="settings-actions"><button data-open-panel="calendars">'+safe(T().manage)+' <span>›</span></button>'+
  '<button data-backup>'+safe(T().dataAndBackup)+' <span>›</span></button></div>'+
  '<p class="build-label">'+safe(T().version)+' '+safe(data.version)+'</p></section>';
 }
@@ -1013,6 +1023,11 @@ root.addEventListener('click',async ev=>{
   return;
  }
  if(b.hasAttribute('data-backup')){state.panel=null;render();openBackup();return;}
+ if(b.hasAttribute('data-retry-festivals')){
+  try{festivalCatalog=await loadFestivalCatalog();festivalLoadError=null;}
+  catch(error){festivalLoadError=String(error?.message||error);console.warn('Renpet public occasions unavailable:',error);}
+  render();return;
+ }
  if(b.hasAttribute('data-remove-cal')){
   if(!confirm(lang()==='ar'?'حذف هذا التقويم ونقل مواعيده إلى تقويم آخر؟':'Delete calendar and move appointments?'))return;
   const v=loadScheduler();if(!removeCalendar(v,b.dataset.removeCal))return;
@@ -1114,7 +1129,14 @@ root.addEventListener('change',async ev=>{
   syncEndDateHint(form);
   return;
  }else return;
- await savePrefs();render();syncKeyboard();
+ try{await savePrefs();render();syncKeyboard();}
+ catch(error){
+  console.error('Renpet preferences save failed',error);
+  alert(error instanceof StorageConflictError?
+   'تغيرت الإعدادات في نافذة أخرى. لم تُستبدل. أعد تحميل رنبت.':
+   'تعذر حفظ إعدادات رنبت على هذا الجهاز.');
+  if(error instanceof StorageConflictError)location.reload();
+ }
 });
 root.addEventListener('input',ev=>{if(ev.target.name==='query'){state.query=ev.target.value;const r=root.querySelector('.search-results');if(r)r.innerHTML=searchResults();}});
 root.addEventListener('invalid',ev=>{
@@ -1242,11 +1264,22 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){
 async function init(){
  try{
   const persisted=await readRecord('scheduler');
-  if(persisted!==undefined){if(!validateSchedulerData(persisted))throw Error('Invalid saved appointments');schedule=persisted;}
+  scheduleRevision=recordRevision('scheduler');
   const savedPrefs=await readRecord('preferences');
+  preferencesRevision=recordRevision('preferences');
+  if(persisted!==undefined){
+   if(!validateSchedulerData(persisted)){
+    showSchedulerRecovery(root,persisted);
+    return;
+   }
+   schedule=persisted;
+  }
   if(savedPrefs){if(LOCALES[savedPrefs.language])prefs.language=savedPrefs.language;if(typeof savedPrefs.gregorian==='boolean')prefs.gregorian=savedPrefs.gregorian;if(typeof savedPrefs.dynamicLighting==='boolean')prefs.dynamicLighting=savedPrefs.dynamicLighting;if(typeof savedPrefs.showHolidays==='boolean')prefs.showHolidays=savedPrefs.showHolidays;if(savedPrefs.weeks&&typeof savedPrefs.weeks==='object')prefs.weeks=savedPrefs.weeks;}
   void requestPersistentStorage().catch(console.warn);
-  const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();festivalCatalog=await loadFestivalCatalog();
+  const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar data unavailable');data=await r.json();
+  try{festivalCatalog=await loadFestivalCatalog();festivalLoadError=null;}
+  catch(error){festivalCatalog={sources:[]};festivalLoadError=String(error?.message||error);
+   console.warn('Renpet public occasions unavailable:',error);}
   state.focus=clamp(state.focus);render();setInterval(()=>{updateSceneLighting();},60000);globalThis.RenpetBoot?.ready();if(typeof document.createElement==='function')initKeyboard(()=>lang());void (lang()==='egy'?primeEgyptianLexicon():lang()==='cop'?primeCopticLexicon():Promise.resolve());
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(console.warn);}
  }catch(e){root.textContent='Renpet: '+e.message;console.error(e);globalThis.RenpetBoot?.fail(e.message);}

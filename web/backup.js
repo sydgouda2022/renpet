@@ -1,5 +1,5 @@
 import {createBackup,parseBackup} from './backup-core.mjs';
-import {readRecord,writeRecords,writeRecord} from './storage.js';
+import {readRecord,writeRecords} from './storage.js';
 import {emptyState,validateSchedulerData,createItem,upsertItem,removeItem,ensureSavedItemVisible,occursOn} from './scheduler.js';
 import {exportICS,eventUID} from './ics-core.mjs';
 import {parseICS} from './ics-import.mjs';
@@ -7,9 +7,9 @@ import {dayNumber} from './calendar.js';
 import {syncModalFocus} from './dialog-focus.mjs';
 
 const WORDS={
- ar:{title:'بيانات رنبت',info:'كل المواعيد والإعدادات محفوظة على جهازك فقط.',export:'تصدير نسخة محلية',restore:'استعادة نسخة',ics:'تصدير تقويم ICS',importICS:'استيراد ICS',close:'إغلاق',confirm:'استعادة النسخة ستستبدل المواعيد والإعدادات الحالية. هل تريد المتابعة؟',done:'تم حفظ البيانات. سيعاد تشغيل رنبت.'},
- cop:{title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ',info:'Ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ ϧⲉⲛ ⲡⲉⲕⲥⲱⲙⲁ.',export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',restore:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',ics:'ICS ↓',importICS:'ICS ↑',close:'Ϣⲧⲁⲙ',confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?',done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.'},
- egy:{title:'𓆳𓏏𓏤 · 𓏞',info:'𓏞 𓆳𓏏 𓉐𓏤',export:'𓏞 ↓',restore:'𓏞 ↑',ics:'ICS ↓',importICS:'ICS ↑',close:'𓐍𓏏𓅓',confirm:'𓏞 ↑ ?',done:'𓏞 ✓'}
+ ar:{title:'بيانات رنبت',info:'كل المواعيد والإعدادات محفوظة على جهازك فقط.',export:'تصدير نسخة محلية',restore:'استعادة نسخة',undo:'التراجع عن آخر استعادة أو استيراد',ics:'تصدير تقويم ICS',importICS:'استيراد ICS',close:'إغلاق',confirm:'ستُستبدل المواعيد والإعدادات الحالية. سيتم حفظ نسخة محلية منها يمكن الرجوع إليها. هل تريد المتابعة؟',done:'تم حفظ البيانات. سيعاد تشغيل رنبت.'},
+ cop:{undo:'Ⲧⲁϩⲟ ⲛ̀ⲥⲁ',title:'Ⲣⲉⲛⲡⲉⲧ · ⲇⲉⲇⲟⲙⲉⲛⲁ',info:'Ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ ϧⲉⲛ ⲡⲉⲕⲥⲱⲙⲁ.',export:'Ⲥⲱⲧⲡ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',restore:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ',ics:'ICS ↓',importICS:'ICS ↑',close:'Ϣⲧⲁⲙ',confirm:'Ⲧⲁϩⲟ ⲁⲛⲧⲓⲅⲣⲁⲫⲟⲛ?',done:'Ⲁⲩⲧⲁϩⲟ ⲛ̀ⲛⲓⲇⲉⲇⲟⲙⲉⲛⲁ.'},
+ egy:{undo:'𓏞 ↶',title:'𓆳𓏏𓏤 · 𓏞',info:'𓏞 𓆳𓏏 𓉐𓏤',export:'𓏞 ↓',restore:'𓏞 ↑',ics:'ICS ↓',importICS:'ICS ↑',close:'𓐍𓏏𓅓',confirm:'𓏞 ↑ ?',done:'𓏞 ✓'}
 };
 let overlay=null,previousFocus=null;
 const language=()=>WORDS[document.body.dataset.language]||WORDS.ar;
@@ -33,6 +33,23 @@ async function records(){
 async function backup(){
  download(createBackup(await records()),'renpet-'+stamp()+'.json');
 }
+// Preserve the preceding complete scheduler and preferences in the SAME
+// IndexedDB transaction as a destructive restore. A failed transaction keeps
+// both old data and previous snapshot intact.
+async function replaceWithSnapshot(next){
+ const original=await records();
+ await readRecord('restoreSnapshot');
+ await writeRecords({...next,restoreSnapshot:{...original,savedAt:new Date().toISOString()}});
+}
+async function undoLastRestore(){
+ const snapshot=await readRecord('restoreSnapshot');
+ if(!snapshot){alert('No previous calendar snapshot is available');return;}
+ // A bad snapshot is never allowed to overwrite a currently valid calendar.
+ const restored=parseBackup(createBackup(snapshot));
+ if(!confirm(language().confirm))return;
+ await replaceWithSnapshot(restored);
+ alert(language().done);location.reload();
+}
 async function restore(){
  const picker=document.createElement('input');picker.type='file';picker.accept='.json,application/json';
  picker.addEventListener('change',async()=>{
@@ -41,7 +58,7 @@ async function restore(){
    if(file.size>5*1024*1024)throw Error('File is too large');
    const parsed=parseBackup(await file.text());
    if(!confirm(language().confirm))return;
-   await writeRecords(parsed);
+   await replaceWithSnapshot(parsed);
    alert(language().done);location.reload();
   }catch(error){alert(error.message);}
  },{once:true});
@@ -60,7 +77,8 @@ async function importCalendar(){
   try{
    if(file.size>5*1024*1024)throw Error('File is too large');
    const r=await fetch('./data.json');if(!r.ok)throw Error('Calendar boundaries unavailable');
-   const limits=await r.json(),state=(await records()).scheduler;
+   const limits=await r.json(),current=await records(),state=current.scheduler;
+   const before=structuredClone(state);
    const result=parseICS(await file.text(),{
     minDay:dayNumber(limits.min_date),maxDay:dayNumber(limits.max_date),
     knownUIDs:state.items.flatMap(item=>[item.importUID,eventUID(item)]).filter(Boolean),
@@ -75,7 +93,8 @@ async function importCalendar(){
     ensureSavedItemVisible(state,item);upsertItem(state,item);
    }
    if(!validateSchedulerData(state))throw Error('Calendar import includes unsupported events');
-   await writeRecord('scheduler',state);
+   await readRecord('restoreSnapshot');
+   await writeRecords({scheduler:state,restoreSnapshot:{...current,scheduler:before,savedAt:new Date().toISOString()}});
    alert(language().done);location.reload();
   }catch(error){alert(error.message);}
  },{once:true});
@@ -92,17 +111,22 @@ export function openBackup(){
  '<button type="button" class="renpet-backup-action" data-backup="export"></button>'+
  '<button type="button" class="renpet-backup-action secondary" data-backup="ics"></button>'+
  '<button type="button" class="renpet-backup-action secondary" data-backup="import-ics"></button>'+
- '<button type="button" class="renpet-backup-action secondary" data-backup="import"></button></section>';
+ '<button type="button" class="renpet-backup-action secondary" data-backup="import"></button>'+
+ '<button type="button" class="renpet-backup-action secondary" data-backup="undo" hidden></button></section>';
  overlay.querySelector('h2').textContent=t.title;
  overlay.querySelector('.renpet-backup-info').textContent=t.info;
- for(const [id,key] of [['export','export'],['ics','ics'],['import-ics','importICS'],['import','restore']])
+ for(const [id,key] of [['export','export'],['ics','ics'],['import-ics','importICS'],['import','restore'],['undo','undo']])
   overlay.querySelector('[data-backup="'+id+'"]').textContent=t[key];
+ void readRecord('restoreSnapshot').then(snapshot=>{
+  if(overlay)overlay.querySelector('[data-backup="undo"]').hidden=!snapshot;
+ }).catch(error=>console.warn('Renpet restore snapshot unavailable',error));
  overlay.addEventListener('click',async event=>{
   if(event.target===overlay){close();return;}
   const action=event.target.closest('[data-backup]')?.dataset.backup;
   try{
    if(action==='export')await backup();
    if(action==='import')await restore();
+   if(action==='undo')await undoLastRestore();
    if(action==='ics')await exportCalendar();
    if(action==='import-ics')await importCalendar();
   }catch(error){alert(error.message);}
