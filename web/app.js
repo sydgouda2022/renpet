@@ -40,12 +40,11 @@ if(typeof window!=='undefined'){
 const root=document.querySelector('#app');
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today=()=>{const d=new Date();return dayNumber([d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'));};
-/* Unified day/night lighting is continuous and clock-aware. */
-/* Lighting is a continuous function of clock time, not a collection of
-   interchangeable day/night artwork panels. Keep foreground text opaque. */
+/* One ambient clock for Month, Day and Year. The landscape lighting follows
+   the user's local time, not the scrolled Day timeline, while text stays opaque. */
 const LIGHTING_POINTS=[
- [0,.57,.78],[5,.64,.82],[7,.95,.96],[12,1.06,1],
- [16,.99,1.04],[18,.83,1.06],[20,.66,.88],[24,.57,.78]
+ [0,.75,.90],[5,.79,.91],[7,.96,.98],[12,1.06,1],
+ [16,1,1.02],[18,.89,1.03],[20,.79,.94],[24,.75,.90]
 ];
 function updateSceneLighting(){
  if(!prefs.dynamicLighting){
@@ -56,19 +55,11 @@ function updateSceneLighting(){
   return;
  }
  const now=new Date();
- let hour=now.getHours()+now.getMinutes()/60;
- if(state.view==='day'){
-  const main=root.querySelector('#main-content'),timeline=main&&visibleRailPanel(main)?.querySelector('.timeline');
-  if(main&&timeline){
-   const middle=main.getBoundingClientRect().top+main.clientHeight*.45;
-   hour=Math.min(24,Math.max(0,(middle-timeline.getBoundingClientRect().top)/64));
-  }
- }
- // In Day, the clock follows the visible timeline; elsewhere it follows
- // local wall time. Both the landscape color and the night shade use the
- // same hour, otherwise scrolling a day produces inconsistent lighting.
+ const hour=now.getHours()+now.getMinutes()/60;
+ // The same local clock drives every view. Browsing another day or scrolling
+ // its time ruler never changes the ambient light.
  const daylight=Math.max(0,Math.sin(Math.PI*(hour-5.5)/13));
- document.body.style.setProperty('--night-opacity',String((.56-.49*daylight).toFixed(3)));
+ document.body.style.setProperty('--night-opacity',String((.52-.45*daylight).toFixed(3)));
  const index=LIGHTING_POINTS.findIndex((p,i)=>i<LIGHTING_POINTS.length-1&&hour>=p[0]&&hour<=LIGHTING_POINTS[i+1][0]);
  const first=LIGHTING_POINTS[Math.max(0,index)],last=LIGHTING_POINTS[Math.min(LIGHTING_POINTS.length-1,Math.max(0,index)+1)];
  const t=(hour-first[0])/(last[0]-first[0]||1);
