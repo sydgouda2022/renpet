@@ -1,11 +1,11 @@
 // Public occasions observed in contemporary Egypt. Personal occasions
 // belong to the local scheduler, never to this read-only public catalog.
-import {dayNumber,DAY} from './calendar.js';
+import {DAY} from './calendar.js';
 import {orthodoxEasterDay} from './festival-dates.mjs';
 
 const SOURCE_ID='national-egypt';
 const validDate=(iso)=>{
- if(typeof iso!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return false;
+ if(typeof iso!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(iso))return false;
  const date=new Date(iso+'T00:00:00Z');
  return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===iso;
 };
