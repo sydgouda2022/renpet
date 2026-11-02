@@ -36,6 +36,8 @@ function allowed(key){
  return key;
 }
 
+export function recordRevision(key){return revisions.get(allowed(key));}
+
 export async function readRecord(key){
  allowed(key);
  const db=await database();
@@ -51,7 +53,7 @@ export async function readRecord(key){
  });
 }
 
-export async function writeRecords(records){
+export async function writeRecords(records,{expectedRevisions={}}={}){
  if(!records||typeof records!=='object'||Array.isArray(records))throw new TypeError('Invalid Renpet records');
  const entries=Object.entries(records);
  if(!entries.length)return;
@@ -59,6 +61,7 @@ export async function writeRecords(records){
  // Every writer must have read the version it intends to replace.
  // This includes backups, imports, and preference changes.
  const expected=entries.map(([key])=>{
+  if(Object.hasOwn(expectedRevisions,key))return expectedRevisions[key];
   if(!revisions.has(key))throw new Error('Read Renpet record before writing: '+key);
   return revisions.get(key);
  });
@@ -90,7 +93,10 @@ export async function writeRecords(records){
  });
 }
 
-export async function writeRecord(key,value){await writeRecords({[allowed(key)]:value});}
+export async function writeRecord(key,value,expectedRevision){
+ const name=allowed(key);
+ await writeRecords({[name]:value},expectedRevision===undefined?{}:{expectedRevisions:{[name]:expectedRevision}});
+}
 
 export async function requestPersistentStorage(){
  if(!navigator.storage?.persist)return false;
