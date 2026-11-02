@@ -61,8 +61,10 @@ async function verify(engine,name){
   await page.locator('[data-backup]').click();
   const chooser2=page.waitForEvent('filechooser');
   await page.locator('[data-backup="import-ics"]').click();
+  const repeatReport=page.waitForEvent('dialog',d=>d.type()==='alert');
   await (await chooser2).setFiles({name:'again.ics',mimeType:'text/calendar',buffer:Buffer.from(ics)});
-  await page.waitForFunction(()=>document.querySelector('.renpet-backup-overlay')!==null);
+  const reportDialog=await repeatReport;
+  assert.match(reportDialog.message(),/مواعيد مكررة: 2/);
   assert.equal((await record(page,'scheduler')).items.length,2);
   assert.equal(confirms.length,1,'No write confirmation on duplicate-only reimport');
   assert.match(alerts.at(-1),/مواعيد مكررة: 2/);
