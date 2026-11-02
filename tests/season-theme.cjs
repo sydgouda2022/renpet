@@ -181,7 +181,7 @@ async function main(){
     const staticYear=page.locator('.time-panel[data-stream-kind="year"]').nth(1);
     for(const season of ['akhet','peret','shemu']){
      const card=staticYear.locator('.year-season[data-season="'+season+'"]');
-     assert.ok((await card.evaluate(el=>getComputedStyle(el).backgroundImage)).includes(season+'.webp'));
+     assert.ok((await card.evaluate(el=>getComputedStyle(el,'::before').backgroundImage)).includes(season+'.webp'));
      assert.equal(Number(await card.evaluate(el=>getComputedStyle(el,'::after').opacity)),0,
       season+' must not receive a night overlay when lighting is off');
     }
