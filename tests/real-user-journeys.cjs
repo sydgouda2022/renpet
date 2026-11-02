@@ -45,7 +45,7 @@ async function main(){
       panelHeight:p.getBoundingClientRect().height,
       clientHeight:document.querySelector('#main-content').clientHeight,
       months:[...p.querySelectorAll('.year-month')].map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})),
-      season:[...p.querySelectorAll('.year-season')].map(e=>({width:e.getBoundingClientRect().width,skin:getComputedStyle(e).backgroundImage,nightOpacity:parseFloat(getComputedStyle(e,'::after').opacity)})),
+      season:[...p.querySelectorAll('.year-season')].map(e=>({width:e.getBoundingClientRect().width,skin:getComputedStyle(e,'::before').backgroundImage,nightOpacity:parseFloat(getComputedStyle(e,'::after').opacity)})),
       compactCellFont:getComputedStyle(p.querySelector('.year-mini-day:not(.year-mini-today)')).fontSize,
       compactDot:getComputedStyle(p.querySelector('.year-mini-day:not(.year-mini-today)'),'::after').content
      }));

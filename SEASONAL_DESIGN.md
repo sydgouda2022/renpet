@@ -1,37 +1,54 @@
-# Renpet 7.2 seasonal almanac
+# Renpet seasonal art direction
 
-The approved botanical treatment sits behind the existing calendar, agenda,
-appointment editor and navigation. Calendar text, native numerals and all
-interactive controls remain HTML; none are painted into the artwork.
+Renpet is a local-first Egyptian calendar, not a historical book or a stack of
+picture cards. Its three Egyptian seasons are the atmosphere of the calendar
+surface. No human figures, temple subjects, or external image requests are used.
 
-The displayed Egyptian month chooses Akhet, Peret or Shemu automatically.
-The five/six year-end days retain Shemu's setting, and the following new year
-returns to Akhet. The year view always marks the real current season only in
-the real current year. Its existing twelve month buttons are grouped four to
-each season, with a separate year-end entry.
+## Source art and meaning
+- **Akhet** — blue Nile water, papyrus and water lilies.
+- **Peret** — vivid green plants, young crops and small flowers.
+- **Shemu** — golden ripe wheat, date palms and harvest colors.
 
-The iPad uses four month cards across each season; landscape gives the season
-its own label column. The iPhone uses two cards across and scrolls the year.
-On a month screen its extra botanical scene uses spare space after the dates,
-collapsing when date rows need the height. Decorative layers ignore pointer
-events and are hidden from accessibility navigation.
+The locally packaged WebP source landscapes are preserved in
+`web/assets/seasons/`. Renpet's icon is the gold Shen rope on green;
+the Y3 symbol belongs to Mdwnfr and is unrelated to Renpet.
 
-Selecting a day opens its full timeline on iPhone, iPad and desktop. The Month
-back action retains the selected date and returns to the month and agenda.
+## Rendering and responsive composition
 
-Original Egyptian-inspired artwork was generated from the user's approved
-concept: papyrus/water-lilies for Akhet, growing grain/flax for Peret, and ripe
-grain/date palms for Shemu. This is contemporary illustration, not a claimed
-reconstruction of an ancient painted calendar. Each compressed WebP is used
-for the paper field, friezes and plant borders. The three images total about
-1.1 MB and are installed with the app's offline service worker.
+The main calendar scroll is a single vertical line. Each month/day panel owns
+its season landscape; there is no global ghost background behind the rail.
 
-The Arabic interface keeps Arabic Gregorian labels. Coptic and hieroglyphic
-interfaces show compact numeric Gregorian overlays, preserving native script
-for Egyptian dates and controls. The selected Gregorian visibility preference
-and all personal appointments, reminders and calendars retain their meaning.
+On iPhone and iPad, paint the source at **100% available width** rather than
+`cover`, which would crop the botanical edges of a landscape source on phones.
+Fade the decorative frieze and the scene edges using a CSS mask; floral
+details remain at the bottom while the center stays a legible writing field.
+Adjacent panels share neutral parchment at their edges, reducing seams as the
+user scrolls across month and season boundaries.
 
-Validation includes season/date boundaries, the sixth year-end day, native
-date labels, asset formats and transfer size, five phone/tablet viewports,
-all three UI scripts, appointment save, current-season markers, season changes,
-offline images, and the existing mobile/Safari interaction suites.
+The Month view uses a translucent parchment field over the same artwork.
+The Day timeline uses a slightly denser writing field to preserve readability
+through the 24-hour ruler. Year stays in one viewport, with the twelve
+month squares arranged under three seasonal botanical backgrounds; the
+seasonal groups have no thick framing borders or drop shadows.
+
+## Lighting
+
+One local real-time clock drives the light in Year, Month and Day, including
+when the day timeline is scrolled. Lighting is an interpolated continuum, not
+a set of day/night cards, and never applies filters to appointment text.
+If the dynamic-lighting preference is off, every seasonal artwork retains
+its normal daylight colors.
+
+## Layout, accessibility and tests
+
+Navigation remains three buttons at top-left, a timeframe button at top-right,
+and Today/Appointments at the bottom. The Month is the default view. Arabic
+uses seven-day weeks by default; Coptic and Egyptian hieroglyphs use ten-day
+weeks, without changing the overall Month writing-surface dimensions.
+
+Automated acceptance checks inspect botanical source availability, CSS
+background geometry, gradient masks, per-season assets, legible calendar
+surfaces, continuous scroll, date interaction, device widths, year fit,
+clock lighting, offline availability and phone/tablet WebKit rendering.
+Screenshots are retained as CI evidence for visual inspection. Final visual
+judgment on real devices remains separate from automated geometry tests.

@@ -15,9 +15,9 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .ux-toolbar,html[data-renpet-layout^="tablet"] .ux-toolbar{
  position:relative;z-index:5;flex:0 0 auto!important;grid-column:auto!important;
  grid-row:auto!important;padding: max(env(safe-area-inset-top),8px) max(16px,env(safe-area-inset-right)) 0!important;
- background:linear-gradient(180deg,#fffaeae8,#fffaeab8)!important;
- border:0!important;box-shadow:none!important;backdrop-filter:blur(16px);
- -webkit-backdrop-filter:blur(16px)
+ background:linear-gradient(180deg,#fff9eddb,#fff9edac)!important;
+ border:0!important;box-shadow:none!important;backdrop-filter:blur(10px);
+ -webkit-backdrop-filter:blur(10px)
 }
 .ux-toolbar-top{min-height:52px;display:flex;flex-direction:row!important;align-items:center;justify-content:space-between;gap:12px}
 .ux-toolbar-actions{display:flex;gap:5px;flex:0 0 auto;order:0}
@@ -51,26 +51,47 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 .time-panel[data-season-id="akhet"]{--rail-art:url('assets/seasons/akhet.webp')}
 .time-panel[data-season-id="peret"]{--rail-art:url('assets/seasons/peret.webp')}
 .time-panel[data-season-id="shemu"]{--rail-art:url('assets/seasons/shemu.webp')}
-/* The artwork is a separate, non-interactive layer. Filtering a panel
-   directly would also darken dates, labels and appointment controls. */
+/* Seasonal landscapes are full-width botanical scenery rather than a
+   cropped full-height picture. Their transparent fade hides the source
+   artwork's repetitive top frieze, keeps the foliage at the bottom, and
+   connects adjacent continuous-scroll panels without visible image seams. */
 .time-panel{
- background:#f4e9ce;
+ --season-sky:#f4eee0;
+ --season-ground:#d9e9de;
+ background:linear-gradient(180deg,#f4e9ce 0%,var(--season-sky) 24%,
+             var(--season-ground) 76%,#f4e9ce 100%);
+}
+.time-panel[data-season-id="akhet"]{
+ --season-sky:#f1eddc;--season-ground:#d8e7e4;
+}
+.time-panel[data-season-id="peret"]{
+ --season-sky:#f0f0d9;--season-ground:#dfe9d5;
+}
+.time-panel[data-season-id="shemu"]{
+ --season-sky:#f7ebd4;--season-ground:#eddab4;
 }
 .time-panel::before{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
- background-image:linear-gradient(180deg,#fff8e72b,#fff8e71a),var(--rail-art);
- background-color:#f4e9ce;
- background-position:center center;
- background-size:cover;
+ background-image:var(--rail-art);
+ background-position:center bottom;
+ background-size:100% auto;
  background-repeat:no-repeat;
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0%,
+   transparent calc(100% - clamp(265px,47vw,580px)),
+   #000 calc(100% - clamp(55px,11vw,150px)),
+   #000 calc(100% - 30px),transparent 100%);
+ mask-image:linear-gradient(to bottom,transparent 0%,
+   transparent calc(100% - clamp(265px,47vw,580px)),
+   #000 calc(100% - clamp(55px,11vw,150px)),
+   #000 calc(100% - 30px),transparent 100%);
  filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
- transition:filter .5s linear;
+ transition:filter .6s linear;
 }
 .time-panel::after{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
- background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
- opacity:var(--night-opacity,.13);
- transition:opacity .5s linear;
+ background:linear-gradient(180deg,#15243a,#13263e 57%,#3b2b34);
+ opacity:calc(var(--night-opacity,.13) * .43);
+ transition:opacity .6s linear;
 }
 .time-panel>*{position:relative;z-index:1}
 /* There is no single correct season for a whole Year panel: its three
@@ -84,9 +105,9 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
 /* The month and day see their season behind a legible parchment surface.
    This is a translucent surface over the SAME artwork, not a second image. */
 .time-panel[data-stream-kind="month"]>.month-section{
- background:linear-gradient(180deg,#fff9e6cf,#fff5e2d0)!important;
- border:1px solid #c7a97766;
- border-radius:14px;
+ background:linear-gradient(180deg,#fff9e6b9,#fff5e2cd)!important;
+ border:1px solid #c7a9773d;
+ border-radius:12px;
 }
 
 .time-panel[data-stream-kind="month"] .month-section,
@@ -144,25 +165,34 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  min-height:0;
  height:100%;
  gap:clamp(5px,.7vh,9px);
- /* Paint the image on the section itself, not an invisible pseudo-layer. */
+ /* No printed image border or isolated frame: preserve the landscape
+    as a separate masked botanical layer behind the twelve month squares. */
  background-color:var(--group-fill)!important;
- background-image:linear-gradient(180deg,#fff9e822,#fff7e32b),var(--group-art)!important;
- background-size:cover!important;
- background-position:center 65%!important;
+ background-image:linear-gradient(180deg,#fff9e8df,#fff7e3a1 60%,#fff7e370)!important;
+ background-size:100% 100%!important;
+ background-position:center!important;
  background-repeat:no-repeat!important;
- border:1px solid #c9b58aa8!important;
- border-radius:clamp(12px,1.5vw,20px)!important;
+ border:0!important;
+ border-radius:8px!important;
  padding:clamp(8px,1.2vh,15px) clamp(8px,1vw,16px)!important;
  margin:0!important;
- box-shadow:0 4px 18px #443c2a24!important;
+ box-shadow:none!important;
 }
-.time-panel[data-stream-kind="year"] .year-season::before{content:none!important}
+.time-panel[data-stream-kind="year"] .year-season::before{
+ content:''!important;position:absolute;inset:0;z-index:0;pointer-events:none;
+ opacity:.90!important;
+ background:var(--group-art) no-repeat center bottom / 100% auto!important;
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0%,transparent 14%,
+   #000 48%,#000 83%,transparent 100%);
+ mask-image:linear-gradient(to bottom,transparent 0%,transparent 14%,
+   #000 48%,#000 83%,transparent 100%);
+}
 .time-panel[data-stream-kind="year"] .year-season::after{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
  background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
  /* Preserve botanical colors even at midnight; night is conveyed by
     the changing light, not by obscuring the artwork with a grey veil. */
- opacity:calc(var(--night-opacity,.13) * .38);
+ opacity:calc(var(--night-opacity,.13) * .23);
  transition:opacity .5s linear;
 }
 .time-panel[data-stream-kind="year"] .year-season>*{position:relative;z-index:1}
@@ -197,14 +227,14 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  flex-direction:column!important;
  gap:clamp(3px,.65vh,8px);
  padding:clamp(5px,.8vh,10px) clamp(5px,.7vw,11px)!important;
- border:1px solid #d6c69c8a!important;
- border-radius:12px!important;
- background:#fff9e7e1!important;
- box-shadow:0 1px 6px #3e34271a!important;
+ border:1px solid #baad8b6b!important;
+ border-radius:9px!important;
+ background:#fff9e9d9!important;
+ box-shadow:none!important;
 }
 .time-panel[data-stream-kind="year"] .year-month.active-month{
  border-color:#8f653e!important;
- background:#fff7e6df!important;
+ background:#fff7e6d8!important;
 }
 .time-panel[data-stream-kind="year"] .year-mini-title{
  flex:0 0 auto;
@@ -321,7 +351,7 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
 .time-panel[data-stream-kind="day"] .timeline{
  position:relative;max-width:none;width:100%;margin:12px 0 35px!important;
  border:0!important;border-radius:0!important;
- background:linear-gradient(to bottom,#fff9e8ee 0%,#fff8e9e8 32%,#fff6e7e8 64%,#fff7e8ef 100%)!important
+ background:linear-gradient(to bottom,#fff9e8dc 0%,#fff8e9d5 32%,#fff6e7d5 64%,#fff7e8dc 100%)!important
 }
 .time-panel[data-stream-kind="day"] .timeline-slot{border-color:#755f4688}
 .time-panel[data-stream-kind="day"] .timeline-hour>span{
@@ -362,8 +392,8 @@ html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last
  display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;
  flex:0 0 auto!important;min-height:70px!important;gap:12px!important;
  padding:7px max(16px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))!important;
- border:0!important;background:#fffaeacf!important;backdrop-filter:blur(14px);
- -webkit-backdrop-filter:blur(14px)
+ border:0!important;background:#fff9edd9!important;backdrop-filter:blur(10px);
+ -webkit-backdrop-filter:blur(10px)
 }
 .ux-bottom .ux-nav-item,html[data-renpet-layout^="tablet"] .ux-bottom .ux-nav-item,
 html[data-renpet-layout^="tablet"] .ux-bottom:has(.ux-nav-item:nth-child(2):last-child) .ux-nav-item{

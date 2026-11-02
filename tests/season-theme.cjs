@@ -66,16 +66,19 @@ async function main(){
      assert.equal(await card.locator('.year-month').count(),4,season+' contains four months');
      const style=await card.evaluate(el=>({
       image:getComputedStyle(el).backgroundImage,
-      imageSize:getComputedStyle(el).backgroundSize,
+      imageSize:getComputedStyle(el,'::before').backgroundSize,
+      artImage:getComputedStyle(el,'::before').backgroundImage,
       pseudo:getComputedStyle(el,'::before').content,
+      mask:getComputedStyle(el,'::before').maskImage,
       shade:getComputedStyle(el,'::after').opacity,
       border:getComputedStyle(el).borderTopWidth
      }));
-     assert.ok(style.image.includes('/assets/seasons/'+season+'.webp'),season+' artwork must be directly visible: '+style.image);
-     assert.equal(style.pseudo,'none',season+' artwork must not be hidden in pseudo-element');
-     assert.ok(style.imageSize.includes('cover'),season+' landscape must fill section');
+     assert.ok(style.artImage.includes('/assets/seasons/'+season+'.webp'),season+' artwork must be painted behind month squares: '+style.artImage);
+     assert.notEqual(style.pseudo,'none',season+' botanical image layer must be present');
+     assert.ok(['100%','100% auto'].includes(style.imageSize),season+' decorative artwork spans full width');
+     assert.ok(style.mask.includes('gradient'),season+' scene borders fade into the year surface');
      assert.ok(Number(style.shade)>0,season+' card keeps dynamic night shading');
-     assert.notEqual(style.border,'0px',season+' remains a visible section');
+     assert.equal(style.border,'0px',season+' has no redundant frame around its natural landscape');
     }
     // The actual Year writing surface must occupy its viewport rather than
     // leave wide decorative margins or undersized month strips.
@@ -178,7 +181,7 @@ async function main(){
     const staticYear=page.locator('.time-panel[data-stream-kind="year"]').nth(1);
     for(const season of ['akhet','peret','shemu']){
      const card=staticYear.locator('.year-season[data-season="'+season+'"]');
-     assert.ok((await card.evaluate(el=>getComputedStyle(el).backgroundImage)).includes(season+'.webp'));
+     assert.ok((await card.evaluate(el=>getComputedStyle(el,'::before').backgroundImage)).includes(season+'.webp'));
      assert.equal(Number(await card.evaluate(el=>getComputedStyle(el,'::after').opacity)),0,
       season+' must not receive a night overlay when lighting is off');
     }
