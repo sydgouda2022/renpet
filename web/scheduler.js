@@ -47,6 +47,22 @@ export function createItem(values){
  };
 }
 export function updateItem(item,values){return {...item,...values,title:String(values.title??item.title).trim(),updatedAt:new Date().toISOString()};}
+// An exception/completion belongs to an occurrence anchor in a particular
+// recurrence rule. Re-anchoring or changing intervals invalidates that history;
+// changing just the title, location, times or calendar does not.
+export function updateSeriesItem(existing,values){
+ const updated=updateItem(existing,values);
+ const changed=existing.startDay!==updated.startDay||
+  existing.repeat!==updated.repeat||
+  (existing.repeat==='custom'&&updated.repeat==='custom'&&
+   (existing.repeatEvery!==updated.repeatEvery||existing.repeatUnit!==updated.repeatUnit));
+ if(changed){
+  updated.excludedDays=[];
+  updated.completedDays=[];
+  updated.completed=false;
+ }
+ return updated;
+}
 export function upsertItem(state,item){
  const i=state.items.findIndex(v=>v.id===item.id);if(i>=0)state.items[i]=item;else state.items.push(item);return item;
 }
@@ -182,8 +198,74 @@ export function itemsInRange(state,start,endExclusive){
  return out;
 }
 
-export function nextOccurrence(item,fromDay,maxDays=370){
- for(let d=Math.max(fromDay,item.startDay);d<Math.max(fromDay,item.startDay)+maxDays;d++)if(isStartOccurrence(item,d))return d;
+// Jump between actual recurrence anchors, never scan an arbitrary 370-day
+// window. In particular 29 February, the sixth epagomenal day, and custom
+// multi-year schedules may have no occurrence in the following calendar year.
+// Explicit maxDays still provides a bounded lookup for callers that need one.
+export function nextOccurrence(item,fromDay,maxDays=366*400){
+ if(!Number.isInteger(fromDay)||!Number.isFinite(maxDays)||maxDays<=0)return null;
+ const first=Math.max(fromDay,item.startDay),limit=first+maxDays;
+ const excluded=new Set(item.excludedDays||[]);
+ const usable=day=>day>=first&&day<limit&&!excluded.has(day);
+ if(item.repeat==='none')return usable(item.startDay)?item.startDay:null;
+
+ let interval=null;
+ if(item.repeat==='daily')interval=1;
+ else if(item.repeat==='egy10')interval=10;
+ else if(item.repeat==='custom'&&
+  Number.isInteger(item.repeatEvery)&&item.repeatEvery>=1&&item.repeatEvery<=MAX_REPEAT_INTERVAL){
+  if(item.repeatUnit==='day')interval=item.repeatEvery;
+  else if(item.repeatUnit==='decan')interval=item.repeatEvery*10;
+ }
+ if(interval!==null){
+  let day=item.startDay+Math.max(0,Math.ceil((first-item.startDay)/interval))*interval;
+  while(day<limit&&excluded.has(day))day+=interval;
+  return day<limit?day:null;
+ }
+
+ const base=toEgyptian(item.startDay),current=toEgyptian(first);
+ if(item.repeat==='egyMonthly'||(item.repeat==='custom'&&item.repeatUnit==='month')){
+  const step=item.repeat==='egyMonthly'?1:item.repeatEvery;
+  if(!Number.isInteger(step)||step<1||step>MAX_REPEAT_INTERVAL)return null;
+  const origin=monthSerial(base),currentMonth=monthSerial(current);
+  const firstIndex=Math.max(0,Math.floor((currentMonth-origin)/step));
+  for(let n=firstIndex;;n++){
+   const serial=origin+n*step,year=Math.floor(serial/13),month=serial%13+1;
+   if(year>9999)break;
+   if(base.day>monthLength(year,month))continue;
+   const day=toGregorian({year,month,day:base.day});
+   if(day>=limit)break;
+   if(usable(day))return day;
+  }
+  return null;
+ }
+ if(item.repeat==='egyYearly'||(item.repeat==='custom'&&item.repeatUnit==='year')){
+  const step=item.repeat==='egyYearly'?1:item.repeatEvery;
+  if(!Number.isInteger(step)||step<1||step>MAX_REPEAT_INTERVAL)return null;
+  const firstIndex=Math.max(0,Math.floor((current.year-base.year)/step));
+  for(let n=firstIndex;;n++){
+   const year=base.year+n*step;
+   if(year>9999)break;
+   if(base.day>monthLength(year,base.month))continue;
+   const day=toGregorian({year,month:base.month,day:base.day});
+   if(day>=limit)break;
+   if(usable(day))return day;
+  }
+  return null;
+ }
+ if(item.repeat==='gregYearly'){
+  const original=new Date(item.startDay*86400000);
+  const month=original.getUTCMonth(),date=original.getUTCDate();
+  const currentYear=new Date(first*86400000).getUTCFullYear();
+  for(let year=Math.max(original.getUTCFullYear(),currentYear);year<=9999;year++){
+   const utc=Date.UTC(year,month,date);
+   const candidate=new Date(utc);
+   if(candidate.getUTCMonth()!==month||candidate.getUTCDate()!==date)continue;
+   const day=Math.floor(utc/86400000);
+   if(day>=limit)break;
+   if(usable(day))return day;
+  }
+ }
  return null;
 }
 
