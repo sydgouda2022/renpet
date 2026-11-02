@@ -77,11 +77,11 @@ html[data-renpet-layout="tablet-stacked"] .app-shell{
  background-size:100% auto;
  background-repeat:no-repeat;
  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,
-   transparent calc(100% - clamp(200px,47vw,580px)),
+   transparent calc(100% - clamp(265px,47vw,580px)),
    #000 calc(100% - clamp(55px,11vw,150px)),
    #000 calc(100% - 30px),transparent 100%);
  mask-image:linear-gradient(to bottom,transparent 0%,
-   transparent calc(100% - clamp(200px,47vw,580px)),
+   transparent calc(100% - clamp(265px,47vw,580px)),
    #000 calc(100% - clamp(55px,11vw,150px)),
    #000 calc(100% - 30px),transparent 100%);
  filter:brightness(var(--scene-brightness,1)) saturate(var(--scene-saturation,1));
@@ -165,12 +165,12 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  min-height:0;
  height:100%;
  gap:clamp(5px,.7vh,9px);
- /* Preserve whole-width artwork and reveal the distinct seasonal flora.
-    The three sections form one year surface rather than framed cards. */
+ /* No printed image border or isolated frame: preserve the landscape
+    as a separate masked botanical layer behind the twelve month squares. */
  background-color:var(--group-fill)!important;
- background-image:linear-gradient(180deg,#fff9e8c9,#fff7e375 60%,#fff7e337),var(--group-art)!important;
- background-size:100% 100%,100% auto!important;
- background-position:center,center bottom!important;
+ background-image:linear-gradient(180deg,#fff9e8df,#fff7e3a1 60%,#fff7e370)!important;
+ background-size:100% 100%!important;
+ background-position:center!important;
  background-repeat:no-repeat!important;
  border:0!important;
  border-radius:8px!important;
@@ -178,7 +178,15 @@ body[data-language="egy"] .time-panel .date.chosen .day-number{border-radius:11p
  margin:0!important;
  box-shadow:none!important;
 }
-.time-panel[data-stream-kind="year"] .year-season::before{content:none!important}
+.time-panel[data-stream-kind="year"] .year-season::before{
+ content:''!important;position:absolute;inset:0;z-index:0;pointer-events:none;
+ opacity:.90!important;
+ background:var(--group-art) no-repeat center bottom / 100% auto!important;
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0%,transparent 14%,
+   #000 48%,#000 83%,transparent 100%);
+ mask-image:linear-gradient(to bottom,transparent 0%,transparent 14%,
+   #000 48%,#000 83%,transparent 100%);
+}
 .time-panel[data-stream-kind="year"] .year-season::after{
  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
  background:linear-gradient(180deg,#0d1a35,#13233b 60%,#2d2640);
