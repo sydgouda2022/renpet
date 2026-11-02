@@ -59,6 +59,15 @@ async function verify(engine,name){
     });
     assert.equal(result,'StorageConflictError');
     assert.ok((await record(first,'scheduler')).items.some(item=>item.title==='Saved in first tab'));
+    // A background export/read may refresh the storage module's revision,
+    // but the old UI must still reject a save from its stale in-memory state.
+    await record(stale,'scheduler');
+    stale.on('dialog',dialog=>dialog.accept());
+    await stale.locator('header [data-new]').click();
+    await stale.locator('#event-editor [name=title]').fill('Should not overwrite first tab');
+    await stale.locator('#event-editor .save-button').click();
+    await stale.locator('#event-editor .event-error').waitFor();
+    assert.ok(!(await record(first,'scheduler')).items.some(item=>item.title==='Should not overwrite first tab'));
     await stale.reload({waitUntil:'domcontentloaded'});
     await stale.locator('.time-rail').waitFor();
     await saveEvent(stale,'Saved after reload');
